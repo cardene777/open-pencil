@@ -174,6 +174,10 @@ export function createEditor(options?: EditorOptions) {
     _renderer = renderer
     _renderers.add(renderer)
     _textEditor ??= new TextEditor(ck)
+    if (typeof renderer.measureTextNode !== 'function') {
+      setTextMeasurer(null)
+      return
+    }
     setTextMeasurer((node, maxWidth) => renderer.measureTextNode(node, maxWidth))
   }
 
