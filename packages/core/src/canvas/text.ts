@@ -45,6 +45,44 @@ const ARABIC_RE = /[\u0600-\u06ff\u0750-\u077f\u08a0-\u08ff\ufb50-\ufdff\ufe70-\
 const FONT_FAMILY_CACHE_LIMIT = 256
 const fontFamilyCache = new Map<string, string[]>()
 
+// Track which (provider, family|style) pairs we have already registered for
+// CJK self-heal so the registration runs at most once per provider lifetime,
+// not on every paragraph paint. The WeakMap key is the provider object, so
+// the entry is GCed automatically when the provider is replaced.
+const cjkRegisteredKeys = new WeakMap<object, Set<string>>()
+
+function isCJKPrimaryFamily(family: string): boolean {
+  return (
+    family === 'Noto Sans JP' ||
+    family === 'Noto Sans SC' ||
+    family === 'Noto Sans KR' ||
+    family.startsWith('Noto Sans CJK')
+  )
+}
+
+function ensureFamilyRegistered(r: TextRenderer, family: string, style: string): void {
+  if (!r.fontProvider) return
+  let keys = cjkRegisteredKeys.get(r.fontProvider as unknown as object)
+  if (!keys) {
+    keys = new Set()
+    cjkRegisteredKeys.set(r.fontProvider as unknown as object, keys)
+  }
+  const key = `${family}|${style}`
+  if (keys.has(key)) return
+  const data = fontManager.loadedData(family, style) ?? fontManager.loadedData(family, 'Regular')
+  if (!data) return
+  try {
+    r.fontProvider.registerFont(data, family)
+    keys.add(key)
+  } catch {}
+}
+
+function ensureCJKRegistered(r: TextRenderer, cjkFallbacks: readonly string[]): void {
+  for (const family of cjkFallbacks) {
+    ensureFamilyRegistered(r, family, 'Regular')
+  }
+}
+
 function hasRequiredFallbackFonts(text: string): boolean {
   if (CJK_RE.test(text) && fontManager.getCJKFallbackFamilies().length === 0) return false
   if (ARABIC_RE.test(text) && fontManager.getArabicFallbackFamilies().length === 0) return false
@@ -325,36 +363,17 @@ export function buildParagraph(
   })
 
   if (!r.fontProvider) throw new Error('Font provider not initialized')
-  // Self-heal: when the node has CJK text, make sure the active fontProvider
-  // actually has typefaces registered for the CJK fallbacks. The provider can
-  // get into a state where it was rebuilt (e.g. on tab switch) but the
-  // fontManager.loadedFamilies was not re-played onto it, leaving CJK glyphs
-  // unresolved. Re-register synchronously here so the next addText sees the
-  // typefaces.
+  // Self-heal (once per provider per family): make sure CJK fallbacks +
+  // CJK primary are registered on the active provider before paint. The
+  // provider can get rebuilt (tab switch, renderer reload) without
+  // re-playing loadedFamilies, leaving CJK glyphs unresolved. Doing this
+  // once per (provider, family) avoids per-frame re-register cost.
   if (CJK_RE.test(node.text)) {
-    for (const family of cjkFallbacks) {
-      const data = fontManager.loadedData(family, 'Regular')
-      if (data) {
-        try {
-          r.fontProvider.registerFont(data, family)
-        } catch {}
-      }
-    }
-    // Also re-register the primary family if it is a CJK family
+    ensureCJKRegistered(r, cjkFallbacks)
     const primaryFamily = node.fontFamily || DEFAULT_FONT_FAMILY
-    if (
-      primaryFamily.startsWith('Noto Sans') ||
-      primaryFamily === 'Noto Sans JP' ||
-      primaryFamily === 'Noto Sans SC' ||
-      primaryFamily === 'Noto Sans KR'
-    ) {
+    if (isCJKPrimaryFamily(primaryFamily)) {
       const style = weightToStyle(node.fontWeight, node.italic)
-      const data = fontManager.loadedData(primaryFamily, style) ?? fontManager.loadedData(primaryFamily, 'Regular')
-      if (data) {
-        try {
-          r.fontProvider.registerFont(data, primaryFamily)
-        } catch {}
-      }
+      ensureFamilyRegistered(r, primaryFamily, style)
     }
   }
   const builder = ck.ParagraphBuilder.MakeFromFontProvider(paraStyle, r.fontProvider)
