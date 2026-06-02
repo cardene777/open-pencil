@@ -476,6 +476,18 @@ export function buildParagraph(
       ensureFamilyRegistered(r, primaryFamily, style)
     }
   }
+  // Same self-heal for icon fonts: when an icon node (Lucide / Material
+  // Symbols / etc.) is about to paint, make sure its typeface is registered
+  // on the active provider. Without this the paragraph shaper gets the
+  // wrong typeface and renders raw latin glyphs ("home") instead of the
+  // ligature-resolved icon.
+  {
+    const primaryFamily = node.fontFamily || DEFAULT_FONT_FAMILY
+    if (isIconFontFamily(primaryFamily)) {
+      const style = weightToStyle(node.fontWeight, node.italic)
+      ensureFamilyRegistered(r, primaryFamily, style)
+    }
+  }
   const builder = ck.ParagraphBuilder.MakeFromFontProvider(paraStyle, r.fontProvider)
 
   if (node.styleRuns.length === 0) {
