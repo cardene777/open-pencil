@@ -315,19 +315,14 @@ export class FontManager {
     return this.loadedFamilies.get(`${family}|${style}`) ?? null
   }
 
-  renderFamily(family: string, style: string): string {
-    const data = this.loadedData(family, style)
-    if (!data) return family
-
-    const renderFamily = fontFaceRenderFamily(family, style)
-    if (!this.registeredRenderFamilies.has(renderFamily)) {
-      if (this.registerFontInCanvasKit(renderFamily, data)) {
-        this.registeredRenderFamilies.add(renderFamily)
-      } else {
-        return family
-      }
-    }
-    return renderFamily
+  renderFamily(family: string, _style: string): string {
+    // Skip the synthetic `__op_font__<family>__<style>` alias to avoid
+    // double-registering every TTF in CanvasKit's TypefaceFontProvider, which
+    // bloats WASM heap (Noto Sans JP alone is 5.3MB) and can cause later
+    // typefaces to be registered with empty glyph tables under memory
+    // pressure. Skia handles weight selection from a single family name based
+    // on the TTF's OS/2 table, so the bare family is sufficient.
+    return family
   }
 
   collectFontKeys(graph: SceneGraph, nodeIds: string[]): Array<[string, string]> {

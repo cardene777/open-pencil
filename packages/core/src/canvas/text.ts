@@ -325,6 +325,38 @@ export function buildParagraph(
   })
 
   if (!r.fontProvider) throw new Error('Font provider not initialized')
+  // Self-heal: when the node has CJK text, make sure the active fontProvider
+  // actually has typefaces registered for the CJK fallbacks. The provider can
+  // get into a state where it was rebuilt (e.g. on tab switch) but the
+  // fontManager.loadedFamilies was not re-played onto it, leaving CJK glyphs
+  // unresolved. Re-register synchronously here so the next addText sees the
+  // typefaces.
+  if (CJK_RE.test(node.text)) {
+    for (const family of cjkFallbacks) {
+      const data = fontManager.loadedData(family, 'Regular')
+      if (data) {
+        try {
+          r.fontProvider.registerFont(data, family)
+        } catch {}
+      }
+    }
+    // Also re-register the primary family if it is a CJK family
+    const primaryFamily = node.fontFamily || DEFAULT_FONT_FAMILY
+    if (
+      primaryFamily.startsWith('Noto Sans') ||
+      primaryFamily === 'Noto Sans JP' ||
+      primaryFamily === 'Noto Sans SC' ||
+      primaryFamily === 'Noto Sans KR'
+    ) {
+      const style = weightToStyle(node.fontWeight, node.italic)
+      const data = fontManager.loadedData(primaryFamily, style) ?? fontManager.loadedData(primaryFamily, 'Regular')
+      if (data) {
+        try {
+          r.fontProvider.registerFont(data, primaryFamily)
+        } catch {}
+      }
+    }
+  }
   const builder = ck.ParagraphBuilder.MakeFromFontProvider(paraStyle, r.fontProvider)
 
   if (node.styleRuns.length === 0) {
