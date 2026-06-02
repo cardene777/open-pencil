@@ -138,8 +138,17 @@ function resolveParagraphFontFamilies(
   if (cached) return cached
 
   const families = [renderPrimary]
+  // Resolve CJK / Arabic fallbacks through renderFamily so each weight gets its
+  // own canonical name in CanvasKit. Without this, multiple weights registered
+  // under the same family name (e.g. "Noto Sans JP" Regular + Bold) collide and
+  // Skia picks the last one, which may not have the right glyph weight.
+  for (const family of cjkFallbacks) {
+    families.push(fontManager.renderFamily(family, 'Regular'))
+  }
   if (primary !== DEFAULT_FONT_FAMILY) families.push(DEFAULT_FONT_FAMILY)
-  families.push(...arabicFallbacks, ...cjkFallbacks)
+  for (const family of arabicFallbacks) {
+    families.push(fontManager.renderFamily(family, 'Regular'))
+  }
 
   const resolved = uniq(families)
   fontFamilyCache.set(key, resolved)

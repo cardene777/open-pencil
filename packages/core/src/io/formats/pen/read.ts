@@ -101,12 +101,19 @@ function applyAutoLayout(
   }
 }
 
+const CJK_RE = /[぀-ヿ㐀-鿿豈-﫿가-힯]/u
+
 function applyTextProps(node: SceneNode, pen: PenNode, ctx: VarContext): void {
   node.text = pen.type === 'icon_font' ? (pen.iconFontName ?? '') : (pen.content ?? '')
-  node.fontFamily =
+  const resolved =
     pen.type === 'icon_font'
       ? (pen.iconFontFamily ?? 'Material Symbols Sharp')
       : resolveFontFamily(pen.fontFamily, ctx)
+  // If the text contains CJK characters and the resolved family is Latin-only
+  // (e.g. Inter), switch to Noto Sans JP. CanvasKit's TypefaceFontProvider
+  // does not reliably fall through to CJK fonts per-glyph.
+  node.fontFamily =
+    pen.type !== 'icon_font' && CJK_RE.test(node.text) ? 'Noto Sans JP' : resolved
   node.fontSize = pen.fontSize ?? 14
   node.fontWeight = mapFontWeight(
     pen.fontWeight ?? (pen.type === 'icon_font' ? pen.weight : undefined)

@@ -71,6 +71,9 @@ const ICON_FAMILY_MAP: Record<string, string> = {
   phosphor: 'ph'
 }
 
+// Icon fonts (lucide, Material Symbols, etc.) are bundled in /public.
+// fontManager.loadFont automatically picks them up via BUNDLED_FONTS in fonts.ts.
+
 async function resolveIconFontNodes(graph: SceneGraph): Promise<void> {
   const iconNodes: Array<{ node: SceneNode; prefix: string; iconName: string }> = []
   for (const node of graph.getAllNodes()) {
@@ -206,32 +209,34 @@ export async function openFileInNewTab(
           data: new Uint8Array(await file.arrayBuffer())
         })
 
+    // Trigger CJK fallback EARLY (before any awaits that may block on CanvasKit)
+    const cjkPromise = fontManager.ensureCJKFallback().catch(() => [])
+
     const firstPageId = imported.getPages()[0]?.id
     if (firstPageId) computeAllLayouts(imported, firstPageId)
     store.replaceGraph(imported)
     store.undo.clear()
     store.setDocumentSource(file.name, sourceFormat, handle, path)
     store.clearSelection()
-    const pageId = store.graph.getPages()[0]?.id ?? store.graph.rootId
-    await store.switchPage(pageId)
-    await store.fitCurrentPageToViewport()
 
     const allNodeIds = imported.getPages().flatMap((p) => p.childIds)
-    const extraFonts = collectExtraFontStyles(store.graph)
+    const extraFonts = collectExtraFontStyles(imported)
 
     const fontPromise = Promise.all([
+      cjkPromise,
       store.loadFontsForNodes(allNodeIds).catch(() => []),
-      fontManager.ensureCJKFallback().catch(() => []),
       ...extraFonts.map(([f, s]) => fontManager.loadFont(f, s).catch(() => null)),
+      // lucide icon font (bundled in /public)
+      fontManager.loadFont('lucide', 'Regular').catch(() => null),
     ])
-    const iconPromise = resolveIconFontNodes(store.graph).catch(() => {})
-
     fontPromise.then(() => {
       const pid = store.graph.getPages()[0]?.id ?? store.graph.rootId
       computeAllLayouts(store.graph, pid)
       store.requestRender()
     })
-    iconPromise.then(() => store.requestRender())
+    const pageId = store.graph.getPages()[0]?.id ?? store.graph.rootId
+    await store.switchPage(pageId)
+    await store.fitCurrentPageToViewport()
   } finally {
     store.state.loading = false
   }
