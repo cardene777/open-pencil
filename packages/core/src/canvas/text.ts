@@ -171,6 +171,14 @@ function resolveParagraphFontFamilies(
   cjkFallbacks: readonly string[]
 ): string[] {
   const renderPrimary = fontManager.renderFamily(primary, style)
+  // Icon fonts (Lucide / Material Symbols / etc.) only render correctly when
+  // the GSUB ligatures fire on the slug text ("home" -> 🏠). Skia's paragraph
+  // shaper short-circuits the ligature pass when the run can also be shaped
+  // by a fallback family present in the fontFamilies array, so we deliberately
+  // drop the CJK / Arabic / Latin fallbacks for icon-font primaries.
+  if (isIconFontFamily(primary)) {
+    return [renderPrimary]
+  }
   const key = `${renderPrimary}\0${arabicFallbacks.join('\0')}\0${cjkFallbacks.join('\0')}`
   const cached = fontFamilyCache.get(key)
   if (cached) return cached
@@ -231,6 +239,45 @@ export function textFontFeatures(
   }))
 }
 
+// Icon fonts (Lucide / Material Symbols / Phosphor / etc.) deliver their
+// glyphs as GSUB ligatures keyed by icon slug ("home" -> 🏠). CanvasKit's
+// ParagraphBuilder disables those ligature features by default, so if we
+// don't explicitly enable them the icon text gets rendered as the raw
+// latin glyphs ("home", "bell", ...) instead of the icon. Force the
+// standard set of ligature features on when the primary family is an icon
+// font.
+const ICON_FONT_FAMILIES = new Set([
+  'lucide',
+  'material symbols',
+  'material symbols sharp',
+  'material symbols rounded',
+  'material symbols outlined',
+  'material icons',
+  'material icons sharp',
+  'material icons round',
+  'material icons outlined',
+  'phosphor',
+  'phosphor regular',
+  'remix',
+  'tabler icons'
+])
+
+function isIconFontFamily(family: string): boolean {
+  return ICON_FONT_FAMILIES.has(family.trim().toLowerCase())
+}
+
+function ensureIconLigatureFeatures(
+  base: TextFontFeatures[] | undefined,
+  primary: string
+): TextFontFeatures[] | undefined {
+  if (!isIconFontFamily(primary)) return base
+  const out = base ? [...base] : []
+  for (const tag of ['liga', 'clig', 'dlig', 'rlig']) {
+    if (!out.some((f) => f.name === tag)) out.push({ name: tag, value: 1 })
+  }
+  return out
+}
+
 function textDecorationValue(ck: CanvasKit, decoration: string): number {
   switch (decoration) {
     case 'UNDERLINE':
@@ -282,7 +329,10 @@ function pushStyleRun(
         slant: (style.italic ?? node.italic) ? ck.FontSlant.Italic : ck.FontSlant.Upright
       },
       fontVariations: textFontVariations(style.fontVariations ?? node.fontVariations),
-      fontFeatures: textFontFeatures(style.fontFeatures ?? node.fontFeatures),
+      fontFeatures: ensureIconLigatureFeatures(
+        textFontFeatures(style.fontFeatures ?? node.fontFeatures),
+        style.fontFamily ?? node.fontFamily ?? DEFAULT_FONT_FAMILY
+      ),
       letterSpacing: style.letterSpacing ?? (node.letterSpacing || 0),
       decoration: textDecorationValue(ck, style.textDecoration ?? node.textDecoration),
       heightMultiplier: runLineHeight ? runLineHeight / runFontSize : undefined,
@@ -354,7 +404,10 @@ export function buildParagraph(
         slant: node.italic ? ck.FontSlant.Italic : ck.FontSlant.Upright
       },
       fontVariations: textFontVariations(node.fontVariations),
-      fontFeatures: textFontFeatures(node.fontFeatures),
+      fontFeatures: ensureIconLigatureFeatures(
+        textFontFeatures(node.fontFeatures),
+        node.fontFamily || DEFAULT_FONT_FAMILY
+      ),
       letterSpacing: node.letterSpacing || 0,
       decoration: textDecorationValue(ck, node.textDecoration),
       heightMultiplier: node.lineHeight ? node.lineHeight / baseFontSize : undefined,
