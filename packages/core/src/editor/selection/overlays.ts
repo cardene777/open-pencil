@@ -3,12 +3,6 @@ import type { SnapGuide } from '#core/scene-graph/snap'
 import type { Rect } from '#core/types'
 
 export function createSelectionOverlayActions(ctx: EditorContext) {
-  function setsEqual(a: ReadonlySet<string> | null, b: ReadonlySet<string> | null) {
-    if (a === b) return true
-    if (!a || !b) return false
-    return a.size === b.size && [...a].every((id) => b.has(id))
-  }
-
   function setMarquee(rect: Rect | null) {
     ctx.state.marquee = rect
     ctx.requestRepaint()
@@ -36,9 +30,9 @@ export function createSelectionOverlayActions(ctx: EditorContext) {
     ctx.requestRepaint()
   }
 
-  function setDraggingClipBypassFrameIds(ids: Set<string> | null) {
-    if (setsEqual(ctx.state.draggingClipBypassFrameIds, ids)) return
-    ctx.state.draggingClipBypassFrameIds = ids
+  function setDraggingClipBypassAll(value: boolean) {
+    if (ctx.state.draggingClipBypassAll === value) return
+    ctx.state.draggingClipBypassAll = value
     ctx.requestRepaint()
   }
 
@@ -68,7 +62,7 @@ export function createSelectionOverlayActions(ctx: EditorContext) {
     setRotationPreview,
     setHoveredNode,
     setDropTarget,
-    setDraggingClipBypassFrameIds,
+    setDraggingClipBypassAll,
     setLayoutInsertIndicator,
     setAutoLayoutHover
   }

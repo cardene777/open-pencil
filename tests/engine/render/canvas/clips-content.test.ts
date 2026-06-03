@@ -141,32 +141,31 @@ describe('clipsContent rendering', () => {
     ])
   })
 
-  test('limits drag clip bypass to the targeted frame', () => {
+  test('skips clipping for all clipping frames while drag bypass all is enabled', () => {
     const graph = new SceneGraph()
-    const bypassFrame = createClippingFrame(graph, 'BypassFrame')
-    const normalFrame = createClippingFrame(graph, 'NormalFrame', 200)
-    const bypassChild = graph.createNode('RECTANGLE', bypassFrame.id, {
+    const leftFrame = createClippingFrame(graph, 'LeftFrame')
+    const rightFrame = createClippingFrame(graph, 'RightFrame', 200)
+    const leftChild = graph.createNode('RECTANGLE', leftFrame.id, {
       x: 120,
       y: 0,
       width: 40,
       height: 40
     })
-    const normalChild = graph.createNode('RECTANGLE', normalFrame.id, {
+    const rightChild = graph.createNode('RECTANGLE', rightFrame.id, {
       x: 120,
       y: 0,
       width: 40,
       height: 40
     })
 
-    const bypassRecords = renderChildRecords(graph, bypassFrame.id, {
-      draggingClipBypassFrameIds: new Set([bypassFrame.id])
-    })
-    const normalRecords = renderChildRecords(graph, normalFrame.id, {
-      draggingClipBypassFrameIds: new Set([bypassFrame.id])
-    })
+    const overlays = { draggingClipBypassAll: true }
 
-    expect(bypassRecords).toEqual([{ nodeId: bypassChild.id, clipped: false }])
-    expect(normalRecords).toEqual([{ nodeId: normalChild.id, clipped: true }])
+    expect(renderChildRecords(graph, leftFrame.id, overlays)).toEqual([
+      { nodeId: leftChild.id, clipped: false }
+    ])
+    expect(renderChildRecords(graph, rightFrame.id, overlays)).toEqual([
+      { nodeId: rightChild.id, clipped: false }
+    ])
   })
 
   test('keeps a mask and its absolute target in the same clipped auto-layout run', () => {
@@ -249,7 +248,7 @@ describe('clipsContent rendering', () => {
     ])
   })
 
-  test('skips clipping for layoutMode NONE frames when their id is in the drag bypass set', () => {
+  test('skips clipping for layoutMode NONE frames when drag bypass all is enabled', () => {
     const graph = new SceneGraph()
     const frame = graph.createNode('FRAME', pageId(graph), {
       name: 'ScreenFrame',
@@ -270,7 +269,7 @@ describe('clipsContent rendering', () => {
 
     expect(
       renderChildRecords(graph, frame.id, {
-        draggingClipBypassFrameIds: new Set([frame.id])
+        draggingClipBypassAll: true
       })
     ).toEqual([{ nodeId: absoluteChild.id, clipped: false }])
   })

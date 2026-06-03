@@ -229,12 +229,11 @@ function renderChildren(
   if (node.type === 'BOOLEAN_OPERATION') return
   const isClippableContainer =
     node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE'
-  const isBypassedDrag = overlays.draggingClipBypassFrameIds?.has(node.id) ?? false
   const shouldClip =
     isClippableContainer &&
     node.clipsContent &&
     node.childIds.length > 0 &&
-    !isBypassedDrag
+    !overlays.draggingClipBypassAll
 
   if (shouldClip) {
     for (const run of getRenderableChildRuns(graph, node, node.childIds)) {

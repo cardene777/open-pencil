@@ -14,6 +14,7 @@
 - Render complex text fills through vector glyph outlines so imported Figma text can use the normal fill pipeline for gradients, images, patterns, and other non-solid paints.
 - Let late Cmd/Ctrl presses during auto-layout child drags pin the node absolutely on mouseup instead of incorrectly reordering against a stale insert indicator.
 - Keep absolute auto-layout children and Cmd/Ctrl drag previews visible outside clipping parent frames instead of incorrectly hiding them behind the parent clip.
+- Disable all `clipsContent` frame clipping temporarily during Cmd/Ctrl drags so dragged content stays visible even while crossing other screen clips.
 
 ## 0.13.2 — 2026-05-30
 

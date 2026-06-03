@@ -32,11 +32,11 @@ import type { DragState } from '#vue/shared/input/types'
  * panning, drawing tools, scoped hit testing, and text-edit interaction.
  * It is primarily intended for editor shell components that own the canvas.
  */
-export function clearDraggingClipBypassFrame(
-  editor: Pick<Editor, 'state' | 'setDraggingClipBypassFrameIds'>
+export function clearDraggingClipBypassAll(
+  editor: Pick<Editor, 'state' | 'setDraggingClipBypassAll'>
 ) {
-  if (!editor.state.draggingClipBypassFrameIds) return
-  editor.setDraggingClipBypassFrameIds(null)
+  if (!editor.state.draggingClipBypassAll) return
+  editor.setDraggingClipBypassAll(false)
 }
 
 export function cancelMoveDragInterruption(
@@ -44,7 +44,7 @@ export function cancelMoveDragInterruption(
     Editor,
     | 'graph'
     | 'requestRender'
-    | 'setDraggingClipBypassFrameIds'
+    | 'setDraggingClipBypassAll'
     | 'setDropTarget'
     | 'setLayoutInsertIndicator'
     | 'setSnapGuides'
@@ -65,7 +65,7 @@ export function cancelMoveDragInterruption(
     editor.setDropTarget(null)
     editor.requestRender()
   }
-  clearDraggingClipBypassFrame(editor)
+  clearDraggingClipBypassAll(editor)
 }
 
 export function useCanvasInput(
@@ -87,7 +87,7 @@ export function useCanvasInput(
   const selectedIdsBeforeClickSequence = ref<ReadonlySet<string>>(new Set())
   const spaceHeld = useSpaceHeld()
   const { recordClick, getClickCount } = createClickCounter()
-  const clearClipBypassFrame = () => cancelMoveDragInterruption(editor, drag, cursorOverride)
+  const clearClipBypassAll = () => cancelMoveDragInterruption(editor, drag, cursorOverride)
 
   const { getCoords, canvasToLocal, hitTestInScope, hitFns } = createCanvasPointer(
     canvasRef,
@@ -331,15 +331,15 @@ export function useCanvasInput(
   useEventListener(window, 'mouseup', (e: MouseEvent) => {
     if (drag.value) onMouseUp(e)
   })
-  useEventListener(window, 'blur', clearClipBypassFrame)
+  useEventListener(window, 'blur', clearClipBypassAll)
   useEventListener(document, 'visibilitychange', () => {
-    if (document.hidden) clearClipBypassFrame()
+    if (document.hidden) clearClipBypassAll()
   })
 
-  const stopToolChangeCleanup = editor.onEditorEvent('tool:changed', clearClipBypassFrame)
+  const stopToolChangeCleanup = editor.onEditorEvent('tool:changed', clearClipBypassAll)
   onScopeDispose(() => {
     stopToolChangeCleanup()
-    clearClipBypassFrame()
+    clearClipBypassAll()
   })
 
   setupPanZoom(canvasRef, editor, drag, onMouseDown, onMouseMove, onMouseUp)
