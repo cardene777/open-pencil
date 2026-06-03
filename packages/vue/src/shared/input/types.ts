@@ -29,7 +29,6 @@ export interface DragMove {
   duplicatedPreviousSelection?: Set<string>
   autoLayoutParentId?: string
   brokeFromAutoLayout?: boolean
-  lastBypassAutoLayout?: boolean
 }
 
 export interface DragPan {

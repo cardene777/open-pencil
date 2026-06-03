@@ -46,6 +46,33 @@ function setupAutoLayoutDrag() {
   return { editor, drag, parentId: parent.id, child1Id: child1.id, child2Id: child2.id }
 }
 
+function setupNonAutoLayoutChildDrag() {
+  const editor = createEditor()
+  const pageId = editor.state.currentPageId
+  const parent = editor.graph.createNode('FRAME', pageId, {
+    name: 'RegularFrame',
+    x: 0,
+    y: 0,
+    width: 400,
+    height: 200,
+    layoutMode: 'NONE'
+  })
+  const child = editor.graph.createNode('RECTANGLE', parent.id, {
+    name: 'Child',
+    x: 10,
+    y: 10,
+    width: 100,
+    height: 100
+  })
+
+  editor.select([child.id])
+
+  const drag = createSelectionMoveDrag(60, 60, 60, 60, editor, false)
+  if (drag.type !== 'move') throw new Error('Expected move drag')
+
+  return { editor, drag, childId: child.id }
+}
+
 describe('Cmd/Ctrl auto-layout bypass', () => {
   test('AC1: bypass keeps insert indicator cleared and allows free movement inside the parent bounds', () => {
     const { editor, drag, child1Id } = setupAutoLayoutDrag()
@@ -113,5 +140,47 @@ describe('Cmd/Ctrl auto-layout bypass', () => {
 
     expect(editor.graph.getNode(child1Id)?.layoutPositioning).not.toBe('ABSOLUTE')
     expect(editor.graph.getNode(child2Id)?.layoutPositioning).not.toBe('ABSOLUTE')
+  })
+
+  test('does not pin a child inside a layoutMode=NONE parent even when mouseup requests absolute pinning', () => {
+    const { editor, drag, childId } = setupNonAutoLayoutChildDrag()
+
+    expect(drag.autoLayoutParentId).toBeUndefined()
+
+    handleMoveMove(drag, 160, 90, 160, 90, editor, true)
+    handleMoveUp(drag, editor, true)
+
+    const child = editor.graph.getNode(childId)
+    expect(child?.layoutPositioning).not.toBe('ABSOLUTE')
+    expect(child?.x).toBe(110)
+    expect(child?.y).toBe(40)
+  })
+
+  test('does not pin multi-select drags moved outside the auto-layout frame', () => {
+    const { editor, child1Id, child2Id } = setupAutoLayoutDrag()
+
+    editor.select([child1Id, child2Id])
+
+    const drag = createSelectionMoveDrag(60, 60, 60, 60, editor, false)
+    if (drag.type !== 'move') throw new Error('Expected move drag')
+
+    expect(drag.autoLayoutParentId).toBeUndefined()
+
+    handleMoveMove(drag, 520, 80, 520, 80, editor, true)
+    handleMoveUp(drag, editor, true)
+
+    expect(editor.graph.getNode(child1Id)?.layoutPositioning).not.toBe('ABSOLUTE')
+    expect(editor.graph.getNode(child2Id)?.layoutPositioning).not.toBe('ABSOLUTE')
+  })
+
+  test('mouseup pinning decision follows the final argument even when drag move never bypassed auto-layout', () => {
+    const { editor, drag, child1Id } = setupAutoLayoutDrag()
+
+    expect(drag.autoLayoutParentId).toBeDefined()
+
+    handleMoveMove(drag, 520, 80, 520, 80, editor, false)
+    handleMoveUp(drag, editor, true)
+
+    expect(editor.graph.getNode(child1Id)?.layoutPositioning).toBe('ABSOLUTE')
   })
 })

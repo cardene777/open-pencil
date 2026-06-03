@@ -62,7 +62,6 @@ export function handleMoveMove(
 ) {
   d.currentX = cx
   d.currentY = cy
-  d.lastBypassAutoLayout = bypassAutoLayout
   const bypassingAutoLayout = Boolean(d.autoLayoutParentId && bypassAutoLayout)
 
   if (!d.dragStarted) {
@@ -156,6 +155,9 @@ export function handleMoveUp(d: DragMove, editor: Editor, pinAsAbsolute = false)
     return
   }
 
+  const shouldPinAbsolute =
+    pinAsAbsolute && Boolean(d.autoLayoutParentId) && d.originals.size === 1
+
   const indicator = editor.state.layoutInsertIndicator
   editor.setLayoutInsertIndicator(null)
   editor.setSnapGuides([])
@@ -177,7 +179,7 @@ export function handleMoveUp(d: DragMove, editor: Editor, pinAsAbsolute = false)
   if (moved) {
     restoreOriginalPositions(d, editor)
     const dropId = editor.state.dropTargetId
-    if (pinAsAbsolute) {
+    if (shouldPinAbsolute) {
       applyFinalPinnedPositions(d, editor)
       if (dropId) {
         editor.reparentNodes([...editor.state.selectedIds], dropId)
@@ -205,7 +207,7 @@ export function handleMoveUp(d: DragMove, editor: Editor, pinAsAbsolute = false)
     }
     editor.commitDuplicateMove([...d.originals.keys()], previousSelection)
   } else if (moved) {
-    if (pinAsAbsolute) {
+    if (shouldPinAbsolute) {
       editor.commitMoveWithAbsolutePin(d.originals)
     } else {
       editor.commitMoveWithReparent(d.originals)
