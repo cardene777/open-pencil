@@ -33,10 +33,10 @@ import type { DragState } from '#vue/shared/input/types'
  * It is primarily intended for editor shell components that own the canvas.
  */
 export function clearDraggingClipBypassFrame(
-  editor: Pick<Editor, 'state' | 'setDraggingClipBypassFrameId'>
+  editor: Pick<Editor, 'state' | 'setDraggingClipBypassFrameIds'>
 ) {
-  if (!editor.state.draggingClipBypassFrameId) return
-  editor.setDraggingClipBypassFrameId(null)
+  if (!editor.state.draggingClipBypassFrameIds) return
+  editor.setDraggingClipBypassFrameIds(null)
 }
 
 export function cancelMoveDragInterruption(
@@ -44,7 +44,7 @@ export function cancelMoveDragInterruption(
     Editor,
     | 'graph'
     | 'requestRender'
-    | 'setDraggingClipBypassFrameId'
+    | 'setDraggingClipBypassFrameIds'
     | 'setDropTarget'
     | 'setLayoutInsertIndicator'
     | 'setSnapGuides'

@@ -159,10 +159,10 @@ describe('clipsContent rendering', () => {
     })
 
     const bypassRecords = renderChildRecords(graph, bypassFrame.id, {
-      draggingClipBypassFrameId: bypassFrame.id
+      draggingClipBypassFrameIds: new Set([bypassFrame.id])
     })
     const normalRecords = renderChildRecords(graph, normalFrame.id, {
-      draggingClipBypassFrameId: bypassFrame.id
+      draggingClipBypassFrameIds: new Set([bypassFrame.id])
     })
 
     expect(bypassRecords).toEqual([{ nodeId: bypassChild.id, clipped: false }])
@@ -247,5 +247,31 @@ describe('clipsContent rendering', () => {
     expect(renderChildRecords(graph, frame.id)).toEqual([
       { nodeId: absoluteChild.id, clipped: true }
     ])
+  })
+
+  test('skips clipping for layoutMode NONE frames when their id is in the drag bypass set', () => {
+    const graph = new SceneGraph()
+    const frame = graph.createNode('FRAME', pageId(graph), {
+      name: 'ScreenFrame',
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      clipsContent: true,
+      layoutMode: 'NONE'
+    })
+    const absoluteChild = graph.createNode('RECTANGLE', frame.id, {
+      x: 140,
+      y: 0,
+      width: 40,
+      height: 40,
+      layoutPositioning: 'ABSOLUTE'
+    })
+
+    expect(
+      renderChildRecords(graph, frame.id, {
+        draggingClipBypassFrameIds: new Set([frame.id])
+      })
+    ).toEqual([{ nodeId: absoluteChild.id, clipped: false }])
   })
 })

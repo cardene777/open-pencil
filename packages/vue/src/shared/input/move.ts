@@ -14,6 +14,10 @@ const AUTO_LAYOUT_REORDER_CLICK_SLOP = 3
 const AUTO_LAYOUT_CROSS_AXIS_DRAG_TOLERANCE = 96
 export const MOVE_DRAG_START_THRESHOLD_PX = 3
 
+function isClippableFrameType(type: string) {
+  return type === 'FRAME' || type === 'COMPONENT' || type === 'INSTANCE'
+}
+
 function isInsideAutoLayoutDragBounds(parentId: string, cx: number, cy: number, editor: Editor) {
   const parent = editor.graph.getNode(parentId)
   if (!parent) return false
@@ -53,12 +57,27 @@ function isPastDragStartThreshold(d: DragMove, sx: number, sy: number) {
 
 function syncDraggingClipBypassFrame(
   editor: Editor,
-  autoLayoutParentId: string | undefined,
-  bypassingAutoLayout: boolean
+  d: DragMove,
+  bypassClipDuringDrag: boolean
 ) {
-  const nextFrameId = bypassingAutoLayout && autoLayoutParentId ? autoLayoutParentId : null
-  if (editor.state.draggingClipBypassFrameId === nextFrameId) return
-  editor.setDraggingClipBypassFrameId(nextFrameId)
+  if (!bypassClipDuringDrag) {
+    editor.setDraggingClipBypassFrameIds(null)
+    return
+  }
+
+  const nextFrameIds = new Set<string>()
+
+  if (d.autoLayoutParentId) {
+    const parent = editor.graph.getNode(d.autoLayoutParentId)
+    if (parent && isClippableFrameType(parent.type)) nextFrameIds.add(parent.id)
+  }
+
+  for (const original of d.originals.values()) {
+    const parent = editor.graph.getNode(original.parentId)
+    if (parent && isClippableFrameType(parent.type)) nextFrameIds.add(parent.id)
+  }
+
+  editor.setDraggingClipBypassFrameIds(nextFrameIds.size > 0 ? nextFrameIds : null)
 }
 
 export function handleMoveMove(
@@ -79,7 +98,7 @@ export function handleMoveMove(
     d.dragStarted = true
   }
 
-  syncDraggingClipBypassFrame(editor, d.autoLayoutParentId, bypassingAutoLayout)
+  syncDraggingClipBypassFrame(editor, d, bypassAutoLayout)
 
   let dx = cx - d.startX
   let dy = cy - d.startY
@@ -186,7 +205,7 @@ function commitMovedDrag(d: DragMove, editor: Editor, shouldPinAbsolute: boolean
 }
 
 export function handleMoveUp(d: DragMove, editor: Editor, pinAsAbsolute = false) {
-  editor.setDraggingClipBypassFrameId(null)
+  editor.setDraggingClipBypassFrameIds(null)
 
   if (!d.dragStarted) {
     editor.setLayoutInsertIndicator(null)
