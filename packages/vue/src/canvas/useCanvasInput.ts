@@ -211,7 +211,7 @@ export function useCanvasInput(
       return
     }
     if (d.type === 'move') {
-      handleMoveMove(d, cx, cy, sx, sy, editor)
+      handleMoveMove(d, cx, cy, sx, sy, editor, e.metaKey || e.ctrlKey)
       return
     }
     if (d.type === 'text-select') {
@@ -252,7 +252,7 @@ export function useCanvasInput(
 
     if (handleNodeEditMouseUp(drag, editor)) return
 
-    if (d.type === 'move') handleMoveUp(d, editor)
+    if (d.type === 'move') handleMoveUp(d, editor, d.lastBypassAutoLayout ?? false)
     else if (d.type === 'text-select') {
       drag.value = null
       return
