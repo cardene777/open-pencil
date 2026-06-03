@@ -19,6 +19,7 @@ export interface RenderOverlays {
   snapGuides?: SnapGuide[]
   rotationPreview?: { nodeId: string; angle: number } | null
   dropTargetId?: string | null
+  draggingClipBypassFrameId?: string | null
   layoutInsertIndicator?: {
     x: number
     y: number

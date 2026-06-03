@@ -156,6 +156,33 @@ function renderChildIds(
   )
 }
 
+function clipToNodeBounds(r: SkiaRenderer, canvas: Canvas, node: SceneNode): void {
+  if (nodeHasSmoothCorners(node)) {
+    const clipPath = makeSmoothRRectPath(r, node)
+    canvas.clipPath(clipPath, r.ck.ClipOp.Intersect, true)
+    clipPath.delete()
+  } else if (nodeHasRadius(node)) {
+    canvas.clipRRect(r.makeRRect(node), r.ck.ClipOp.Intersect, true)
+  } else {
+    canvas.clipRect(r.ck.LTRBRect(0, 0, node.width, node.height), r.ck.ClipOp.Intersect, true)
+  }
+}
+
+function getChildClipRuns(graph: SceneGraph, childIds: string[]) {
+  const runs: Array<{ childIds: string[]; shouldClip: boolean }> = []
+  for (const childId of childIds) {
+    const child = graph.getNode(childId)
+    const shouldClip = child?.layoutPositioning !== 'ABSOLUTE'
+    const currentRun = runs.at(-1)
+    if (currentRun && currentRun.shouldClip === shouldClip) {
+      currentRun.childIds.push(childId)
+      continue
+    }
+    runs.push({ childIds: [childId], shouldClip })
+  }
+  return runs
+}
+
 function renderChildren(
   r: SkiaRenderer,
   canvas: Canvas,
@@ -168,19 +195,23 @@ function renderChildren(
   if (node.type === 'BOOLEAN_OPERATION') return
   const isClippableContainer =
     node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE'
-  if (isClippableContainer && node.clipsContent && node.childIds.length > 0) {
-    canvas.save()
-    if (nodeHasSmoothCorners(node)) {
-      const clipPath = makeSmoothRRectPath(r, node)
-      canvas.clipPath(clipPath, r.ck.ClipOp.Intersect, true)
-      clipPath.delete()
-    } else if (nodeHasRadius(node)) {
-      canvas.clipRRect(r.makeRRect(node), r.ck.ClipOp.Intersect, true)
-    } else {
-      canvas.clipRect(r.ck.LTRBRect(0, 0, node.width, node.height), r.ck.ClipOp.Intersect, true)
+  const shouldClip =
+    isClippableContainer &&
+    node.clipsContent &&
+    node.childIds.length > 0 &&
+    overlays.draggingClipBypassFrameId !== node.id
+
+  if (shouldClip) {
+    for (const run of getChildClipRuns(graph, node.childIds)) {
+      if (!run.shouldClip) {
+        renderChildIds(r, canvas, graph, run.childIds, overlays, absX, absY)
+        continue
+      }
+      canvas.save()
+      clipToNodeBounds(r, canvas, node)
+      renderChildIds(r, canvas, graph, run.childIds, overlays, absX, absY)
+      canvas.restore()
     }
-    renderChildIds(r, canvas, graph, node.childIds, overlays, absX, absY)
-    canvas.restore()
   } else {
     renderChildIds(r, canvas, graph, node.childIds, overlays, absX, absY)
   }

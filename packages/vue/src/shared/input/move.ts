@@ -51,6 +51,16 @@ function isPastDragStartThreshold(d: DragMove, sx: number, sy: number) {
   return dx * dx + dy * dy >= MOVE_DRAG_START_THRESHOLD_PX * MOVE_DRAG_START_THRESHOLD_PX
 }
 
+function syncDraggingClipBypassFrame(
+  editor: Editor,
+  autoLayoutParentId: string | undefined,
+  bypassingAutoLayout: boolean
+) {
+  const nextFrameId = bypassingAutoLayout && autoLayoutParentId ? autoLayoutParentId : null
+  if (editor.state.draggingClipBypassFrameId === nextFrameId) return
+  editor.setDraggingClipBypassFrameId(nextFrameId)
+}
+
 export function handleMoveMove(
   d: DragMove,
   cx: number,
@@ -68,6 +78,8 @@ export function handleMoveMove(
     if (!isPastDragStartThreshold(d, sx, sy)) return
     d.dragStarted = true
   }
+
+  syncDraggingClipBypassFrame(editor, d.autoLayoutParentId, bypassingAutoLayout)
 
   let dx = cx - d.startX
   let dy = cy - d.startY
@@ -174,6 +186,8 @@ function commitMovedDrag(d: DragMove, editor: Editor, shouldPinAbsolute: boolean
 }
 
 export function handleMoveUp(d: DragMove, editor: Editor, pinAsAbsolute = false) {
+  editor.setDraggingClipBypassFrameId(null)
+
   if (!d.dragStarted) {
     editor.setLayoutInsertIndicator(null)
     editor.setSnapGuides([])
