@@ -39,6 +39,35 @@ export function clearDraggingClipBypassFrame(
   editor.setDraggingClipBypassFrameId(null)
 }
 
+export function cancelMoveDragInterruption(
+  editor: Pick<
+    Editor,
+    | 'graph'
+    | 'requestRender'
+    | 'setDraggingClipBypassFrameId'
+    | 'setDropTarget'
+    | 'setLayoutInsertIndicator'
+    | 'setSnapGuides'
+    | 'state'
+  >,
+  drag: Pick<Ref<DragState | null>, 'value'>,
+  cursorOverride?: Pick<Ref<string | null>, 'value'>
+) {
+  const activeDrag = drag.value
+  if (activeDrag?.type === 'move') {
+    for (const [id, orig] of activeDrag.originals) {
+      editor.graph.updateNodePositionPreview(id, orig.x, orig.y)
+    }
+    drag.value = null
+    if (cursorOverride) cursorOverride.value = null
+    editor.setLayoutInsertIndicator(null)
+    editor.setSnapGuides([])
+    editor.setDropTarget(null)
+    editor.requestRender()
+  }
+  clearDraggingClipBypassFrame(editor)
+}
+
 export function useCanvasInput(
   canvasRef: Ref<HTMLCanvasElement | null>,
   editor: Editor,
@@ -58,7 +87,7 @@ export function useCanvasInput(
   const selectedIdsBeforeClickSequence = ref<ReadonlySet<string>>(new Set())
   const spaceHeld = useSpaceHeld()
   const { recordClick, getClickCount } = createClickCounter()
-  const clearClipBypassFrame = () => clearDraggingClipBypassFrame(editor)
+  const clearClipBypassFrame = () => cancelMoveDragInterruption(editor, drag, cursorOverride)
 
   const { getCoords, canvasToLocal, hitTestInScope, hitFns } = createCanvasPointer(
     canvasRef,

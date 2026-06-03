@@ -1,9 +1,13 @@
 import { describe, expect, test } from 'bun:test'
+import { ref } from 'vue'
 
 import { createEditor } from '@open-pencil/core/editor'
 import { computeAllLayouts } from '@open-pencil/core/layout'
 
-import { clearDraggingClipBypassFrame } from '#vue/canvas/useCanvasInput'
+import {
+  cancelMoveDragInterruption,
+  clearDraggingClipBypassFrame
+} from '#vue/canvas/useCanvasInput'
 import { handleMoveMove, handleMoveUp } from '#vue/shared/input/move'
 import { createSelectionMoveDrag } from '#vue/shared/input/select/move'
 
@@ -221,5 +225,28 @@ describe('Cmd/Ctrl auto-layout bypass', () => {
     clearDraggingClipBypassFrame(editor)
 
     expect(editor.state.draggingClipBypassFrameId).toBeNull()
+  })
+
+  test('R2-001: cleanup paths cancel move drags and restore preview before bypass can re-arm', () => {
+    const { editor, drag, parentId, child1Id } = setupAutoLayoutDrag()
+    const dragState = ref(drag)
+
+    handleMoveMove(drag, 150, 60, 150, 60, editor, true)
+
+    expect(editor.state.draggingClipBypassFrameId).toBe(parentId)
+    expect(editor.graph.getNode(child1Id)?.x).not.toBe(10)
+
+    cancelMoveDragInterruption(editor, dragState)
+
+    expect(dragState.value).toBeNull()
+    expect(editor.state.draggingClipBypassFrameId).toBeNull()
+    expect(editor.graph.getNode(child1Id)?.x).toBe(10)
+
+    if (dragState.value?.type === 'move') {
+      handleMoveMove(dragState.value, 200, 80, 200, 80, editor, true)
+    }
+
+    expect(editor.state.draggingClipBypassFrameId).toBeNull()
+    expect(editor.graph.getNode(child1Id)?.x).toBe(10)
   })
 })
