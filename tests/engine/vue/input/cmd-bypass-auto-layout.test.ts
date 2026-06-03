@@ -183,4 +183,16 @@ describe('Cmd/Ctrl auto-layout bypass', () => {
 
     expect(editor.graph.getNode(child1Id)?.layoutPositioning).toBe('ABSOLUTE')
   })
+
+  test('R2-001: late Cmd press wins over stale indicator without another mousemove', () => {
+    const { editor, drag, child1Id } = setupAutoLayoutDrag()
+
+    handleMoveMove(drag, 220, 60, 220, 60, editor, false)
+
+    expect(editor.state.layoutInsertIndicator).not.toBeNull()
+
+    handleMoveUp(drag, editor, true)
+
+    expect(editor.graph.getNode(child1Id)?.layoutPositioning).toBe('ABSOLUTE')
+  })
 })

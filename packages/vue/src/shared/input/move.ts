@@ -162,7 +162,7 @@ export function handleMoveUp(d: DragMove, editor: Editor, pinAsAbsolute = false)
   editor.setLayoutInsertIndicator(null)
   editor.setSnapGuides([])
 
-  if (indicator) {
+  if (indicator && !shouldPinAbsolute) {
     if (getMoveDistance(d) < AUTO_LAYOUT_REORDER_CLICK_SLOP) {
       editor.setDropTarget(null)
       return
@@ -174,7 +174,11 @@ export function handleMoveUp(d: DragMove, editor: Editor, pinAsAbsolute = false)
     return
   }
 
-  const moved = hasMoved(d, editor)
+  const moved =
+    hasMoved(d, editor) ||
+    (shouldPinAbsolute &&
+      Boolean(indicator) &&
+      getMoveDistance(d) >= AUTO_LAYOUT_REORDER_CLICK_SLOP)
 
   if (moved) {
     restoreOriginalPositions(d, editor)
