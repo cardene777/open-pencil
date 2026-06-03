@@ -14,9 +14,9 @@
         "@atlaskit/pragmatic-drag-and-drop": "^1.7.9",
         "@atlaskit/pragmatic-drag-and-drop-hitbox": "^1.1.0",
         "@chenglou/pretext": "^0.0.7",
-        "@open-pencil/cli": "workspace:*",
-        "@open-pencil/core": "workspace:*",
-        "@open-pencil/vue": "workspace:*",
+        "@inkly/cli": "workspace:*",
+        "@inkly/core": "workspace:*",
+        "@inkly/vue": "workspace:*",
         "@openrouter/ai-sdk-provider": "^2.9.0",
         "@tailwindcss/vite": "^4.2.1",
         "@tanstack/vue-table": "^8.21.3",
@@ -63,8 +63,8 @@
         "@figma/plugin-typings": "^1.126.0",
         "@hono/node-server": "^1.19.11",
         "@iconify-json/lucide": "^1.2.94",
+        "@inkly/mcp": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.27.1",
-        "@open-pencil/mcp": "workspace:*",
         "@playwright/test": "^1.58.2",
         "@tauri-apps/cli": "^2",
         "@types/culori": "^4.0.1",
@@ -97,13 +97,13 @@
       },
     },
     "packages/cli": {
-      "name": "@open-pencil/cli",
+      "name": "@inkly/cli",
       "version": "0.13.2",
       "bin": {
-        "openpencil": "./bin/openpencil.js",
+        "inkly": "./bin/inkly.js",
       },
       "dependencies": {
-        "@open-pencil/core": "workspace:*",
+        "@inkly/core": "workspace:*",
         "agentfmt": "^0.1.3",
         "canvaskit-wasm": "^0.40.0",
         "citty": "^0.1.6",
@@ -113,7 +113,7 @@
       },
     },
     "packages/core": {
-      "name": "@open-pencil/core",
+      "name": "@inkly/core",
       "version": "0.13.2",
       "dependencies": {
         "@chenglou/pretext": "^0.0.7",
@@ -145,7 +145,7 @@
       },
     },
     "packages/docs": {
-      "name": "@open-pencil/docs",
+      "name": "@inkly/docs",
       "version": "0.1.0",
       "dependencies": {
         "@iconify/vue": "^5.0.0",
@@ -156,16 +156,16 @@
       },
     },
     "packages/mcp": {
-      "name": "@open-pencil/mcp",
+      "name": "@inkly/mcp",
       "version": "0.13.2",
       "bin": {
-        "openpencil-mcp": "./dist/stdio.mjs",
-        "openpencil-mcp-http": "./dist/index.mjs",
+        "inkly-mcp": "./dist/stdio.mjs",
+        "inkly-mcp-http": "./dist/index.mjs",
       },
       "dependencies": {
         "@hono/node-server": "^1.19.9",
+        "@inkly/core": "workspace:*",
         "@modelcontextprotocol/sdk": "^1.25.2",
-        "@open-pencil/core": "workspace:*",
         "hono": "^4.11.4",
         "package-manager-detector": "^1.6.0",
         "ws": "^8.19.0",
@@ -177,7 +177,7 @@
       },
     },
     "packages/vue": {
-      "name": "@open-pencil/vue",
+      "name": "@inkly/vue",
       "version": "0.13.2",
       "dependencies": {
         "@atlaskit/pragmatic-drag-and-drop": "^1.7.9",
@@ -195,7 +195,7 @@
         "unplugin-vue": "^7.1.1",
       },
       "peerDependencies": {
-        "@open-pencil/core": "workspace:*",
+        "@inkly/core": "workspace:*",
         "canvaskit-wasm": ">=0.39.0",
         "vue": "^3.4.0",
       },
@@ -662,6 +662,16 @@
 
     "@iconify/vue": ["@iconify/vue@5.0.0", "", { "dependencies": { "@iconify/types": "^2.0.0" }, "peerDependencies": { "vue": ">=3" } }, "sha512-C+KuEWIF5nSBrobFJhT//JS87OZ++QDORB6f2q2Wm6fl2mueSTpFBeBsveK0KW9hWiZ4mNiPjsh6Zs4jjdROSg=="],
 
+    "@inkly/cli": ["@inkly/cli@workspace:packages/cli"],
+
+    "@inkly/core": ["@inkly/core@workspace:packages/core"],
+
+    "@inkly/docs": ["@inkly/docs@workspace:packages/docs"],
+
+    "@inkly/mcp": ["@inkly/mcp@workspace:packages/mcp"],
+
+    "@inkly/vue": ["@inkly/vue@workspace:packages/vue"],
+
     "@internationalized/date": ["@internationalized/date@3.12.0", "", { "dependencies": { "@swc/helpers": "^0.5.0" } }, "sha512-/PyIMzK29jtXaGU23qTvNZxvBXRtKbNnGDFD+PY6CZw/Y8Ex8pFUzkuCJCG9aOqmShjqhS9mPqP6Dk5onQY8rQ=="],
 
     "@internationalized/number": ["@internationalized/number@3.6.5", "", { "dependencies": { "@swc/helpers": "^0.5.0" } }, "sha512-6hY4Kl4HPBvtfS62asS/R22JzNNy8vi/Ssev7x6EobfCp+9QIB2hKvI2EtbdJ0VSQacxVNtqhE/NmF/NZ0gm6g=="],
@@ -753,16 +763,6 @@
     "@nodelib/fs.stat": ["@nodelib/fs.stat@2.0.5", "", {}, "sha512-RkhPPp2zrqDAQA/2jNhnztcPAlv64XdhIp7a7454A5ovI7Bukxgt7MX7udwAu3zg1DcpPU0rz3VV1SeaqvY4+A=="],
 
     "@nodelib/fs.walk": ["@nodelib/fs.walk@1.2.8", "", { "dependencies": { "@nodelib/fs.scandir": "2.1.5", "fastq": "^1.6.0" } }, "sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg=="],
-
-    "@open-pencil/cli": ["@open-pencil/cli@workspace:packages/cli"],
-
-    "@open-pencil/core": ["@open-pencil/core@workspace:packages/core"],
-
-    "@open-pencil/docs": ["@open-pencil/docs@workspace:packages/docs"],
-
-    "@open-pencil/mcp": ["@open-pencil/mcp@workspace:packages/mcp"],
-
-    "@open-pencil/vue": ["@open-pencil/vue@workspace:packages/vue"],
 
     "@openrouter/ai-sdk-provider": ["@openrouter/ai-sdk-provider@2.9.0", "", { "peerDependencies": { "ai": "^6.0.0", "zod": "^3.25.0 || ^4.0.0" } }, "sha512-Seva+NCa0WUQnJIUE5GzHsUv1WTIeyqwz0ELl2VtS6NP+eF+77yCXGFVOMbvoCM7QMjlnhv7931e89R+8pJdcQ=="],
 
@@ -2904,6 +2904,8 @@
 
     "@babel/traverse/@babel/types": ["@babel/types@7.29.0", "", { "dependencies": { "@babel/helper-string-parser": "^7.27.1", "@babel/helper-validator-identifier": "^7.28.5" } }, "sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A=="],
 
+    "@inkly/mcp/@types/node": ["@types/node@22.19.15", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg=="],
+
     "@libp2p/crypto/@libp2p/interface": ["@libp2p/interface@3.1.0", "", { "dependencies": { "@multiformats/dns": "^1.0.6", "@multiformats/multiaddr": "^13.0.1", "main-event": "^1.0.1", "multiformats": "^13.4.0", "progress-events": "^1.0.1", "uint8arraylist": "^2.4.8" } }, "sha512-RE7/XyvC47fQBe1cHxhMvepYKa5bFCUyFrrpj8PuM0E7JtzxU7F+Du5j4VXbg2yLDcToe0+j8mB7jvwE2AThYw=="],
 
     "@libp2p/crypto/@noble/curves": ["@noble/curves@2.0.1", "", { "dependencies": { "@noble/hashes": "2.0.1" } }, "sha512-vs1Az2OOTBiP4q0pwjW5aF0xp9n4MxVrmkFBxc6EKZc6ddYx5gaZiAsZoq0uRRXWbi3AT/sBqn05eRPtn1JCPw=="],
@@ -2927,8 +2929,6 @@
     "@libp2p/utils/@libp2p/interface": ["@libp2p/interface@2.11.0", "", { "dependencies": { "@multiformats/dns": "^1.0.6", "@multiformats/multiaddr": "^12.4.4", "it-pushable": "^3.2.3", "it-stream-types": "^2.0.2", "main-event": "^1.0.1", "multiformats": "^13.3.6", "progress-events": "^1.0.1", "uint8arraylist": "^2.4.8" } }, "sha512-0MUFKoXWHTQW3oWIgSHApmYMUKWO/Y02+7Hpyp+n3z+geD4Xo2Rku2gYWmxcq+Pyjkz6Q9YjDWz3Yb2SoV2E8Q=="],
 
     "@multiformats/dns/@libp2p/interface": ["@libp2p/interface@3.1.0", "", { "dependencies": { "@multiformats/dns": "^1.0.6", "@multiformats/multiaddr": "^13.0.1", "main-event": "^1.0.1", "multiformats": "^13.4.0", "progress-events": "^1.0.1", "uint8arraylist": "^2.4.8" } }, "sha512-RE7/XyvC47fQBe1cHxhMvepYKa5bFCUyFrrpj8PuM0E7JtzxU7F+Du5j4VXbg2yLDcToe0+j8mB7jvwE2AThYw=="],
-
-    "@open-pencil/mcp/@types/node": ["@types/node@22.19.15", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg=="],
 
     "@rollup/plugin-node-resolve/@rollup/pluginutils": ["@rollup/pluginutils@5.3.0", "", { "dependencies": { "@types/estree": "^1.0.0", "estree-walker": "^2.0.2", "picomatch": "^4.0.2" }, "peerDependencies": { "rollup": "^1.20.0||^2.0.0||^3.0.0||^4.0.0" }, "optionalPeers": ["rollup"] }, "sha512-5EdhGZtnu3V88ces7s53hhfK5KSASnJZv8Lulpc04cWO3REESroJXg73DFsOmgbU2BhwV0E20bu2IDZb3VKW4Q=="],
 
@@ -3138,11 +3138,11 @@
 
     "@babel/traverse/@babel/types/@babel/helper-validator-identifier": ["@babel/helper-validator-identifier@7.28.5", "", {}, "sha512-qSs4ifwzKJSV39ucNjsvc6WVHs6b7S03sOh2OcHF9UHfVPqWWALUsNUVzhSBiItjRZoLHx7nIarVjqKVusUZ1Q=="],
 
+    "@inkly/mcp/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
+
     "@libp2p/crypto/@libp2p/interface/@multiformats/multiaddr": ["@multiformats/multiaddr@13.0.1", "", { "dependencies": { "@chainsafe/is-ip": "^2.0.1", "multiformats": "^13.0.0", "uint8-varint": "^2.0.1", "uint8arrays": "^5.0.0" } }, "sha512-XToN915cnfr6Lr9EdGWakGJbPT0ghpg/850HvdC+zFX8XvpLZElwa8synCiwa8TuvKNnny6m8j8NVBNCxhIO3g=="],
 
     "@multiformats/dns/@libp2p/interface/@multiformats/multiaddr": ["@multiformats/multiaddr@13.0.1", "", { "dependencies": { "@chainsafe/is-ip": "^2.0.1", "multiformats": "^13.0.0", "uint8-varint": "^2.0.1", "uint8arrays": "^5.0.0" } }, "sha512-XToN915cnfr6Lr9EdGWakGJbPT0ghpg/850HvdC+zFX8XvpLZElwa8synCiwa8TuvKNnny6m8j8NVBNCxhIO3g=="],
-
-    "@open-pencil/mcp/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
     "@vue-macros/common/ast-kit/@babel/parser": ["@babel/parser@7.29.2", "", { "dependencies": { "@babel/types": "^7.29.0" }, "bin": "./bin/babel-parser.js" }, "sha512-4GgRzy/+fsBa72/RZVJmGKPmZu9Byn8o4MoLpmNe1m8ZfYnz5emHLQz3U4gLud6Zwl0RZIcgiLD7Uq7ySFuDLA=="],
 
