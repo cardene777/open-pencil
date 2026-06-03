@@ -139,10 +139,7 @@ function renderChildIds(
     r,
     canvas,
     childIds,
-    (childId) => {
-      const child = graph.getNode(childId)
-      return child?.visible && child.isMask ? child.maskType : null
-    },
+    (childId) => getVisibleMaskType(graph.getNode(childId)),
     (childId) => r.renderNode(canvas, graph, childId, overlays, absX, absY),
     (childId) => {
       const child = graph.getNode(childId)
@@ -154,6 +151,10 @@ function renderChildIds(
       return { x: child.x, y: child.y, width: child.width, height: child.height }
     }
   )
+}
+
+function getVisibleMaskType(node: SceneNode | null | undefined): SceneNode['maskType'] | null {
+  return node?.visible && node.isMask ? node.maskType : null
 }
 
 function clipToNodeBounds(r: SkiaRenderer, canvas: Canvas, node: SceneNode): void {
@@ -168,17 +169,50 @@ function clipToNodeBounds(r: SkiaRenderer, canvas: Canvas, node: SceneNode): voi
   }
 }
 
-function getChildClipRuns(graph: SceneGraph, childIds: string[]) {
+export function getRenderableChildRuns(graph: SceneGraph, parent: SceneNode, childIds: string[]) {
+  const parentIsAutoLayout = parent.layoutMode !== undefined && parent.layoutMode !== 'NONE'
+  if (!parentIsAutoLayout) return [{ childIds: [...childIds], shouldClip: true }]
+
   const runs: Array<{ childIds: string[]; shouldClip: boolean }> = []
-  for (const childId of childIds) {
+  let index = 0
+  while (index < childIds.length) {
+    const childId = childIds[index]
+    if (getVisibleMaskType(graph.getNode(childId))) {
+      const maskRunChildIds: string[] = []
+      let maskIndex = index
+      while (
+        maskIndex < childIds.length &&
+        getVisibleMaskType(graph.getNode(childIds[maskIndex]))
+      ) {
+        maskRunChildIds.push(childIds[maskIndex])
+        maskIndex++
+      }
+      while (
+        maskIndex < childIds.length &&
+        !getVisibleMaskType(graph.getNode(childIds[maskIndex]))
+      ) {
+        maskRunChildIds.push(childIds[maskIndex])
+        maskIndex++
+      }
+      runs.push({
+        childIds: maskRunChildIds,
+        shouldClip: maskRunChildIds.some(
+          (id) => graph.getNode(id)?.layoutPositioning !== 'ABSOLUTE'
+        )
+      })
+      index = maskIndex
+      continue
+    }
+
     const child = graph.getNode(childId)
     const shouldClip = child?.layoutPositioning !== 'ABSOLUTE'
     const currentRun = runs.at(-1)
     if (currentRun && currentRun.shouldClip === shouldClip) {
       currentRun.childIds.push(childId)
-      continue
+    } else {
+      runs.push({ childIds: [childId], shouldClip })
     }
-    runs.push({ childIds: [childId], shouldClip })
+    index++
   }
   return runs
 }
@@ -202,7 +236,7 @@ function renderChildren(
     overlays.draggingClipBypassFrameId !== node.id
 
   if (shouldClip) {
-    for (const run of getChildClipRuns(graph, node.childIds)) {
+    for (const run of getRenderableChildRuns(graph, node, node.childIds)) {
       if (!run.shouldClip) {
         renderChildIds(r, canvas, graph, run.childIds, overlays, absX, absY)
         continue

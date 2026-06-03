@@ -1,5 +1,5 @@
 import { useEventListener } from '@vueuse/core'
-import { ref, type Ref } from 'vue'
+import { onScopeDispose, ref, type Ref } from 'vue'
 
 import type { Editor } from '@open-pencil/core/editor'
 import type { SceneNode } from '@open-pencil/core/scene-graph'
@@ -32,6 +32,13 @@ import type { DragState } from '#vue/shared/input/types'
  * panning, drawing tools, scoped hit testing, and text-edit interaction.
  * It is primarily intended for editor shell components that own the canvas.
  */
+export function clearDraggingClipBypassFrame(
+  editor: Pick<Editor, 'state' | 'setDraggingClipBypassFrameId'>
+) {
+  if (!editor.state.draggingClipBypassFrameId) return
+  editor.setDraggingClipBypassFrameId(null)
+}
+
 export function useCanvasInput(
   canvasRef: Ref<HTMLCanvasElement | null>,
   editor: Editor,
@@ -51,6 +58,7 @@ export function useCanvasInput(
   const selectedIdsBeforeClickSequence = ref<ReadonlySet<string>>(new Set())
   const spaceHeld = useSpaceHeld()
   const { recordClick, getClickCount } = createClickCounter()
+  const clearClipBypassFrame = () => clearDraggingClipBypassFrame(editor)
 
   const { getCoords, canvasToLocal, hitTestInScope, hitFns } = createCanvasPointer(
     canvasRef,
@@ -293,6 +301,16 @@ export function useCanvasInput(
   })
   useEventListener(window, 'mouseup', (e: MouseEvent) => {
     if (drag.value) onMouseUp(e)
+  })
+  useEventListener(window, 'blur', clearClipBypassFrame)
+  useEventListener(document, 'visibilitychange', () => {
+    if (document.hidden) clearClipBypassFrame()
+  })
+
+  const stopToolChangeCleanup = editor.onEditorEvent('tool:changed', clearClipBypassFrame)
+  onScopeDispose(() => {
+    stopToolChangeCleanup()
+    clearClipBypassFrame()
   })
 
   setupPanZoom(canvasRef, editor, drag, onMouseDown, onMouseMove, onMouseUp)

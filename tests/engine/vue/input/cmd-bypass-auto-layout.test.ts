@@ -3,6 +3,7 @@ import { describe, expect, test } from 'bun:test'
 import { createEditor } from '@open-pencil/core/editor'
 import { computeAllLayouts } from '@open-pencil/core/layout'
 
+import { clearDraggingClipBypassFrame } from '#vue/canvas/useCanvasInput'
 import { handleMoveMove, handleMoveUp } from '#vue/shared/input/move'
 import { createSelectionMoveDrag } from '#vue/shared/input/select/move'
 
@@ -208,5 +209,17 @@ describe('Cmd/Ctrl auto-layout bypass', () => {
     handleMoveUp(drag, editor, true)
 
     expect(editor.graph.getNode(child1Id)?.layoutPositioning).toBe('ABSOLUTE')
+  })
+
+  test('clears clip bypass state through the shared cleanup path when a drag is interrupted', () => {
+    const { editor, drag, parentId } = setupAutoLayoutDrag()
+
+    handleMoveMove(drag, 200, 80, 200, 80, editor, true)
+
+    expect(editor.state.draggingClipBypassFrameId).toBe(parentId)
+
+    clearDraggingClipBypassFrame(editor)
+
+    expect(editor.state.draggingClipBypassFrameId).toBeNull()
   })
 })

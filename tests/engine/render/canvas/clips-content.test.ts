@@ -3,7 +3,7 @@ import { describe, expect, mock, test } from 'bun:test'
 import type { Canvas } from 'canvaskit-wasm'
 
 import type { RenderOverlays, SkiaRenderer } from '#core/canvas/renderer'
-import { renderNode } from '#core/canvas/scene'
+import { getRenderableChildRuns, renderNode } from '#core/canvas/scene'
 import { SceneGraph } from '#core/scene-graph'
 
 type DrawRecord = {
@@ -95,6 +95,12 @@ function createClippingFrame(graph: SceneGraph, name: string, x = 0) {
   })
 }
 
+function getNodeOrThrow(graph: SceneGraph, id: string) {
+  const node = graph.getNode(id)
+  if (!node) throw new Error(`Expected node ${id}`)
+  return node
+}
+
 function renderChildRecords(
   graph: SceneGraph,
   frameId: string,
@@ -161,5 +167,85 @@ describe('clipsContent rendering', () => {
 
     expect(bypassRecords).toEqual([{ nodeId: bypassChild.id, clipped: false }])
     expect(normalRecords).toEqual([{ nodeId: normalChild.id, clipped: true }])
+  })
+
+  test('keeps a mask and its absolute target in the same clipped auto-layout run', () => {
+    const graph = new SceneGraph()
+    const frame = createClippingFrame(graph, 'MaskedFrame')
+    const mask = graph.createNode('RECTANGLE', frame.id, {
+      x: 0,
+      y: 0,
+      width: 50,
+      height: 50,
+      isMask: true
+    })
+    const target = graph.createNode('RECTANGLE', frame.id, {
+      x: 120,
+      y: 0,
+      width: 40,
+      height: 40,
+      layoutPositioning: 'ABSOLUTE'
+    })
+
+    const parent = getNodeOrThrow(graph, frame.id)
+
+    expect(getRenderableChildRuns(graph, parent, parent.childIds)).toEqual([
+      { childIds: [mask.id, target.id], shouldClip: true }
+    ])
+  })
+
+  test('keeps an all-absolute mask group outside the clip in auto-layout frames', () => {
+    const graph = new SceneGraph()
+    const frame = createClippingFrame(graph, 'AbsoluteMaskedFrame')
+    const mask = graph.createNode('RECTANGLE', frame.id, {
+      x: 0,
+      y: 0,
+      width: 50,
+      height: 50,
+      isMask: true,
+      layoutPositioning: 'ABSOLUTE'
+    })
+    const target = graph.createNode('RECTANGLE', frame.id, {
+      x: 120,
+      y: 0,
+      width: 40,
+      height: 40,
+      layoutPositioning: 'ABSOLUTE'
+    })
+
+    const parent = getNodeOrThrow(graph, frame.id)
+
+    expect(getRenderableChildRuns(graph, parent, parent.childIds)).toEqual([
+      { childIds: [mask.id, target.id], shouldClip: false }
+    ])
+  })
+
+  test('keeps absolute children clipped for layoutMode NONE frames', () => {
+    const graph = new SceneGraph()
+    const frame = graph.createNode('FRAME', pageId(graph), {
+      name: 'RegularFrame',
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      clipsContent: true,
+      layoutMode: 'NONE'
+    })
+    const absoluteChild = graph.createNode('RECTANGLE', frame.id, {
+      x: 140,
+      y: 0,
+      width: 40,
+      height: 40,
+      layoutPositioning: 'ABSOLUTE'
+    })
+
+    const parent = getNodeOrThrow(graph, frame.id)
+
+    expect(getRenderableChildRuns(graph, parent, parent.childIds)).toEqual([
+      { childIds: [absoluteChild.id], shouldClip: true }
+    ])
+    expect(renderChildRecords(graph, frame.id)).toEqual([
+      { nodeId: absoluteChild.id, clipped: true }
+    ])
   })
 })
