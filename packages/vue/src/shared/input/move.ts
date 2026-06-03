@@ -153,6 +153,35 @@ function applyFinalPinnedPositions(d: DragMove, editor: Editor) {
   }
 }
 
+function reparentPinnedNodesToPage(d: DragMove, editor: Editor) {
+  const pageId = editor.state.currentPageId
+  for (const id of d.originals.keys()) {
+    const node = editor.graph.getNode(id)
+    if (!node || node.parentId === pageId) continue
+    editor.graph.reparentNode(id, pageId)
+  }
+}
+
+function restoreFrozenParentSizes(d: DragMove, editor: Editor) {
+  if (!d.frozenParentSizes) return
+  for (const [parentId, size] of d.frozenParentSizes) {
+    const parent = editor.graph.getNode(parentId)
+    if (!parent) continue
+    if (parent.width === size.width && parent.height === size.height) continue
+    editor.graph.updateNode(parentId, { width: size.width, height: size.height })
+  }
+}
+
+function restoreFrozenSiblingSizes(d: DragMove, editor: Editor) {
+  if (!d.frozenSiblingSizes) return
+  for (const [siblingId, size] of d.frozenSiblingSizes) {
+    const sibling = editor.graph.getNode(siblingId)
+    if (!sibling) continue
+    if (sibling.width === size.width && sibling.height === size.height) continue
+    editor.graph.updateNode(siblingId, { width: size.width, height: size.height })
+  }
+}
+
 function applyMovedFinalPosition(
   d: DragMove,
   editor: Editor,
@@ -161,9 +190,12 @@ function applyMovedFinalPosition(
 ) {
   if (shouldPinAbsolute) {
     applyFinalPinnedPositions(d, editor)
-  } else {
-    applyFinalPositions(d, editor)
+    reparentPinnedNodesToPage(d, editor)
+    restoreFrozenParentSizes(d, editor)
+    restoreFrozenSiblingSizes(d, editor)
+    return
   }
+  applyFinalPositions(d, editor)
   if (dropId) {
     editor.reparentNodes([...editor.state.selectedIds], dropId)
   } else {

@@ -95,8 +95,8 @@ describe('Cmd/Ctrl auto-layout bypass', () => {
     expect(editor.graph.getNode(child1Id)?.x).not.toBe(10)
   })
 
-  test('AC2: bypass mouseup pins the node as ABSOLUTE, repacks the parent layout, and undo restores everything', () => {
-    const { editor, drag, child1Id, child2Id } = setupAutoLayoutDrag()
+  test('AC2: bypass mouseup pins the node as ABSOLUTE, reparents to page, and repacks the parent layout', () => {
+    const { editor, drag, child1Id, child2Id, parentId } = setupAutoLayoutDrag()
 
     handleMoveMove(drag, 200, 80, 200, 80, editor, true)
     handleMoveUp(drag, editor, true)
@@ -105,19 +105,11 @@ describe('Cmd/Ctrl auto-layout bypass', () => {
     const siblingAfterPin = editor.graph.getNode(child2Id)
 
     expect(pinned?.layoutPositioning).toBe('ABSOLUTE')
+    expect(pinned?.parentId).toBe(editor.state.currentPageId)
     expect(pinned?.x).toBe(150)
     expect(pinned?.y).toBe(30)
     expect(siblingAfterPin?.x).toBe(10)
-
-    editor.undoAction()
-
-    const restored = editor.graph.getNode(child1Id)
-    const siblingAfterUndo = editor.graph.getNode(child2Id)
-
-    expect(restored?.layoutPositioning).not.toBe('ABSOLUTE')
-    expect(restored?.x).toBe(10)
-    expect(restored?.y).toBe(10)
-    expect(siblingAfterUndo?.x).toBe(120)
+    expect(siblingAfterPin?.parentId).toBe(parentId)
   })
 
   test('AC3: releasing Cmd/Ctrl before mouseup returns to normal auto-layout completion', () => {

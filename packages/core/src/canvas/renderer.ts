@@ -56,6 +56,11 @@ import type { RenderOverlays, RulerTheme } from './renderer/types'
 export class SkiaRenderer {
   ck: CanvasKit
   surface: Surface
+  absoluteClipStack: Array<{
+    nodeId: string
+    clipActive: boolean
+    deferredRuns: string[][]
+  }> = []
   declare fillPaint: Paint
   declare strokePaint: Paint
   declare selectionPaint: Paint

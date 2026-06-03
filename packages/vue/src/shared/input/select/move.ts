@@ -56,6 +56,35 @@ function detectDragAutoLayoutParent(originals: Map<string, MoveOriginal>, editor
   return undefined
 }
 
+function collectFrozenParentSizes(originals: Map<string, MoveOriginal>, editor: Editor) {
+  const sizes = new Map<string, { width: number; height: number }>()
+  for (const [, original] of originals) {
+    if (sizes.has(original.parentId)) continue
+    const parent = editor.graph.getNode(original.parentId)
+    if (!parent || parent.layoutMode === 'NONE' || parent.layoutMode === undefined) continue
+    sizes.set(original.parentId, { width: parent.width, height: parent.height })
+  }
+  return sizes
+}
+
+function collectFrozenSiblingSizes(originals: Map<string, MoveOriginal>, editor: Editor) {
+  const sizes = new Map<string, { width: number; height: number }>()
+  const dragIds = new Set(originals.keys())
+  const parentIds = new Set<string>()
+  for (const [, original] of originals) parentIds.add(original.parentId)
+  for (const parentId of parentIds) {
+    const parent = editor.graph.getNode(parentId)
+    if (!parent || parent.layoutMode === 'NONE' || parent.layoutMode === undefined) continue
+    for (const childId of parent.childIds) {
+      if (dragIds.has(childId)) continue
+      const sibling = editor.graph.getNode(childId)
+      if (!sibling) continue
+      sizes.set(childId, { width: sibling.width, height: sibling.height })
+    }
+  }
+  return sizes
+}
+
 export function createSelectionMoveDrag(
   cx: number,
   cy: number,
@@ -79,6 +108,8 @@ export function createSelectionMoveDrag(
     startScreenY: sy,
     dragStarted: false,
     originals,
-    autoLayoutParentId: detectDragAutoLayoutParent(originals, editor)
+    autoLayoutParentId: detectDragAutoLayoutParent(originals, editor),
+    frozenParentSizes: collectFrozenParentSizes(originals, editor),
+    frozenSiblingSizes: collectFrozenSiblingSizes(originals, editor)
   }
 }

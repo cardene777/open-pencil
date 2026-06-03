@@ -7,6 +7,8 @@ import type { SceneNode, SceneGraph, Fill } from '#core/scene-graph'
 import type { Color } from '#core/types'
 import { vectorNetworkToCenterlinePath } from '#core/vector'
 
+import { getNodeLocalMatrix } from './coordinate'
+import Matrix, { type Mat3 } from './matrix'
 import { figmaBlendModeToSkia, needsIsolatedBlendLayer } from './blend'
 import { renderBooleanOperation } from './boolean'
 import { drawLayoutGrids } from './layout-grids'
@@ -126,155 +128,44 @@ function renderMaskNodeContent(
   canvas.restore()
 }
 
-function renderChildIds(
-  r: SkiaRenderer,
-  canvas: Canvas,
-  graph: SceneGraph,
-  childIds: string[],
-  overlays: RenderOverlays,
-  absX: number,
-  absY: number
-): void {
-  renderMaskedChildIds(
-    r,
-    canvas,
-    childIds,
-    (childId) => getVisibleMaskType(graph.getNode(childId)),
-    (childId) => r.renderNode(canvas, graph, childId, overlays, absX, absY),
-    (childId) => {
-      const child = graph.getNode(childId)
-      if (child) renderMaskNodeContent(r, canvas, graph, child, childId, overlays)
-    },
-    (childId) => {
-      const child = graph.getNode(childId)
-      if (!child) return null
-      return { x: child.x, y: child.y, width: child.width, height: child.height }
-    }
-  )
-}
+function getRelativeNodeMatrix(graph: SceneGraph, node: SceneNode, ancestorId: string): Mat3 {
+  if (node.id === ancestorId) return Matrix.identity()
 
-function getVisibleMaskType(node: SceneNode | null | undefined): SceneNode['maskType'] | null {
-  return node?.visible && node.isMask ? node.maskType : null
-}
+  const chain: SceneNode[] = []
+  let current: SceneNode | null | undefined = node
 
-function clipToNodeBounds(r: SkiaRenderer, canvas: Canvas, node: SceneNode): void {
-  if (nodeHasSmoothCorners(node)) {
-    const clipPath = makeSmoothRRectPath(r, node)
-    canvas.clipPath(clipPath, r.ck.ClipOp.Intersect, true)
-    clipPath.delete()
-  } else if (nodeHasRadius(node)) {
-    canvas.clipRRect(r.makeRRect(node), r.ck.ClipOp.Intersect, true)
-  } else {
-    canvas.clipRect(r.ck.LTRBRect(0, 0, node.width, node.height), r.ck.ClipOp.Intersect, true)
+  while (current && current.id !== ancestorId) {
+    chain.unshift(current)
+    current = current.parentId ? graph.getNode(current.parentId) : null
   }
-}
 
-export function getRenderableChildRuns(graph: SceneGraph, parent: SceneNode, childIds: string[]) {
-  void parent
-  const runs: Array<{ childIds: string[]; shouldClip: boolean }> = []
-  let index = 0
-  while (index < childIds.length) {
-    const childId = childIds[index]
-    if (getVisibleMaskType(graph.getNode(childId))) {
-      const maskRunChildIds: string[] = []
-      let maskIndex = index
-      while (
-        maskIndex < childIds.length &&
-        getVisibleMaskType(graph.getNode(childIds[maskIndex]))
-      ) {
-        maskRunChildIds.push(childIds[maskIndex])
-        maskIndex++
-      }
-      while (
-        maskIndex < childIds.length &&
-        !getVisibleMaskType(graph.getNode(childIds[maskIndex]))
-      ) {
-        maskRunChildIds.push(childIds[maskIndex])
-        maskIndex++
-      }
-      runs.push({
-        childIds: maskRunChildIds,
-        shouldClip: maskRunChildIds.some(
-          (id) => graph.getNode(id)?.layoutPositioning !== 'ABSOLUTE'
-        )
-      })
-      index = maskIndex
-      continue
-    }
-
-    const child = graph.getNode(childId)
-    const shouldClip = child?.layoutPositioning !== 'ABSOLUTE'
-    const currentRun = runs.at(-1)
-    if (currentRun && currentRun.shouldClip === shouldClip) {
-      currentRun.childIds.push(childId)
-    } else {
-      runs.push({ childIds: [childId], shouldClip })
-    }
-    index++
+  if (!current || current.id !== ancestorId) {
+    throw new Error(`Expected ${node.id} to descend from ${ancestorId}`)
   }
-  return runs
+
+  return chain.reduce<Mat3>((matrix, chainNode) => {
+    return Matrix.multiply(matrix, getNodeLocalMatrix(chainNode))
+  }, Matrix.identity())
 }
 
-function renderChildren(
+function renderResolvedNode(
   r: SkiaRenderer,
   canvas: Canvas,
   graph: SceneGraph,
   node: SceneNode,
-  overlays: RenderOverlays,
-  absX: number,
-  absY: number
-): void {
-  if (node.type === 'BOOLEAN_OPERATION') return
-  const isClippableContainer =
-    node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE'
-  const shouldClip =
-    isClippableContainer &&
-    node.clipsContent &&
-    node.childIds.length > 0 &&
-    !overlays.draggingClipBypassAll
-
-  if (shouldClip) {
-    for (const run of getRenderableChildRuns(graph, node, node.childIds)) {
-      if (!run.shouldClip) {
-        renderChildIds(r, canvas, graph, run.childIds, overlays, absX, absY)
-        continue
-      }
-      canvas.save()
-      clipToNodeBounds(r, canvas, node)
-      renderChildIds(r, canvas, graph, run.childIds, overlays, absX, absY)
-      canvas.restore()
-    }
-  } else {
-    renderChildIds(r, canvas, graph, node.childIds, overlays, absX, absY)
-  }
-}
-export function renderNode(
-  r: SkiaRenderer,
-  canvas: Canvas,
-  graph: SceneGraph,
   nodeId: string,
   overlays: RenderOverlays,
-  parentAbsX = 0,
-  parentAbsY = 0
+  absX: number,
+  absY: number,
+  positionNode: () => void
 ): void {
-  const node = graph.getNode(nodeId)
-  if (!node || !node.visible || node.isMask) return
-
-  // Hide the node being edited in node-edit mode (overlay draws it live)
-  if (overlays.nodeEditState?.nodeId === nodeId) return
-
-  r._nodeCount++
-
-  const absX = parentAbsX + node.x
-  const absY = parentAbsY + node.y
-
   if (isCulled(r, node, absX, absY)) {
     r._culledCount++
     return
   }
 
   canvas.save()
-  canvas.translate(node.x, node.y)
+  positionNode()
 
   const needsNodeLayer = node.opacity < 1 || needsIsolatedBlendLayer(node.blendMode)
   if (needsNodeLayer) {
@@ -331,6 +222,288 @@ export function renderNode(
     r.opacityPaint.setBlendMode(r.ck.BlendMode.SrcOver)
   }
   canvas.restore()
+}
+
+function renderMaskNodeContentRelativeToAncestor(
+  r: SkiaRenderer,
+  canvas: Canvas,
+  graph: SceneGraph,
+  node: SceneNode,
+  nodeId: string,
+  ancestorId: string
+): void {
+  const relativeMatrix = getRelativeNodeMatrix(graph, node, ancestorId)
+  canvas.save()
+  canvas.concat(relativeMatrix)
+  renderNodeContent(r, canvas, graph, node, nodeId, {})
+  canvas.restore()
+}
+
+function renderChildIds(
+  r: SkiaRenderer,
+  canvas: Canvas,
+  graph: SceneGraph,
+  childIds: string[],
+  overlays: RenderOverlays,
+  absX: number,
+  absY: number
+): void {
+  renderMaskedChildIds(
+    r,
+    canvas,
+    childIds,
+    (childId) => getVisibleMaskType(graph.getNode(childId)),
+    (childId) => r.renderNode(canvas, graph, childId, overlays, absX, absY),
+    (childId) => {
+      const child = graph.getNode(childId)
+      if (child) renderMaskNodeContent(r, canvas, graph, child, childId, overlays)
+    },
+    (childId) => {
+      const child = graph.getNode(childId)
+      if (!child) return null
+      return { x: child.x, y: child.y, width: child.width, height: child.height }
+    }
+  )
+}
+
+function renderNodeRelativeToAncestor(
+  r: SkiaRenderer,
+  canvas: Canvas,
+  graph: SceneGraph,
+  nodeId: string,
+  overlays: RenderOverlays,
+  ancestorId: string
+): void {
+  const node = graph.getNode(nodeId)
+  if (!node || !node.visible || node.isMask) return
+
+  if (overlays.nodeEditState?.nodeId === nodeId) return
+
+  r._nodeCount++
+
+  const abs = graph.getAbsolutePosition(nodeId)
+  const relativeMatrix = getRelativeNodeMatrix(graph, node, ancestorId)
+  renderResolvedNode(r, canvas, graph, node, nodeId, overlays, abs.x, abs.y, () => {
+    canvas.concat(relativeMatrix)
+  })
+}
+
+function renderChildIdsRelativeToAncestor(
+  r: SkiaRenderer,
+  canvas: Canvas,
+  graph: SceneGraph,
+  childIds: string[],
+  overlays: RenderOverlays,
+  ancestorId: string
+): void {
+  renderMaskedChildIds(
+    r,
+    canvas,
+    childIds,
+    (childId) => getVisibleMaskType(graph.getNode(childId)),
+    (childId) => renderNodeRelativeToAncestor(r, canvas, graph, childId, overlays, ancestorId),
+    (childId) => {
+      const child = graph.getNode(childId)
+      if (!child) return
+      renderMaskNodeContentRelativeToAncestor(r, canvas, graph, child, childId, ancestorId)
+    },
+    (childId) => {
+      const child = graph.getNode(childId)
+      if (!child) return null
+      return { x: child.x, y: child.y, width: child.width, height: child.height }
+    }
+  )
+}
+
+function getVisibleMaskType(node: SceneNode | null | undefined): SceneNode['maskType'] | null {
+  return node?.visible && node.isMask ? node.maskType : null
+}
+
+function clipToNodeBounds(r: SkiaRenderer, canvas: Canvas, node: SceneNode): void {
+  if (nodeHasSmoothCorners(node)) {
+    const clipPath = makeSmoothRRectPath(r, node)
+    canvas.clipPath(clipPath, r.ck.ClipOp.Intersect, true)
+    clipPath.delete()
+  } else if (nodeHasRadius(node)) {
+    canvas.clipRRect(r.makeRRect(node), r.ck.ClipOp.Intersect, true)
+  } else {
+    canvas.clipRect(r.ck.LTRBRect(0, 0, node.width, node.height), r.ck.ClipOp.Intersect, true)
+  }
+}
+
+function getBlockingClipContext(r: SkiaRenderer) {
+  const clipStack = r.absoluteClipStack ?? []
+  for (let index = clipStack.length - 1; index >= 0; index--) {
+    const context = clipStack[index]
+    if (context?.clipActive) return context
+  }
+  return null
+}
+
+function flushDeferredRunsForNode(
+  r: SkiaRenderer,
+  canvas: Canvas,
+  graph: SceneGraph,
+  overlays: RenderOverlays,
+  ancestorId: string,
+  deferredRuns: string[][]
+): void {
+  for (const childIds of deferredRuns) {
+    renderChildIdsRelativeToAncestor(r, canvas, graph, childIds, overlays, ancestorId)
+  }
+}
+
+export function getRenderableChildRuns(graph: SceneGraph, parent: SceneNode, childIds: string[]) {
+  void parent
+  const runs: Array<{ childIds: string[]; shouldClip: boolean }> = []
+  const absoluteTailIds: string[] = []
+  let index = 0
+  while (index < childIds.length) {
+    const childId = childIds[index]
+    if (getVisibleMaskType(graph.getNode(childId))) {
+      const maskRunChildIds: string[] = []
+      let maskIndex = index
+      let sawAutoMaskedTarget = false
+      while (
+        maskIndex < childIds.length &&
+        getVisibleMaskType(graph.getNode(childIds[maskIndex]))
+      ) {
+        maskRunChildIds.push(childIds[maskIndex])
+        maskIndex++
+      }
+      while (maskIndex < childIds.length) {
+        const maskedChildId = childIds[maskIndex]
+        if (getVisibleMaskType(graph.getNode(maskedChildId))) break
+        const maskedChild = graph.getNode(maskedChildId)
+        const isAbsoluteMaskedTarget = maskedChild?.layoutPositioning === 'ABSOLUTE'
+        if (isAbsoluteMaskedTarget && sawAutoMaskedTarget) break
+        maskRunChildIds.push(maskedChildId)
+        if (!isAbsoluteMaskedTarget) {
+          sawAutoMaskedTarget = true
+        }
+        maskIndex++
+      }
+      runs.push({
+        childIds: maskRunChildIds,
+        shouldClip: maskRunChildIds.some(
+          (id) => graph.getNode(id)?.layoutPositioning !== 'ABSOLUTE'
+        )
+      })
+      index = maskIndex
+      continue
+    }
+
+    const child = graph.getNode(childId)
+    const isAbsolute = child?.layoutPositioning === 'ABSOLUTE'
+    if (isAbsolute) {
+      absoluteTailIds.push(childId)
+      index++
+      continue
+    }
+    const currentRun = runs.at(-1)
+    if (currentRun && currentRun.shouldClip === true) {
+      currentRun.childIds.push(childId)
+    } else {
+      runs.push({ childIds: [childId], shouldClip: true })
+    }
+    index++
+  }
+  if (absoluteTailIds.length > 0) {
+    runs.push({ childIds: absoluteTailIds, shouldClip: false })
+  }
+  return runs
+}
+
+function renderChildren(
+  r: SkiaRenderer,
+  canvas: Canvas,
+  graph: SceneGraph,
+  node: SceneNode,
+  overlays: RenderOverlays,
+  absX: number,
+  absY: number
+): void {
+  if (node.type === 'BOOLEAN_OPERATION') return
+  const isClippableContainer =
+    node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'INSTANCE'
+  const shouldClip =
+    isClippableContainer &&
+    node.clipsContent &&
+    node.childIds.length > 0 &&
+    !overlays.draggingClipBypassAll
+
+  if (shouldClip) {
+    const clipStack = (r.absoluteClipStack ??= [])
+    const nodeClipContext = {
+      nodeId: node.id,
+      clipActive: false,
+      deferredRuns: [] as string[][]
+    }
+    clipStack.push(nodeClipContext)
+
+    for (const run of getRenderableChildRuns(graph, node, node.childIds)) {
+      if (!run.shouldClip) {
+        const blockingClipContext = getBlockingClipContext(r)
+        if (blockingClipContext) {
+          blockingClipContext.deferredRuns.push([...run.childIds])
+        } else {
+          renderChildIds(r, canvas, graph, run.childIds, overlays, absX, absY)
+        }
+        continue
+      }
+      nodeClipContext.clipActive = true
+      canvas.save()
+      clipToNodeBounds(r, canvas, node)
+      renderChildIds(r, canvas, graph, run.childIds, overlays, absX, absY)
+      canvas.restore()
+      nodeClipContext.clipActive = false
+    }
+
+    clipStack.pop()
+    const blockingAncestorContext = getBlockingClipContext(r)
+    if (blockingAncestorContext) {
+      blockingAncestorContext.deferredRuns.push(...nodeClipContext.deferredRuns)
+    } else {
+      flushDeferredRunsForNode(r, canvas, graph, overlays, node.id, nodeClipContext.deferredRuns)
+    }
+  } else {
+    const blockingClipContext = getBlockingClipContext(r)
+    if (!blockingClipContext) {
+      renderChildIds(r, canvas, graph, node.childIds, overlays, absX, absY)
+      return
+    }
+
+    for (const run of getRenderableChildRuns(graph, node, node.childIds)) {
+      if (!run.shouldClip) {
+        blockingClipContext.deferredRuns.push([...run.childIds])
+        continue
+      }
+      renderChildIds(r, canvas, graph, run.childIds, overlays, absX, absY)
+    }
+  }
+}
+export function renderNode(
+  r: SkiaRenderer,
+  canvas: Canvas,
+  graph: SceneGraph,
+  nodeId: string,
+  overlays: RenderOverlays,
+  parentAbsX = 0,
+  parentAbsY = 0
+): void {
+  const node = graph.getNode(nodeId)
+  if (!node || !node.visible || node.isMask) return
+
+  // Hide the node being edited in node-edit mode (overlay draws it live)
+  if (overlays.nodeEditState?.nodeId === nodeId) return
+
+  r._nodeCount++
+
+  const absX = parentAbsX + node.x
+  const absY = parentAbsY + node.y
+  renderResolvedNode(r, canvas, graph, node, nodeId, overlays, absX, absY, () => {
+    canvas.translate(node.x, node.y)
+  })
 }
 
 function makeNodeRRect(r: SkiaRenderer, node: SceneNode, radius: number): Float32Array {

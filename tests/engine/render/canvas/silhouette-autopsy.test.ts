@@ -127,20 +127,25 @@ describe('Doc 01 — The Current Engine: Static Code Claims', () => {
     expect(strokeIdx).toBeLessThan(frontIdx)
   })
 
-  test('C01-07: renderNode has opacity layer → blur layer → content → children (scene.ts:106-158)', () => {
+  test('C01-07: renderNode pipeline keeps opacity layer before blur before content rendering', () => {
     const src = readSource(scenePath)
-    const renderNodeMatch = src.match(
-      /export function renderNode[\s\S]*?(?=\nexport function|\nexport const)/
+    const renderPipelineMatch = src.match(
+      /function renderResolvedNode[\s\S]*?(?=\nexport function|\nexport const)/
     )
-    expect(renderNodeMatch).toBeTruthy()
-    const body = expectDefined(renderNodeMatch, 'renderNodeMatch')[0]
+    expect(renderPipelineMatch).toBeTruthy()
+    const body = expectDefined(renderPipelineMatch, 'renderPipelineMatch')[0]
 
-    // Verify opacity saveLayer comes before layerBlur saveLayer
-    const opacityLayerIdx = body.indexOf('opacity < 1')
+    const opacityLayerIdx = body.indexOf('needsNodeLayer')
     const layerBlurCheckIdx = body.indexOf('layerBlur')
+    const contentIdx = body.indexOf('renderNodeContent')
+    const childrenIdx = body.indexOf('renderChildren')
     expect(opacityLayerIdx).toBeGreaterThan(-1)
     expect(layerBlurCheckIdx).toBeGreaterThan(-1)
+    expect(contentIdx).toBeGreaterThan(-1)
+    expect(childrenIdx).toBeGreaterThan(-1)
     expect(opacityLayerIdx).toBeLessThan(layerBlurCheckIdx)
+    expect(layerBlurCheckIdx).toBeLessThan(contentIdx)
+    expect(contentIdx).toBeLessThan(childrenIdx)
   })
 
   test('C01-08: drawShapeDropShadow uses auxFill.setMaskFilter (MaskFilter approach)', () => {

@@ -444,6 +444,41 @@ describe('computeVisualBounds', () => {
     expect(bounds).toEqual({ minX: 0, minY: 0, maxX: 100, maxY: 100 })
   })
 
+  test('absolute children bypass only their direct clipping parent in descendant bounds', () => {
+    const nodes = {
+      root: {
+        id: 'root',
+        type: 'FRAME',
+        width: 100,
+        height: 100,
+        visible: true,
+        clipsContent: true,
+        childIds: ['absolute-child']
+      },
+      'absolute-child': {
+        id: 'absolute-child',
+        type: 'FRAME',
+        width: 40,
+        height: 40,
+        visible: true,
+        layoutPositioning: 'ABSOLUTE' as const,
+        childIds: []
+      }
+    }
+    const positions: Record<keyof typeof nodes, Vector> = {
+      root: { x: 0, y: 0 },
+      'absolute-child': { x: 140, y: 0 }
+    }
+
+    const bounds = computeDescendantVisualBounds(
+      ['root'],
+      (id) => nodes[id as keyof typeof nodes],
+      (id) => positions[id as keyof typeof positions]
+    )
+
+    expect(bounds).toEqual({ minX: 0, minY: 0, maxX: 180, maxY: 100 })
+  })
+
   test('multiple effects accumulate directional overflow', () => {
     const noEffects = computeVisualBounds([{ id: 'r1', width: 50, height: 60 }], idPos)
     const multiEffect = computeVisualBounds(

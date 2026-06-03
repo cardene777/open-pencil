@@ -218,6 +218,7 @@ export interface VisualBoundsNode {
   rotation?: number
   flipX?: boolean
   flipY?: boolean
+  layoutPositioning?: 'AUTO' | 'ABSOLUTE'
   strokes?: Stroke[]
   effects?: Effect[]
   fillGeometry?: Array<{ commandsBlob: Uint8Array }>
@@ -375,9 +376,14 @@ function collectDescendantVisualBounds(
   }
 
   for (const childId of node.childIds ?? []) {
+    const child = getNode(childId)
+    const childClipToUse =
+      isClippableContainer && node.clipsContent && child?.layoutPositioning === 'ABSOLUTE'
+        ? clip
+        : childClip
     bounds = unionVisualBounds(
       bounds,
-      collectDescendantVisualBounds(childId, getNode, getAbsolutePosition, childClip)
+      collectDescendantVisualBounds(childId, getNode, getAbsolutePosition, childClipToUse)
     )
   }
 
