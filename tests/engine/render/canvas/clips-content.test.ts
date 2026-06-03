@@ -219,7 +219,7 @@ describe('clipsContent rendering', () => {
     ])
   })
 
-  test('keeps absolute children clipped for layoutMode NONE frames', () => {
+  test('renders absolute children outside the parent clip for layoutMode NONE frames', () => {
     const graph = new SceneGraph()
     const frame = graph.createNode('FRAME', pageId(graph), {
       name: 'RegularFrame',
@@ -241,10 +241,10 @@ describe('clipsContent rendering', () => {
     const parent = getNodeOrThrow(graph, frame.id)
 
     expect(getRenderableChildRuns(graph, parent, parent.childIds)).toEqual([
-      { childIds: [absoluteChild.id], shouldClip: true }
+      { childIds: [absoluteChild.id], shouldClip: false }
     ])
     expect(renderChildRecords(graph, frame.id)).toEqual([
-      { nodeId: absoluteChild.id, clipped: true }
+      { nodeId: absoluteChild.id, clipped: false }
     ])
   })
 

@@ -15,6 +15,7 @@
 - Let late Cmd/Ctrl presses during auto-layout child drags pin the node absolutely on mouseup instead of incorrectly reordering against a stale insert indicator.
 - Keep absolute auto-layout children and Cmd/Ctrl drag previews visible outside clipping parent frames instead of incorrectly hiding them behind the parent clip.
 - Disable all `clipsContent` frame clipping temporarily during Cmd/Ctrl drags so dragged content stays visible even while crossing other screen clips.
+- Repack auto-layout parents immediately after Cmd/Ctrl drag pinning so the original gap closes, and keep pinned absolute children visible outside `clipsContent` frames after mouseup.
 
 ## 0.13.2 — 2026-05-30
 

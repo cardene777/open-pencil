@@ -170,9 +170,7 @@ function clipToNodeBounds(r: SkiaRenderer, canvas: Canvas, node: SceneNode): voi
 }
 
 export function getRenderableChildRuns(graph: SceneGraph, parent: SceneNode, childIds: string[]) {
-  const parentIsAutoLayout = parent.layoutMode !== undefined && parent.layoutMode !== 'NONE'
-  if (!parentIsAutoLayout) return [{ childIds: [...childIds], shouldClip: true }]
-
+  void parent
   const runs: Array<{ childIds: string[]; shouldClip: boolean }> = []
   let index = 0
   while (index < childIds.length) {
