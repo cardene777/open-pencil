@@ -147,6 +147,32 @@ function applyFinalPinnedPositions(d: DragMove, editor: Editor) {
   }
 }
 
+function applyMovedFinalPosition(
+  d: DragMove,
+  editor: Editor,
+  shouldPinAbsolute: boolean,
+  dropId: string | null
+) {
+  if (shouldPinAbsolute) {
+    applyFinalPinnedPositions(d, editor)
+  } else {
+    applyFinalPositions(d, editor)
+  }
+  if (dropId) {
+    editor.reparentNodes([...editor.state.selectedIds], dropId)
+  } else {
+    reparentOutsideNodes(editor)
+  }
+}
+
+function commitMovedDrag(d: DragMove, editor: Editor, shouldPinAbsolute: boolean) {
+  if (shouldPinAbsolute) {
+    editor.commitMoveWithAbsolutePin(d.originals)
+  } else {
+    editor.commitMoveWithReparent(d.originals)
+  }
+}
+
 export function handleMoveUp(d: DragMove, editor: Editor, pinAsAbsolute = false) {
   if (!d.dragStarted) {
     editor.setLayoutInsertIndicator(null)
@@ -182,22 +208,7 @@ export function handleMoveUp(d: DragMove, editor: Editor, pinAsAbsolute = false)
 
   if (moved) {
     restoreOriginalPositions(d, editor)
-    const dropId = editor.state.dropTargetId
-    if (shouldPinAbsolute) {
-      applyFinalPinnedPositions(d, editor)
-      if (dropId) {
-        editor.reparentNodes([...editor.state.selectedIds], dropId)
-      } else {
-        reparentOutsideNodes(editor)
-      }
-    } else {
-      applyFinalPositions(d, editor)
-      if (dropId) {
-        editor.reparentNodes([...editor.state.selectedIds], dropId)
-      } else {
-        reparentOutsideNodes(editor)
-      }
-    }
+    applyMovedFinalPosition(d, editor, shouldPinAbsolute, editor.state.dropTargetId)
   }
 
   if (d.duplicated) {
@@ -211,11 +222,7 @@ export function handleMoveUp(d: DragMove, editor: Editor, pinAsAbsolute = false)
     }
     editor.commitDuplicateMove([...d.originals.keys()], previousSelection)
   } else if (moved) {
-    if (shouldPinAbsolute) {
-      editor.commitMoveWithAbsolutePin(d.originals)
-    } else {
-      editor.commitMoveWithReparent(d.originals)
-    }
+    commitMovedDrag(d, editor, shouldPinAbsolute)
   }
   editor.setDropTarget(null)
 }
