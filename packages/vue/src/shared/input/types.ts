@@ -29,6 +29,8 @@ export interface DragMove {
   duplicatedPreviousSelection?: Set<string>
   autoLayoutParentId?: string
   brokeFromAutoLayout?: boolean
+  frozenParentSizes?: Map<string, { width: number; height: number }>
+  frozenSiblingSizes?: Map<string, { width: number; height: number }>
 }
 
 export interface DragPan {

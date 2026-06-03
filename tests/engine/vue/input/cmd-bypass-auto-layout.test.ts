@@ -6,10 +6,14 @@ import { computeAllLayouts } from '@inkly/core/layout'
 
 import {
   cancelMoveDragInterruption,
-  clearDraggingClipBypassFrame
+  clearDraggingClipBypassAll
 } from '#vue/canvas/useCanvasInput'
 import { handleMoveMove, handleMoveUp } from '#vue/shared/input/move'
 import { createSelectionMoveDrag } from '#vue/shared/input/select/move'
+
+function expectBypassAll(editor: ReturnType<typeof createEditor>, value: boolean) {
+  expect(editor.state.draggingClipBypassAll).toBe(value)
+}
 
 function setupAutoLayoutDrag() {
   const editor = createEditor()
@@ -20,6 +24,7 @@ function setupAutoLayoutDrag() {
     y: 0,
     width: 400,
     height: 200,
+    clipsContent: true,
     layoutMode: 'HORIZONTAL',
     itemSpacing: 10,
     paddingLeft: 10,
@@ -60,6 +65,7 @@ function setupNonAutoLayoutChildDrag() {
     y: 0,
     width: 400,
     height: 200,
+    clipsContent: true,
     layoutMode: 'NONE'
   })
   const child = editor.graph.createNode('RECTANGLE', parent.id, {
@@ -80,51 +86,53 @@ function setupNonAutoLayoutChildDrag() {
 
 describe('Cmd/Ctrl auto-layout bypass', () => {
   test('AC1: bypass keeps insert indicator cleared and allows free movement inside the parent bounds', () => {
-    const { editor, drag, parentId, child1Id } = setupAutoLayoutDrag()
+    const { editor, drag, child1Id } = setupAutoLayoutDrag()
 
     handleMoveMove(drag, 150, 60, 150, 60, editor, true)
 
     expect(editor.state.layoutInsertIndicator).toBeNull()
-    expect(editor.state.draggingClipBypassFrameId).toBe(parentId)
+    expectBypassAll(editor, true)
     expect(editor.graph.getNode(child1Id)?.x).not.toBe(10)
   })
 
-  test('AC2: bypass mouseup pins the node as ABSOLUTE and undo restores position and layoutPositioning together', () => {
-    const { editor, drag, child1Id } = setupAutoLayoutDrag()
+  test('AC2: bypass mouseup pins the node as ABSOLUTE, reparents to page, and repacks the parent layout', () => {
+    const { editor, drag, child1Id, child2Id, parentId } = setupAutoLayoutDrag()
 
     handleMoveMove(drag, 200, 80, 200, 80, editor, true)
     handleMoveUp(drag, editor, true)
 
-    expect(editor.graph.getNode(child1Id)?.layoutPositioning).toBe('ABSOLUTE')
+    const pinned = editor.graph.getNode(child1Id)
+    const siblingAfterPin = editor.graph.getNode(child2Id)
 
-    editor.undoAction()
-
-    const restored = editor.graph.getNode(child1Id)
-    expect(restored?.layoutPositioning).not.toBe('ABSOLUTE')
-    expect(restored?.x).toBe(10)
+    expect(pinned?.layoutPositioning).toBe('ABSOLUTE')
+    expect(pinned?.parentId).toBe(editor.state.currentPageId)
+    expect(pinned?.x).toBe(150)
+    expect(pinned?.y).toBe(30)
+    expect(siblingAfterPin?.x).toBe(10)
+    expect(siblingAfterPin?.parentId).toBe(parentId)
   })
 
   test('AC3: releasing Cmd/Ctrl before mouseup returns to normal auto-layout completion', () => {
-    const { editor, drag, child1Id, parentId } = setupAutoLayoutDrag()
+    const { editor, drag, child1Id } = setupAutoLayoutDrag()
 
     handleMoveMove(drag, 150, 60, 150, 60, editor, true)
-    expect(editor.state.draggingClipBypassFrameId).toBe(parentId)
+    expectBypassAll(editor, true)
     handleMoveMove(drag, 200, 80, 200, 80, editor, false)
-    expect(editor.state.draggingClipBypassFrameId).toBeNull()
+    expectBypassAll(editor, false)
     handleMoveUp(drag, editor, false)
 
     expect(editor.graph.getNode(child1Id)?.layoutPositioning).not.toBe('ABSOLUTE')
   })
 
-  test('AC5: mouseup always clears draggingClipBypassFrameId', () => {
-    const { editor, drag, parentId } = setupAutoLayoutDrag()
+  test('AC2: mouseup always clears draggingClipBypassAll', () => {
+    const { editor, drag } = setupAutoLayoutDrag()
 
     handleMoveMove(drag, 200, 80, 200, 80, editor, true)
-    expect(editor.state.draggingClipBypassFrameId).toBe(parentId)
+    expectBypassAll(editor, true)
 
     handleMoveUp(drag, editor, true)
 
-    expect(editor.state.draggingClipBypassFrameId).toBeNull()
+    expectBypassAll(editor, false)
   })
 
   test('AC4: an already absolute child stays on the normal free-move path', () => {
@@ -175,6 +183,21 @@ describe('Cmd/Ctrl auto-layout bypass', () => {
     expect(child?.y).toBe(40)
   })
 
+  test('adds a layoutMode=NONE screen parent to the drag clip bypass set during Cmd/Ctrl drag', () => {
+    const { editor, drag, childId } = setupNonAutoLayoutChildDrag()
+
+    expect(drag.autoLayoutParentId).toBeUndefined()
+
+    handleMoveMove(drag, 520, 90, 520, 90, editor, true)
+
+    expectBypassAll(editor, true)
+
+    handleMoveUp(drag, editor, true)
+
+    expectBypassAll(editor, false)
+    expect(editor.graph.getNode(childId)?.layoutPositioning).not.toBe('ABSOLUTE')
+  })
+
   test('does not pin multi-select drags moved outside the auto-layout frame', () => {
     const { editor, child1Id, child2Id } = setupAutoLayoutDrag()
 
@@ -215,38 +238,38 @@ describe('Cmd/Ctrl auto-layout bypass', () => {
     expect(editor.graph.getNode(child1Id)?.layoutPositioning).toBe('ABSOLUTE')
   })
 
-  test('clears clip bypass state through the shared cleanup path when a drag is interrupted', () => {
-    const { editor, drag, parentId } = setupAutoLayoutDrag()
+  test('AC4: clear helper resets draggingClipBypassAll through the shared cleanup path', () => {
+    const { editor, drag } = setupAutoLayoutDrag()
 
     handleMoveMove(drag, 200, 80, 200, 80, editor, true)
 
-    expect(editor.state.draggingClipBypassFrameId).toBe(parentId)
+    expectBypassAll(editor, true)
 
-    clearDraggingClipBypassFrame(editor)
+    clearDraggingClipBypassAll(editor)
 
-    expect(editor.state.draggingClipBypassFrameId).toBeNull()
+    expectBypassAll(editor, false)
   })
 
   test('R2-001: cleanup paths cancel move drags and restore preview before bypass can re-arm', () => {
-    const { editor, drag, parentId, child1Id } = setupAutoLayoutDrag()
+    const { editor, drag, child1Id } = setupAutoLayoutDrag()
     const dragState = ref(drag)
 
     handleMoveMove(drag, 150, 60, 150, 60, editor, true)
 
-    expect(editor.state.draggingClipBypassFrameId).toBe(parentId)
+    expectBypassAll(editor, true)
     expect(editor.graph.getNode(child1Id)?.x).not.toBe(10)
 
     cancelMoveDragInterruption(editor, dragState)
 
     expect(dragState.value).toBeNull()
-    expect(editor.state.draggingClipBypassFrameId).toBeNull()
+    expectBypassAll(editor, false)
     expect(editor.graph.getNode(child1Id)?.x).toBe(10)
 
     if (dragState.value?.type === 'move') {
       handleMoveMove(dragState.value, 200, 80, 200, 80, editor, true)
     }
 
-    expect(editor.state.draggingClipBypassFrameId).toBeNull()
+    expectBypassAll(editor, false)
     expect(editor.graph.getNode(child1Id)?.x).toBe(10)
   })
 })

@@ -61,7 +61,7 @@ export function renderFromEditorState(
       snapGuides: state.snapGuides,
       rotationPreview: state.rotationPreview,
       dropTargetId: state.dropTargetId,
-      draggingClipBypassFrameId: state.draggingClipBypassFrameId,
+      draggingClipBypassAll: state.draggingClipBypassAll,
       layoutInsertIndicator: state.layoutInsertIndicator,
       penState: state.penState
         ? ({
@@ -82,7 +82,7 @@ export function renderFromEditorState(
 function hasVolatileOverlay(overlays: RenderOverlays): boolean {
   return (
     overlays.dropTargetId != null ||
-    overlays.draggingClipBypassFrameId != null ||
+    Boolean(overlays.draggingClipBypassAll) ||
     overlays.rotationPreview != null ||
     overlays.editingTextId != null ||
     overlays.nodeEditState != null

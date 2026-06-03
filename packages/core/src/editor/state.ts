@@ -10,7 +10,7 @@ export function createDefaultEditorState(pageId: string): EditorState {
     snapGuides: [],
     rotationPreview: null,
     dropTargetId: null,
-    draggingClipBypassFrameId: null,
+    draggingClipBypassAll: false,
     layoutInsertIndicator: null,
     hoveredNodeId: null,
     editingTextId: null,

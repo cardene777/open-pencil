@@ -31,6 +31,7 @@ function createCanvas(): MockCanvas {
       this.__clipActive = this.__clipStack.pop() ?? false
     }),
     translate: mock(() => undefined),
+    concat: mock(() => undefined),
     rotate: mock(() => undefined),
     scale: mock(() => undefined),
     saveLayer: mock(() => undefined),
@@ -141,32 +142,64 @@ describe('clipsContent rendering', () => {
     ])
   })
 
-  test('limits drag clip bypass to the targeted frame', () => {
+  test('renders absolute descendants outside every ancestor clip in nested clipping frames', () => {
     const graph = new SceneGraph()
-    const bypassFrame = createClippingFrame(graph, 'BypassFrame')
-    const normalFrame = createClippingFrame(graph, 'NormalFrame', 200)
-    const bypassChild = graph.createNode('RECTANGLE', bypassFrame.id, {
+    const screen = createClippingFrame(graph, 'Screen')
+    const mainContent = graph.createNode('FRAME', screen.id, {
+      name: 'mainContent',
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      clipsContent: true,
+      layoutMode: 'VERTICAL'
+    })
+    const autoChild = graph.createNode('RECTANGLE', mainContent.id, {
+      x: 0,
+      y: 0,
+      width: 40,
+      height: 40
+    })
+    const absoluteChild = graph.createNode('RECTANGLE', mainContent.id, {
+      x: 140,
+      y: 0,
+      width: 40,
+      height: 40,
+      layoutPositioning: 'ABSOLUTE'
+    })
+
+    expect(renderChildRecords(graph, screen.id)).toEqual([
+      { nodeId: mainContent.id, clipped: true },
+      { nodeId: autoChild.id, clipped: true },
+      { nodeId: absoluteChild.id, clipped: false }
+    ])
+  })
+
+  test('skips clipping for all clipping frames while drag bypass all is enabled', () => {
+    const graph = new SceneGraph()
+    const leftFrame = createClippingFrame(graph, 'LeftFrame')
+    const rightFrame = createClippingFrame(graph, 'RightFrame', 200)
+    const leftChild = graph.createNode('RECTANGLE', leftFrame.id, {
       x: 120,
       y: 0,
       width: 40,
       height: 40
     })
-    const normalChild = graph.createNode('RECTANGLE', normalFrame.id, {
+    const rightChild = graph.createNode('RECTANGLE', rightFrame.id, {
       x: 120,
       y: 0,
       width: 40,
       height: 40
     })
 
-    const bypassRecords = renderChildRecords(graph, bypassFrame.id, {
-      draggingClipBypassFrameId: bypassFrame.id
-    })
-    const normalRecords = renderChildRecords(graph, normalFrame.id, {
-      draggingClipBypassFrameId: bypassFrame.id
-    })
+    const overlays = { draggingClipBypassAll: true }
 
-    expect(bypassRecords).toEqual([{ nodeId: bypassChild.id, clipped: false }])
-    expect(normalRecords).toEqual([{ nodeId: normalChild.id, clipped: true }])
+    expect(renderChildRecords(graph, leftFrame.id, overlays)).toEqual([
+      { nodeId: leftChild.id, clipped: false }
+    ])
+    expect(renderChildRecords(graph, rightFrame.id, overlays)).toEqual([
+      { nodeId: rightChild.id, clipped: false }
+    ])
   })
 
   test('keeps a mask and its absolute target in the same clipped auto-layout run', () => {
@@ -220,7 +253,39 @@ describe('clipsContent rendering', () => {
     ])
   })
 
-  test('keeps absolute children clipped for layoutMode NONE frames', () => {
+  test('ends a mask run before a later absolute sibling so it can render unclipped', () => {
+    const graph = new SceneGraph()
+    const frame = createClippingFrame(graph, 'MaskedFrame')
+    const mask = graph.createNode('RECTANGLE', frame.id, {
+      x: 0,
+      y: 0,
+      width: 50,
+      height: 50,
+      isMask: true
+    })
+    const maskedTarget = graph.createNode('RECTANGLE', frame.id, {
+      x: 0,
+      y: 0,
+      width: 50,
+      height: 50
+    })
+    const overlay = graph.createNode('RECTANGLE', frame.id, {
+      x: 120,
+      y: 0,
+      width: 40,
+      height: 40,
+      layoutPositioning: 'ABSOLUTE'
+    })
+
+    const parent = getNodeOrThrow(graph, frame.id)
+
+    expect(getRenderableChildRuns(graph, parent, parent.childIds)).toEqual([
+      { childIds: [mask.id, maskedTarget.id], shouldClip: true },
+      { childIds: [overlay.id], shouldClip: false }
+    ])
+  })
+
+  test('renders absolute children outside the parent clip for layoutMode NONE frames', () => {
     const graph = new SceneGraph()
     const frame = graph.createNode('FRAME', pageId(graph), {
       name: 'RegularFrame',
@@ -242,10 +307,36 @@ describe('clipsContent rendering', () => {
     const parent = getNodeOrThrow(graph, frame.id)
 
     expect(getRenderableChildRuns(graph, parent, parent.childIds)).toEqual([
-      { childIds: [absoluteChild.id], shouldClip: true }
+      { childIds: [absoluteChild.id], shouldClip: false }
     ])
     expect(renderChildRecords(graph, frame.id)).toEqual([
-      { nodeId: absoluteChild.id, clipped: true }
+      { nodeId: absoluteChild.id, clipped: false }
     ])
+  })
+
+  test('skips clipping for layoutMode NONE frames when drag bypass all is enabled', () => {
+    const graph = new SceneGraph()
+    const frame = graph.createNode('FRAME', pageId(graph), {
+      name: 'ScreenFrame',
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 100,
+      clipsContent: true,
+      layoutMode: 'NONE'
+    })
+    const absoluteChild = graph.createNode('RECTANGLE', frame.id, {
+      x: 140,
+      y: 0,
+      width: 40,
+      height: 40,
+      layoutPositioning: 'ABSOLUTE'
+    })
+
+    expect(
+      renderChildRecords(graph, frame.id, {
+        draggingClipBypassAll: true
+      })
+    ).toEqual([{ nodeId: absoluteChild.id, clipped: false }])
   })
 })

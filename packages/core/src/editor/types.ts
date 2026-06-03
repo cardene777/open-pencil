@@ -35,7 +35,7 @@ export interface EditorState {
   snapGuides: SnapGuide[]
   rotationPreview: { nodeId: string; angle: number } | null
   dropTargetId: string | null
-  draggingClipBypassFrameId: string | null
+  draggingClipBypassAll: boolean
   layoutInsertIndicator: {
     parentId: string
     index: number

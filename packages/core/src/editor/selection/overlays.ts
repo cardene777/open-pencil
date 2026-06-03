@@ -30,9 +30,9 @@ export function createSelectionOverlayActions(ctx: EditorContext) {
     ctx.requestRepaint()
   }
 
-  function setDraggingClipBypassFrameId(id: string | null) {
-    if (ctx.state.draggingClipBypassFrameId === id) return
-    ctx.state.draggingClipBypassFrameId = id
+  function setDraggingClipBypassAll(value: boolean) {
+    if (ctx.state.draggingClipBypassAll === value) return
+    ctx.state.draggingClipBypassAll = value
     ctx.requestRepaint()
   }
 
@@ -62,7 +62,7 @@ export function createSelectionOverlayActions(ctx: EditorContext) {
     setRotationPreview,
     setHoveredNode,
     setDropTarget,
-    setDraggingClipBypassFrameId,
+    setDraggingClipBypassAll,
     setLayoutInsertIndicator,
     setAutoLayoutHover
   }

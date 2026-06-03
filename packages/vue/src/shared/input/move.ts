@@ -51,14 +51,8 @@ function isPastDragStartThreshold(d: DragMove, sx: number, sy: number) {
   return dx * dx + dy * dy >= MOVE_DRAG_START_THRESHOLD_PX * MOVE_DRAG_START_THRESHOLD_PX
 }
 
-function syncDraggingClipBypassFrame(
-  editor: Editor,
-  autoLayoutParentId: string | undefined,
-  bypassingAutoLayout: boolean
-) {
-  const nextFrameId = bypassingAutoLayout && autoLayoutParentId ? autoLayoutParentId : null
-  if (editor.state.draggingClipBypassFrameId === nextFrameId) return
-  editor.setDraggingClipBypassFrameId(nextFrameId)
+function syncDraggingClipBypassAll(editor: Editor, bypassClipDuringDrag: boolean) {
+  editor.setDraggingClipBypassAll(bypassClipDuringDrag)
 }
 
 export function handleMoveMove(
@@ -79,7 +73,7 @@ export function handleMoveMove(
     d.dragStarted = true
   }
 
-  syncDraggingClipBypassFrame(editor, d.autoLayoutParentId, bypassingAutoLayout)
+  syncDraggingClipBypassAll(editor, bypassAutoLayout)
 
   let dx = cx - d.startX
   let dy = cy - d.startY
@@ -159,6 +153,35 @@ function applyFinalPinnedPositions(d: DragMove, editor: Editor) {
   }
 }
 
+function reparentPinnedNodesToPage(d: DragMove, editor: Editor) {
+  const pageId = editor.state.currentPageId
+  for (const id of d.originals.keys()) {
+    const node = editor.graph.getNode(id)
+    if (!node || node.parentId === pageId) continue
+    editor.graph.reparentNode(id, pageId)
+  }
+}
+
+function restoreFrozenParentSizes(d: DragMove, editor: Editor) {
+  if (!d.frozenParentSizes) return
+  for (const [parentId, size] of d.frozenParentSizes) {
+    const parent = editor.graph.getNode(parentId)
+    if (!parent) continue
+    if (parent.width === size.width && parent.height === size.height) continue
+    editor.graph.updateNode(parentId, { width: size.width, height: size.height })
+  }
+}
+
+function restoreFrozenSiblingSizes(d: DragMove, editor: Editor) {
+  if (!d.frozenSiblingSizes) return
+  for (const [siblingId, size] of d.frozenSiblingSizes) {
+    const sibling = editor.graph.getNode(siblingId)
+    if (!sibling) continue
+    if (sibling.width === size.width && sibling.height === size.height) continue
+    editor.graph.updateNode(siblingId, { width: size.width, height: size.height })
+  }
+}
+
 function applyMovedFinalPosition(
   d: DragMove,
   editor: Editor,
@@ -167,9 +190,12 @@ function applyMovedFinalPosition(
 ) {
   if (shouldPinAbsolute) {
     applyFinalPinnedPositions(d, editor)
-  } else {
-    applyFinalPositions(d, editor)
+    reparentPinnedNodesToPage(d, editor)
+    restoreFrozenParentSizes(d, editor)
+    restoreFrozenSiblingSizes(d, editor)
+    return
   }
+  applyFinalPositions(d, editor)
   if (dropId) {
     editor.reparentNodes([...editor.state.selectedIds], dropId)
   } else {
@@ -186,7 +212,7 @@ function commitMovedDrag(d: DragMove, editor: Editor, shouldPinAbsolute: boolean
 }
 
 export function handleMoveUp(d: DragMove, editor: Editor, pinAsAbsolute = false) {
-  editor.setDraggingClipBypassFrameId(null)
+  editor.setDraggingClipBypassAll(false)
 
   if (!d.dragStarted) {
     editor.setLayoutInsertIndicator(null)
