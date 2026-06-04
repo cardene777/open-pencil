@@ -15,7 +15,6 @@ export function clearSubtreePictureCache(r: SkiaRenderer): void {
   r.subtreePictureCache.clear()
   r.subtreePictureCachePageId = null
   r.subtreePictureCacheSceneVersion = -1
-  r.subtreePictureCachePositionPreviewVersion = -1
 }
 
 export function invalidateAllPictures(r: SkiaRenderer): void {

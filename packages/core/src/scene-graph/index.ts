@@ -56,6 +56,7 @@ export class SceneGraph {
   private previewMutationDepth = 0
   private sourceMetadataPreservationDepth = 0
   positionPreviewVersion = 0
+  subtreeVersion = new Map<string, number>()
   instanceIndex = new Map<string, Set<string>>()
 
   constructor() {
@@ -496,6 +497,7 @@ export class SceneGraph {
       this.instanceIndex.get(node.componentId)?.delete(id)
     }
     this.nodes.delete(id)
+    this.subtreeVersion.delete(id)
     this.emitter.emit('node:deleted', id)
   }
 

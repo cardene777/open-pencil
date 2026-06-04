@@ -48,7 +48,6 @@ function createRenderer(surfaceFactory: () => Surface | null) {
     subtreePictureCache: new Map(),
     subtreePictureCachePageId: null,
     subtreePictureCacheSceneVersion: 0,
-    subtreePictureCachePositionPreviewVersion: 0,
     worldViewport: { x: 0, y: 0, w: 0, h: 0 },
     renderNode: mock()
   }
@@ -67,6 +66,7 @@ function createGraph(positionPreviewVersion = 0) {
   const graph: Partial<SceneGraph> = {
     rootId: 'root',
     positionPreviewVersion,
+    subtreeVersion: new Map(),
     getNode: mock((id: string) => {
       if (id === 'page') return { id: 'page', type: 'CANVAS', childIds: [] }
       return null

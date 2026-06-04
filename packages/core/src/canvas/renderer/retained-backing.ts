@@ -182,37 +182,28 @@ function createSceneBackingSurface(r: SkiaRenderer, width: number, height: numbe
   })
 }
 
-function ensureSubtreePictureCacheScope(
-  r: SkiaRenderer,
-  graph: SceneGraph,
-  sceneVersion: number
-): void {
-  if (
-    r.subtreePictureCachePageId === r.pageId &&
-    r.subtreePictureCacheSceneVersion === sceneVersion &&
-    r.subtreePictureCachePositionPreviewVersion === graph.positionPreviewVersion
-  ) {
+function ensureSubtreePictureCacheScope(r: SkiaRenderer, sceneVersion: number): void {
+  if (r.subtreePictureCachePageId === r.pageId && r.subtreePictureCacheSceneVersion === sceneVersion) {
     return
   }
   clearSubtreePictureCache(r)
   r.subtreePictureCachePageId = r.pageId
   r.subtreePictureCacheSceneVersion = sceneVersion
-  r.subtreePictureCachePositionPreviewVersion = graph.positionPreviewVersion
 }
 
-function cachedSubtreePicture(
+export function cachedSubtreePicture(
   r: SkiaRenderer,
   graph: SceneGraph,
   childId: string,
   sceneVersion: number
 ) {
-  ensureSubtreePictureCacheScope(r, graph, sceneVersion)
+  ensureSubtreePictureCacheScope(r, sceneVersion)
   const cached = r.subtreePictureCache.get(childId)
   if (
     cached &&
     cached.pageId === r.pageId &&
     cached.sceneVersion === sceneVersion &&
-    cached.positionPreviewVersion === graph.positionPreviewVersion
+    cached.subtreeVersion === (graph.subtreeVersion.get(childId) ?? 0)
   ) {
     return cached.picture
   }
@@ -244,7 +235,7 @@ function cachedSubtreePicture(
     picture,
     pageId: r.pageId,
     sceneVersion,
-    positionPreviewVersion: graph.positionPreviewVersion
+    subtreeVersion: graph.subtreeVersion.get(childId) ?? 0
   })
   return picture
 }
