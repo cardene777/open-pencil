@@ -10,7 +10,18 @@ export default defineConfig({
   clean: true,
   outDir: './dist',
   deps: {
-    neverBundle: ['hono', /^hono\//, 'jose', /^jose\//, 'zod', /^node:/],
+    neverBundle: [
+      'better-sqlite3',
+      'drizzle-orm',
+      /^drizzle-orm\//,
+      'hono',
+      /^hono\//,
+      'jose',
+      /^jose\//,
+      /^node:/,
+      'resend',
+      'zod'
+    ],
     onlyBundle: false
   }
 })

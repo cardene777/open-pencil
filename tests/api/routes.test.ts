@@ -1,14 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 
-import { createApiApp } from '../../packages/api/src/server.js'
-import { createInvitationStore } from '../../packages/api/src/store.js'
-
-const SECRET = 'test-secret'
+import { TEST_API_SECRET, createTestApiApp } from '../helpers/api.js'
 
 describe('invite routes', () => {
   test('creates and verifies an invitation', async () => {
-    const store = createInvitationStore()
-    const { app } = createApiApp({ secret: SECRET, store })
+    const { app, database, store } = createTestApiApp({ secret: TEST_API_SECRET })
 
     const inviteResponse = await app.request('/api/invite', {
       method: 'POST',
@@ -52,11 +48,11 @@ describe('invite routes', () => {
         expiresAt: inviteBody.expiresAt
       }
     })
+    database.close()
   })
 
   test('rejects revoked invitations', async () => {
-    const store = createInvitationStore()
-    const { app } = createApiApp({ secret: SECRET, store })
+    const { app, database, store } = createTestApiApp({ secret: TEST_API_SECRET })
 
     const inviteResponse = await app.request('/api/invite', {
       method: 'POST',
@@ -87,5 +83,6 @@ describe('invite routes', () => {
       valid: false,
       reason: 'revoked'
     })
+    database.close()
   })
 })

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Persist board, invitation, and collaborator API records in SQLite with drizzle migrations, and send invitation emails through Resend with a dry-run fallback when no API key is configured.
+
 ### Changed
 
 - Add JSX authoring support for components, component sets, and instances.

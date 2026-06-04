@@ -50,7 +50,8 @@ export default defineConfig({
       reuseExistingServer: true
     },
     {
-      command: 'INKLY_API_JWT_SECRET=playwright-secret bun --filter @inkly/api dev',
+      command:
+        'INKLY_API_DB_MODE=memory INKLY_API_JWT_SECRET=playwright-secret bun --filter @inkly/api dev',
       port: 3001,
       reuseExistingServer: true
     }
