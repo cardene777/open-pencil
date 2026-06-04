@@ -1,3 +1,5 @@
+import { perfTracer } from './perf-tracer'
+
 type DevToolsColor =
   | 'primary'
   | 'secondary'
@@ -23,24 +25,30 @@ export class PhaseTimer {
 
   private starts = new Map<string, number>()
 
+  private get effectiveEnabled(): boolean {
+    return this.enabled || perfTracer.enabled
+  }
+
   beginPhase(name: string): void {
-    if (!this.enabled || typeof performance === 'undefined') return
+    if (!this.effectiveEnabled || typeof performance === 'undefined') return
     this.starts.set(name, performance.now())
   }
 
   endPhase(name: string): void {
-    if (!this.enabled || typeof performance === 'undefined') return
+    if (!this.effectiveEnabled || typeof performance === 'undefined') return
 
     const startTime = this.starts.get(name)
     if (startTime === undefined) return
     this.starts.delete(name)
 
-    const duration = performance.now() - startTime
+    const endTime = performance.now()
+    const duration = endTime - startTime
     const prev = this.averages.get(name)
     this.averages.set(name, prev === undefined ? duration : prev + (duration - prev) * SMOOTH)
 
     performance.measure(name, {
       start: startTime,
+      end: endTime,
       detail: {
         devtools: {
           dataType: 'track-entry',
@@ -50,6 +58,7 @@ export class PhaseTimer {
         }
       }
     })
+    perfTracer.observe(name, 'Renderer', startTime, endTime, { phase: name })
   }
 
   clearPhases(): void {

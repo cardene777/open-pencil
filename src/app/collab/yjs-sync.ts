@@ -1,5 +1,6 @@
 import * as Y from 'yjs'
 
+import { perfTracer } from '@inkly/core/profiler'
 import type { SceneNode } from '@inkly/core/scene-graph'
 
 import type { EditorStore } from '@/app/editor/active-store'
@@ -129,26 +130,40 @@ export function registerYjsObservers({
 }: YjsObserverOptions) {
   ynodes.observeDeep((events) => {
     if (getSuppressYjsEvents()) return
-    setSuppressGraphSync(true)
-    try {
-      applyYjsToGraph(events)
-    } finally {
-      setSuppressGraphSync(false)
-    }
-    store.requestRender()
+    perfTracer.measure(
+      'yjs:applyRemote',
+      'Collab',
+      () => {
+        setSuppressGraphSync(true)
+        try {
+          applyYjsToGraph(events)
+        } finally {
+          setSuppressGraphSync(false)
+        }
+        store.requestRender()
+      },
+      { eventCount: events.length }
+    )
   })
 
   yimages.observe((event) => {
     if (getSuppressYjsEvents()) return
-    for (const [key, change] of event.changes.keys) {
-      if (change.action === 'add' || change.action === 'update') {
-        const data = yimages.get(key)
-        if (data) store.graph.images.set(key, new Uint8Array(data))
-      } else {
-        store.graph.images.delete(key)
-      }
-    }
-    store.requestRender()
+    perfTracer.measure(
+      'yjs:applyImages',
+      'Collab',
+      () => {
+        for (const [key, change] of event.changes.keys) {
+          if (change.action === 'add' || change.action === 'update') {
+            const data = yimages.get(key)
+            if (data) store.graph.images.set(key, new Uint8Array(data))
+          } else {
+            store.graph.images.delete(key)
+          }
+        }
+        store.requestRender()
+      },
+      { keyCount: event.changes.keys.size }
+    )
   })
 }
 
@@ -168,29 +183,56 @@ export function createYjsGraphSync({
     if (!node) return
 
     const localYimages = getYimages()
-    setSuppressYjsEvents(true)
-    ydoc.transact(() => {
-      let ynode = ynodes.get(nodeId)
-      if (!ynode) {
-        ynode = new Y.Map()
-        ynodes.set(nodeId, ynode)
-      }
-      const changedKeysArray =
-        changedKeys === undefined ? undefined : Array.from(changedKeys)
-      syncNodePropsToYMap(node, ynode, changedKeysArray)
+    const changedKeysArray =
+      changedKeys === undefined ? undefined : Array.from(changedKeys)
+    const keyCount = changedKeysArray?.length ?? -1
+    perfTracer.measure(
+      'yjs:syncNode',
+      'Collab',
+      () => {
+        setSuppressYjsEvents(true)
+        perfTracer.measure(
+          'yjs:transact',
+          'Collab',
+          () => {
+            ydoc.transact(() => {
+              let ynode = ynodes.get(nodeId)
+              if (!ynode) {
+                ynode = new Y.Map()
+                ynodes.set(nodeId, ynode)
+              }
+              perfTracer.measure(
+                'yjs:writeProps',
+                'Collab',
+                () => syncNodePropsToYMap(node, ynode!, changedKeysArray),
+                { nodeId, keyCount }
+              )
 
-      const shouldSyncImages =
-        changedKeysArray === undefined || changedKeysArray.includes('fills')
-      if (localYimages && shouldSyncImages) {
-        for (const fill of node.fills) {
-          if (fill.imageHash && !localYimages.has(fill.imageHash)) {
-            const data = store.graph.images.get(fill.imageHash)
-            if (data) localYimages.set(fill.imageHash, data)
-          }
-        }
-      }
-    })
-    setSuppressYjsEvents(false)
+              const shouldSyncImages =
+                changedKeysArray === undefined || changedKeysArray.includes('fills')
+              if (localYimages && shouldSyncImages) {
+                perfTracer.measure(
+                  'yjs:images',
+                  'Collab',
+                  () => {
+                    for (const fill of node.fills) {
+                      if (fill.imageHash && !localYimages.has(fill.imageHash)) {
+                        const data = store.graph.images.get(fill.imageHash)
+                        if (data) localYimages.set(fill.imageHash, data)
+                      }
+                    }
+                  },
+                  { nodeId, fillCount: node.fills.length }
+                )
+              }
+            })
+          },
+          { nodeId, keyCount }
+        )
+        setSuppressYjsEvents(false)
+      },
+      { nodeId, keyCount, partial: changedKeysArray !== undefined }
+    )
   }
 
   function syncAllNodesToYjs() {

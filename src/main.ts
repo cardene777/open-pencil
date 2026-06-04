@@ -3,12 +3,14 @@ import { createApp } from 'vue'
 
 import './app.css'
 import { preloadFonts } from '@/app/editor/fonts'
+import { startPerfTraceReporter } from '@/app/perf-trace/reporter'
 import { IS_TAURI } from '@/constants'
 
 import App from './App.vue'
 import router from './router'
 
 preloadFonts()
+startPerfTraceReporter()
 const head = createHead()
 createApp(App).use(router).use(head).mount('#app')
 

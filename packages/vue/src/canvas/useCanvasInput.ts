@@ -2,6 +2,7 @@ import { useEventListener } from '@vueuse/core'
 import { onScopeDispose, ref, type Ref } from 'vue'
 
 import type { Editor } from '@inkly/core/editor'
+import { perfTracer } from '@inkly/core/profiler'
 import type { SceneNode } from '@inkly/core/scene-graph'
 
 import {
@@ -212,75 +213,105 @@ export function useCanvasInput(
   }
 
   function onMouseMove(e: MouseEvent) {
+    const endInput = perfTracer.mark('input:mouseMove', 'Custom', {
+      drag: drag.value?.type ?? 'none'
+    })
     if (onCursorMove) {
       const { cx, cy } = getCoords(e)
-      onCursorMove(cx, cy)
+      perfTracer.measure('input:cursorMove', 'Custom', () => onCursorMove(cx, cy))
     }
 
     if (!drag.value) {
       const { cx, cy } = getCoords(e)
-      updatePenHover(cx, cy, editor)
+      perfTracer.measure('input:penHover', 'Custom', () => updatePenHover(cx, cy, editor))
     }
 
     if (!drag.value) {
       const { cx, cy } = getCoords(e)
-      updateNodeEditHover(editor, cx, cy)
+      perfTracer.measure('input:nodeEditHover', 'Custom', () => updateNodeEditHover(editor, cx, cy))
     }
 
     if (!drag.value && editor.state.activeTool === 'SELECT') {
       const { cx, cy } = getCoords(e)
-      cursorOverride.value = updateHoverCursor(cx, cy, editor, hitFns)
-      editor.setAutoLayoutHover(resolveAutoLayoutHover(cx, cy, editor))
+      perfTracer.measure('input:hoverCursor', 'Custom', () => {
+        cursorOverride.value = updateHoverCursor(cx, cy, editor, hitFns)
+        editor.setAutoLayoutHover(resolveAutoLayoutHover(cx, cy, editor))
+      })
     }
 
-    if (!drag.value) return
+    if (!drag.value) {
+      endInput()
+      return
+    }
     const d = drag.value
 
     if (d.type === 'pan') {
-      handlePanMove(d, e)
+      perfTracer.measure('input:panMove', 'Custom', () => handlePanMove(d, e))
+      endInput()
       return
     }
 
     const { sx, sy, cx, cy } = getCoords(e)
 
     if (d.type === 'rotate') {
-      handleRotateMove(d, cx, cy, e.shiftKey)
+      perfTracer.measure('input:rotateMove', 'Custom', () =>
+        handleRotateMove(d, cx, cy, e.shiftKey)
+      )
+      endInput()
       return
     }
     if (d.type === 'move') {
       handleMoveMove(d, cx, cy, sx, sy, editor, e.metaKey || e.ctrlKey)
+      endInput()
       return
     }
     if (d.type === 'text-select') {
-      handleTextSelectMove(cx, cy)
+      perfTracer.measure('input:textSelectMove', 'Custom', () => handleTextSelectMove(cx, cy))
+      endInput()
       return
     }
     if (d.type === 'resize') {
-      applyResize(d, cx, cy, e.shiftKey, editor)
+      perfTracer.measure('input:resizeMove', 'Custom', () =>
+        applyResize(d, cx, cy, e.shiftKey, editor)
+      )
+      endInput()
       return
     }
 
     if (d.type === 'pen-drag') {
-      handlePenDragMove(d, cx, cy, spaceHeld.value, e, editor)
+      perfTracer.measure('input:penDragMove', 'Custom', () =>
+        handlePenDragMove(d, cx, cy, spaceHeld.value, e, editor)
+      )
+      endInput()
       return
     }
 
     if (d.type === 'edit-node' || d.type === 'edit-handle') {
-      handleNodeEditMove(d, cx, cy, editor, e.altKey, e.metaKey || e.ctrlKey, e.shiftKey)
+      perfTracer.measure('input:nodeEditMove', 'Custom', () =>
+        handleNodeEditMove(d, cx, cy, editor, e.altKey, e.metaKey || e.ctrlKey, e.shiftKey)
+      )
+      endInput()
       return
     }
 
     if (d.type === 'bend-handle') {
-      handleBendHandleMove(d, cx, cy, e, editor)
+      perfTracer.measure('input:bendHandleMove', 'Custom', () =>
+        handleBendHandleMove(d, cx, cy, e, editor)
+      )
+      endInput()
       return
     }
 
     if (d.type === 'draw') {
-      handleDrawMove(d, cx, cy, e.shiftKey, editor)
+      perfTracer.measure('input:drawMove', 'Custom', () =>
+        handleDrawMove(d, cx, cy, e.shiftKey, editor)
+      )
+      endInput()
       return
     }
 
-    handleMarqueeMove(d, cx, cy)
+    perfTracer.measure('input:marqueeMove', 'Custom', () => handleMarqueeMove(d, cx, cy))
+    endInput()
   }
 
   function onMouseUp(e: MouseEvent) {

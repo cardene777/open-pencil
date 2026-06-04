@@ -6,6 +6,7 @@ import { findMoveDropTarget, reparentOutsideNodes } from '#vue/shared/input/drop
 export { duplicateAndDrag } from '#vue/shared/input/duplicate-drag'
 import { AUTO_LAYOUT_BREAK_THRESHOLD } from '@inkly/core/constants'
 import type { Editor } from '@inkly/core/editor'
+import { perfTracer } from '@inkly/core/profiler'
 
 import { applyMoveSnap } from '#vue/shared/input/move-snap'
 import type { DragMove } from '#vue/shared/input/types'
@@ -64,12 +65,18 @@ export function handleMoveMove(
   editor: Editor,
   bypassAutoLayout = false
 ) {
+  const endTotal = perfTracer.mark('move:total', 'Custom', {
+    selected: d.originals.length
+  })
   d.currentX = cx
   d.currentY = cy
   const bypassingAutoLayout = Boolean(d.autoLayoutParentId && bypassAutoLayout)
 
   if (!d.dragStarted) {
-    if (!isPastDragStartThreshold(d, sx, sy)) return
+    if (!isPastDragStartThreshold(d, sx, sy)) {
+      endTotal()
+      return
+    }
     d.dragStarted = true
   }
 
@@ -80,7 +87,12 @@ export function handleMoveMove(
 
   if (d.autoLayoutParentId && !d.brokeFromAutoLayout && !bypassAutoLayout) {
     if (isInsideAutoLayoutDragBounds(d.autoLayoutParentId, cx, cy, editor)) {
-      computeAutoLayoutIndicator(d, cx, cy, editor)
+      perfTracer.measure(
+        'move:autoLayoutIndicator',
+        'Custom',
+        () => computeAutoLayoutIndicator(d, cx, cy, editor)
+      )
+      endTotal()
       return
     }
     d.brokeFromAutoLayout = true
@@ -89,31 +101,63 @@ export function handleMoveMove(
     editor.setLayoutInsertIndicator(null)
   }
 
-  const dropTarget = findMoveDropTarget(cx, cy, editor)
+  const dropTarget = perfTracer.measure(
+    'move:dropTarget',
+    'Custom',
+    () => findMoveDropTarget(cx, cy, editor)
+  )
   const dropParent = dropTarget ? editor.graph.getNode(dropTarget.id) : null
 
   if (!bypassingAutoLayout && dropParent && dropParent.layoutMode !== 'NONE') {
-    computeAutoLayoutIndicatorForFrame(dropParent, cx, cy, editor)
+    perfTracer.measure(
+      'move:autoLayoutIndicatorForFrame',
+      'Custom',
+      () => computeAutoLayoutIndicatorForFrame(dropParent, cx, cy, editor)
+    )
     editor.setDropTarget(dropParent.id)
-    for (const [id, orig] of d.originals) {
-      editor.graph.updateNodePositionPreview(id, Math.round(orig.x + dx), Math.round(orig.y + dy))
-    }
-    editor.requestRepaint()
+    perfTracer.measure(
+      'move:positionPreview',
+      'Custom',
+      () => {
+        for (const [id, orig] of d.originals) {
+          editor.graph.updateNodePositionPreview(
+            id,
+            Math.round(orig.x + dx),
+            Math.round(orig.y + dy)
+          )
+        }
+      },
+      { count: d.originals.length }
+    )
+    perfTracer.measure('move:requestRepaint', 'Custom', () => editor.requestRepaint())
+    endTotal()
     return
   }
 
   editor.setLayoutInsertIndicator(null)
 
-  const snapped = applyMoveSnap(d, dx, dy, editor)
+  const snapped = perfTracer.measure('move:snap', 'Custom', () => applyMoveSnap(d, dx, dy, editor))
   dx = snapped.dx
   dy = snapped.dy
 
-  for (const [id, orig] of d.originals) {
-    editor.graph.updateNodePositionPreview(id, Math.round(orig.x + dx), Math.round(orig.y + dy))
-  }
+  perfTracer.measure(
+    'move:positionPreview',
+    'Custom',
+    () => {
+      for (const [id, orig] of d.originals) {
+        editor.graph.updateNodePositionPreview(
+          id,
+          Math.round(orig.x + dx),
+          Math.round(orig.y + dy)
+        )
+      }
+    },
+    { count: d.originals.length }
+  )
 
   editor.setDropTarget(dropTarget?.id ?? null)
-  editor.requestRepaint()
+  perfTracer.measure('move:requestRepaint', 'Custom', () => editor.requestRepaint())
+  endTotal()
 }
 
 function getMoveDistance(d: DragMove) {

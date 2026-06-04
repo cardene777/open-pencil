@@ -148,9 +148,11 @@ export {
   DrawCallCounter,
   PhaseTimer,
   CaptureStack,
-  toSpeedscopeJSON
+  toSpeedscopeJSON,
+  PerfTracer,
+  perfTracer
 } from './profiler'
-export type { FrameCapture, NodeProfile } from './profiler'
+export type { FrameCapture, NodeProfile, PerfTraceEntry, PerfTraceListener, PerfTraceTrack } from './profiler'
 export { computeLayout, computeAllLayouts, setTextMeasurer } from './layout'
 export type { TextMeasurer } from './layout'
 export { getCanvasKit, type CanvasKitOptions } from './canvaskit'

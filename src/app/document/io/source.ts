@@ -1,9 +1,11 @@
-import { watchDebounced } from '@vueuse/core'
+import { watch } from 'vue'
 
 import type { Editor, EditorState } from '@inkly/core/editor'
 import { exportFigFile } from '@inkly/core/io/formats/fig'
+import { perfTracer } from '@inkly/core/profiler'
 
 import { createAutosave } from '@/app/document/autosave'
+import { createThrottleScheduler } from '@/app/document/autosave/throttle-scheduler'
 import {
   documentNameFromFigPath,
   downloadNameFromPath,
@@ -89,30 +91,53 @@ export function createDocumentSourceActions({
     if (typeof ric === 'function') ric(cb)
     else setTimeout(cb, 0)
   }
-  const stopIndexedDBAutosave = watchDebounced(
+
+  async function runAutosave(version: number): Promise<void> {
+    if (version === lastCachedVersion) return
+    await new Promise<void>((resolve) => runOnIdle(resolve))
+    if (version === lastCachedVersion) return
+    const endTotal = perfTracer.mark('autosave:total', 'IO', { version })
+    state.autosaveStatus = 'saving'
+    try {
+      const bytes = await perfTracer.measureAsync(
+        'autosave:encode',
+        'IO',
+        () => buildFigFile(),
+        { version }
+      )
+      const cacheName = getDownloadName() ?? `${state.documentName}.fig`
+      await perfTracer.measureAsync(
+        'autosave:write',
+        'IO',
+        () => savePenToCache(cacheName, 'application/octet-stream', bytes),
+        { version, bytes: bytes.byteLength }
+      )
+      lastCachedVersion = version
+      state.autosaveStatus = 'saved'
+      if (savedResetTimer) clearTimeout(savedResetTimer)
+      savedResetTimer = setTimeout(() => {
+        state.autosaveStatus = 'idle'
+      }, 2000)
+    } catch (e) {
+      console.warn('IndexedDB autosave failed:', e)
+      state.autosaveStatus = 'idle'
+    } finally {
+      endTotal()
+    }
+  }
+
+  const autosaveScheduler = createThrottleScheduler<number>(runAutosave, {
+    debounceMs: 3000,
+    minIntervalMs: 5000,
+    maxDelayMs: 30000
+  })
+
+  const stopIndexedDBAutosave = watch(
     () => state.sceneVersion,
     (version) => {
       if (version === lastCachedVersion) return
-      runOnIdle(async () => {
-        if (version === lastCachedVersion) return
-        state.autosaveStatus = 'saving'
-        try {
-          const bytes = await buildFigFile()
-          const cacheName = getDownloadName() ?? `${state.documentName}.fig`
-          await savePenToCache(cacheName, 'application/octet-stream', bytes)
-          lastCachedVersion = version
-          state.autosaveStatus = 'saved'
-          if (savedResetTimer) clearTimeout(savedResetTimer)
-          savedResetTimer = setTimeout(() => {
-            state.autosaveStatus = 'idle'
-          }, 2000)
-        } catch (e) {
-          console.warn('IndexedDB autosave failed:', e)
-          state.autosaveStatus = 'idle'
-        }
-      })
-    },
-    { debounce: 3000 }
+      autosaveScheduler.schedule(version)
+    }
   )
 
   function setDocumentSource(
@@ -149,6 +174,7 @@ export function createDocumentSourceActions({
     stopWatchingFile()
     disposeAutosave()
     stopIndexedDBAutosave()
+    autosaveScheduler.cancel()
   }
 
   return {
