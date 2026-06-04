@@ -4,6 +4,7 @@ import { normalizeVectorNetwork } from './vector-network'
 type PreviewGraph = {
   nodes: Map<string, SceneNode>
   positionPreviewVersion: number
+  subtreeVersion: Map<string, number>
   clearAbsPosCache: () => void
 }
 
@@ -61,6 +62,19 @@ const TEXT_PICTURE_KEYS = new Set<string>([
   'height'
 ])
 
+function collectAncestorChain(
+  graph: PreviewGraph,
+  startId: string | null | undefined,
+  collected: Set<string>
+): void {
+  let cursor = startId ?? undefined
+  while (cursor) {
+    if (collected.has(cursor)) break
+    collected.add(cursor)
+    cursor = graph.nodes.get(cursor)?.parentId ?? undefined
+  }
+}
+
 export function updateNodePreview(
   graph: PreviewGraph,
   id: string,
@@ -71,6 +85,16 @@ export function updateNodePreview(
   if ((Object.keys(changes) as (keyof SceneNode)[]).every((key) => node[key] === changes[key])) {
     return
   }
+
+  const oldParentId = node.parentId
+  const newParentId = 'parentId' in changes ? changes.parentId : oldParentId
+  const affected = new Set<string>([id])
+  collectAncestorChain(graph, oldParentId, affected)
+  collectAncestorChain(graph, newParentId, affected)
+  for (const nodeId of affected) {
+    graph.subtreeVersion.set(nodeId, (graph.subtreeVersion.get(nodeId) ?? 0) + 1)
+  }
+
   const affectsLayout = Object.keys(changes).some((key) => LAYOUT_AFFECTING_KEYS.has(key))
   if (affectsLayout) graph.clearAbsPosCache()
   if (

@@ -48,7 +48,7 @@ export interface SubtreePictureCacheEntry {
   picture: SkPicture
   pageId: string | null
   sceneVersion: number
-  positionPreviewVersion: number
+  subtreeVersion: number
 }
 
 import type { RenderOverlays, RulerTheme } from './renderer/types'
@@ -138,7 +138,6 @@ export class SkiaRenderer {
   subtreePictureCache = new Map<string, SubtreePictureCacheEntry>()
   subtreePictureCachePageId: string | null = null
   subtreePictureCacheSceneVersion = -1
-  subtreePictureCachePositionPreviewVersion = -1
   readonly labelCache = new LabelCache()
   readonly profiler: RenderProfiler
 
