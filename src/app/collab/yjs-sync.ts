@@ -58,9 +58,8 @@ export function syncNodePropsToYMap(
     return
   }
 
-  const nodeRecord = node as unknown as Record<string, unknown>
   for (const key of changedKeys) {
-    const value = nodeRecord[key]
+    const value = Reflect.get(node, key)
     if (value === undefined) continue
     setValueOnYMap(ynode, key, value)
   }
