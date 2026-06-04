@@ -1,5 +1,6 @@
 import { getWorldMatrix } from '#core/canvas/coordinate'
 import Matrix from '#core/canvas/matrix'
+import type { Vector } from '#core/types'
 
 import type { SceneGraph, SceneNode, NodeType } from './'
 
@@ -18,7 +19,30 @@ function hasVisibleFillOrStroke(node: SceneNode): boolean {
   return node.fills.some((f) => f.visible) || node.strokes.some((s) => s.visible)
 }
 
+function isAxisAligned(node: SceneNode): boolean {
+  return !node.rotation || node.rotation === 0
+}
+
+function aabbRejects(
+  px: number,
+  py: number,
+  abs: Vector,
+  node: SceneNode
+): boolean {
+  return (
+    px < abs.x ||
+    px > abs.x + node.width ||
+    py < abs.y ||
+    py > abs.y + node.height
+  )
+}
+
 function containsPoint(px: number, py: number, node: SceneNode, graph: SceneGraph): boolean {
+  if (isAxisAligned(node)) {
+    const abs = graph.getAbsolutePosition(node.id)
+    return !aabbRejects(px, py, abs, node)
+  }
+
   const m = getWorldMatrix(node, graph)
 
   const inv = Matrix.invert(m)
