@@ -14,7 +14,7 @@ type GraphBindingOptions = {
   getYnodes: () => YNodes | null
   getSuppressGraphSync: () => boolean
   setSuppressYjsEvents: (value: boolean) => void
-  syncNodeToYjs: (nodeId: string) => void
+  syncNodeToYjs: (nodeId: string, changedKeys?: Iterable<string>) => void
 }
 
 type YjsObserverOptions = {
@@ -34,13 +34,35 @@ type YjsGraphSyncOptions = {
   setSuppressYjsEvents: (value: boolean) => void
 }
 
-export function syncNodePropsToYMap(node: SceneNode, ynode: Y.Map<unknown>) {
-  for (const [key, value] of Object.entries(node)) {
-    if (typeof value === 'object' && value !== null) {
-      ynode.set(key, JSON.stringify(value))
-    } else {
-      ynode.set(key, value)
+function setValueOnYMap(
+  ynode: Y.Map<unknown>,
+  key: string,
+  value: unknown
+): void {
+  if (typeof value === 'object' && value !== null) {
+    ynode.set(key, JSON.stringify(value))
+  } else {
+    ynode.set(key, value)
+  }
+}
+
+export function syncNodePropsToYMap(
+  node: SceneNode,
+  ynode: Y.Map<unknown>,
+  changedKeys?: Iterable<string>
+) {
+  if (changedKeys === undefined) {
+    for (const [key, value] of Object.entries(node)) {
+      setValueOnYMap(ynode, key, value)
     }
+    return
+  }
+
+  const nodeRecord = node as unknown as Record<string, unknown>
+  for (const key of changedKeys) {
+    const value = nodeRecord[key]
+    if (value === undefined) continue
+    setValueOnYMap(ynode, key, value)
   }
 }
 
@@ -70,9 +92,9 @@ export function bindCollabGraphEvents({
   setSuppressYjsEvents,
   syncNodeToYjs
 }: GraphBindingOptions) {
-  function onGraphMutation(nodeId: string) {
+  function onGraphMutation(nodeId: string, changedKeys?: Iterable<string>) {
     if (!getSuppressGraphSync() && getYdoc() && getYnodes()) {
-      syncNodeToYjs(nodeId)
+      syncNodeToYjs(nodeId, changedKeys)
     }
   }
 
@@ -138,7 +160,7 @@ export function createYjsGraphSync({
   getYimages,
   setSuppressYjsEvents
 }: YjsGraphSyncOptions) {
-  function syncNodeToYjs(nodeId: string) {
+  function syncNodeToYjs(nodeId: string, changedKeys?: Iterable<string>) {
     const store = getStore()
     const ydoc = getYdoc()
     const ynodes = getYnodes()
@@ -154,9 +176,13 @@ export function createYjsGraphSync({
         ynode = new Y.Map()
         ynodes.set(nodeId, ynode)
       }
-      syncNodePropsToYMap(node, ynode)
+      const changedKeysArray =
+        changedKeys === undefined ? undefined : Array.from(changedKeys)
+      syncNodePropsToYMap(node, ynode, changedKeysArray)
 
-      if (localYimages) {
+      const shouldSyncImages =
+        changedKeysArray === undefined || changedKeysArray.includes('fills')
+      if (localYimages && shouldSyncImages) {
         for (const fill of node.fills) {
           if (fill.imageHash && !localYimages.has(fill.imageHash)) {
             const data = store.graph.images.get(fill.imageHash)
