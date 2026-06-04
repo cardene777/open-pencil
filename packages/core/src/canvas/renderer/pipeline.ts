@@ -3,13 +3,16 @@ import type { Canvas } from 'canvaskit-wasm'
 import { drawPageGuides } from '#core/canvas/page-guides'
 import type { RenderOverlays, SkiaRenderer } from '#core/canvas/renderer'
 import type { EditorState } from '#core/editor/types'
+import { computeDescendantVisualBounds } from '#core/geometry'
 import type { SceneGraph } from '#core/scene-graph'
 
 import {
   cachedSubtreePicture,
+  getSubtreeVisualBounds,
   hasCachedSubtreePictureHit,
   renderSceneBacking,
-  updateSceneBackingPreviewState
+  updateSceneBackingPreviewState,
+  visualBoundsIntersectsViewport
 } from './retained-backing'
 
 export function renderSceneToCanvas(
@@ -266,9 +269,7 @@ function renderSceneContent(
     const phase = allHit ? 'render:drawPicture' : 'render:recordPicture'
     p.setScenePictureMode(allHit ? 'hit' : 'record', allHit ? '' : cacheMissReason)
     p.beginPhase(phase)
-    const { duration } = measure(() =>
-      renderPageChildren(r, canvas, graph, overlays, sceneVersion)
-    )
+    const { duration } = measure(() => renderPageChildren(r, canvas, graph, overlays, sceneVersion))
     if (allHit) p.setScenePictureDrawTime(duration)
     else p.setScenePictureRecordTime(duration)
     p.endPhase(phase)
@@ -298,7 +299,12 @@ function renderPageChildren(
   const pageNode = graph.getNode(r.pageId ?? graph.rootId)
   if (!pageNode) return
   for (const childId of pageNode.childIds) {
-    const picture = cachedSubtreePicture(r, graph, childId, sceneVersion)
+    const bounds = getSubtreeVisualBounds(r, graph, childId)
+    if (bounds && !visualBoundsIntersectsViewport(bounds, r.worldViewport)) {
+      r._culledCount++
+      continue
+    }
+    const picture = cachedSubtreePicture(r, graph, childId, sceneVersion, bounds)
     if (picture) {
       canvas.drawPicture(picture)
     } else {

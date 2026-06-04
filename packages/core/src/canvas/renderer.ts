@@ -11,6 +11,7 @@ import {
   IS_BROWSER
 } from '#core/constants'
 import type { EditorState } from '#core/editor/types'
+import type { VisualBounds } from '#core/geometry'
 import { RenderProfiler } from '#core/profiler'
 import type { SceneNode, SceneGraph, Fill, Stroke } from '#core/scene-graph'
 import type { SnapGuide } from '#core/scene-graph/snap'
@@ -45,6 +46,7 @@ import type {
 } from 'canvaskit-wasm'
 
 export interface SubtreePictureCacheEntry {
+  bounds: VisualBounds
   picture: SkPicture
   pageId: string | null
   sceneVersion: number
@@ -136,6 +138,7 @@ export class SkiaRenderer {
   lastSceneViewport: { panX: number; panY: number; zoom: number } | null = null
   nodePictureCache = new Map<string, SkPicture | null>()
   subtreePictureCache = new Map<string, SubtreePictureCacheEntry>()
+  subtreePictureCacheLruLimit = 2000
   subtreePictureCachePageId: string | null = null
   subtreePictureCacheSceneVersion = -1
   readonly labelCache = new LabelCache()

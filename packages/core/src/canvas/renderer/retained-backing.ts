@@ -2,7 +2,7 @@ import type { Canvas, Image as CKImage, Surface } from 'canvaskit-wasm'
 
 import type { SkiaRenderer } from '#core/canvas/renderer'
 import { clearSubtreePictureCache } from '#core/canvas/renderer/state'
-import { computeDescendantVisualBounds } from '#core/geometry'
+import { computeDescendantVisualBounds, type VisualBounds } from '#core/geometry'
 import type { SceneGraph } from '#core/scene-graph'
 
 import type { RenderLayer } from './pipeline'
@@ -14,6 +14,7 @@ const MIN_SCENE_BACKING_IDLE_FRAMES = 2
 const MAX_SCENE_BACKING_IDLE_FRAMES = 18
 const MAX_SCENE_BACKING_QUIET_INPUT_INTERVALS = 4
 const SCENE_BACKING_BUILD_BUDGET_MS = 6
+const DEFAULT_SUBTREE_CACHE_LRU_LIMIT = 2000
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -76,6 +77,15 @@ function backingMetadataMatches(
   )
 }
 
+function backingIdentityMatches(r: SkiaRenderer, positionPreviewVersion: number): boolean {
+  const backing = r.sceneBacking
+  return !!(
+    backing &&
+    backing.pageId === r.pageId &&
+    backing.positionPreviewVersion === positionPreviewVersion
+  )
+}
+
 function backingScreenCoverageContainsViewport(r: SkiaRenderer): boolean {
   const backing = r.sceneBacking
   if (!backing) return false
@@ -113,9 +123,13 @@ function backingCoverageContainsLiveViewport(
   r: SkiaRenderer,
   sceneVersion: number,
   allowStaleZoom: boolean,
-  positionPreviewVersion: number
+  positionPreviewVersion: number,
+  allowStaleSceneVersion = false
 ): boolean {
-  if (!backingMetadataMatches(r, sceneVersion, positionPreviewVersion)) return false
+  if (!backingIdentityMatches(r, positionPreviewVersion)) return false
+  if (!allowStaleSceneVersion && !backingMetadataMatches(r, sceneVersion, positionPreviewVersion)) {
+    return false
+  }
   const crispZoom = backingZoomMatchesLiveViewport(r)
   if (allowStaleZoom && backingScreenCoverageContainsViewport(r)) return true
   return crispZoom && backingWorldCoverageContainsLiveViewport(r)
@@ -126,12 +140,19 @@ function drawSceneBacking(
   canvas: Canvas,
   sceneVersion: number,
   allowStaleZoom: boolean,
-  positionPreviewVersion: number
+  positionPreviewVersion: number,
+  allowStaleSceneVersion = false
 ): boolean {
   const backing = r.sceneBacking
   if (
     !backing ||
-    !backingCoverageContainsLiveViewport(r, sceneVersion, allowStaleZoom, positionPreviewVersion)
+    !backingCoverageContainsLiveViewport(
+      r,
+      sceneVersion,
+      allowStaleZoom,
+      positionPreviewVersion,
+      allowStaleSceneVersion
+    )
   ) {
     return false
   }
@@ -172,6 +193,18 @@ function sceneBackingGeometry(r: SkiaRenderer) {
   }
 }
 
+export function visualBoundsIntersectsViewport(
+  bounds: VisualBounds,
+  viewport: SkiaRenderer['worldViewport']
+): boolean {
+  return !(
+    bounds.maxX < viewport.x ||
+    bounds.minX > viewport.x + viewport.w ||
+    bounds.maxY < viewport.y ||
+    bounds.minY > viewport.y + viewport.h
+  )
+}
+
 function createSceneBackingSurface(r: SkiaRenderer, width: number, height: number): Surface | null {
   return r.surface.makeSurface({
     width: Math.ceil(width * r.dpr),
@@ -205,6 +238,48 @@ function isValidSubtreePictureEntry(
   )
 }
 
+function computeSubtreeVisualBounds(graph: SceneGraph, childId: string): VisualBounds | null {
+  return computeDescendantVisualBounds(
+    [childId],
+    (id) => graph.getNode(id),
+    (id) => graph.getAbsolutePosition(id)
+  )
+}
+
+function touchSubtreePictureCacheLru(r: SkiaRenderer, childId: string): void {
+  const entry = r.subtreePictureCache.get(childId)
+  if (!entry) return
+  r.subtreePictureCache.delete(childId)
+  r.subtreePictureCache.set(childId, entry)
+}
+
+function evictSubtreePictureCacheLruIfNeeded(r: SkiaRenderer): void {
+  const limit = r.subtreePictureCacheLruLimit ?? DEFAULT_SUBTREE_CACHE_LRU_LIMIT
+  while (r.subtreePictureCache.size > limit) {
+    const oldest = r.subtreePictureCache.keys().next().value
+    if (typeof oldest !== 'string') break
+    const entry = r.subtreePictureCache.get(oldest)
+    if (!entry) {
+      r.subtreePictureCache.delete(oldest)
+      continue
+    }
+    entry.picture.delete()
+    r.subtreePictureCache.delete(oldest)
+  }
+}
+
+export function getSubtreeVisualBounds(
+  r: SkiaRenderer,
+  graph: SceneGraph,
+  childId: string
+): VisualBounds | null {
+  const cached = r.subtreePictureCache.get(childId)
+  if (isValidSubtreePictureEntry(r, graph, childId, cached) && cached.bounds) {
+    return cached.bounds
+  }
+  return computeSubtreeVisualBounds(graph, childId)
+}
+
 export function hasCachedSubtreePictureHit(
   r: SkiaRenderer,
   graph: SceneGraph,
@@ -219,22 +294,22 @@ export function cachedSubtreePicture(
   r: SkiaRenderer,
   graph: SceneGraph,
   childId: string,
-  sceneVersion: number
+  sceneVersion: number,
+  boundsOverride?: VisualBounds | null
 ) {
   ensureSubtreePictureCacheScope(r, sceneVersion)
   const cached = r.subtreePictureCache.get(childId)
   if (isValidSubtreePictureEntry(r, graph, childId, cached)) {
     cached.sceneVersion = sceneVersion
+    touchSubtreePictureCacheLru(r, childId)
     return cached.picture
   }
 
-  r.subtreePictureCache.get(childId)?.picture.delete()
-  const bounds = computeDescendantVisualBounds(
-    [childId],
-    (id) => graph.getNode(id),
-    (id) => graph.getAbsolutePosition(id)
-  )
+  const bounds = boundsOverride ?? computeSubtreeVisualBounds(graph, childId)
   if (!bounds) return null
+  if (!visualBoundsIntersectsViewport(bounds, r.worldViewport)) return null
+
+  r.subtreePictureCache.get(childId)?.picture.delete()
 
   const recorder = new r.ck.PictureRecorder()
   const recCanvas = recorder.beginRecording(
@@ -252,11 +327,13 @@ export function cachedSubtreePicture(
   const picture = recorder.finishRecordingAsPicture()
   recorder.delete()
   r.subtreePictureCache.set(childId, {
+    bounds,
     picture,
     pageId: r.pageId,
     sceneVersion,
     subtreeVersion: graph.subtreeVersion.get(childId) ?? 0
   })
+  evictSubtreePictureCacheLruIfNeeded(r)
   return picture
 }
 
@@ -440,6 +517,8 @@ export function renderSceneBacking(
 ): boolean {
   const positionPreviewVersion = graph.positionPreviewVersion
   const allowStaleZoom = now() < r.sceneBackingPreviewUntil
+  const canPreviewCurrentBacking =
+    backingIdentityMatches(r, positionPreviewVersion) && backingScreenCoverageContainsViewport(r)
   const hasCoverage = backingCoverageContainsLiveViewport(
     r,
     sceneVersion,
@@ -447,16 +526,12 @@ export function renderSceneBacking(
     positionPreviewVersion
   )
   if (!hasCoverage) {
-    if (
-      !r.sceneBacking ||
-      !backingMetadataMatches(r, sceneVersion, positionPreviewVersion) ||
-      !backingScreenCoverageContainsViewport(r)
-    ) {
-      cancelSceneBackingBuild(r)
-      recordSceneBacking(r, graph, sceneVersion)
-    } else {
+    if (canPreviewCurrentBacking) {
       if (!sceneBackingBuildMatches(r, sceneVersion)) startSceneBackingBuild(r, graph, sceneVersion)
       stepSceneBackingBuild(r, sceneVersion)
+    } else {
+      cancelSceneBackingBuild(r)
+      recordSceneBacking(r, graph, sceneVersion)
     }
   } else if (r.sceneBackingBuild) {
     stepSceneBackingBuild(r, sceneVersion)
@@ -469,6 +544,7 @@ export function renderSceneBacking(
     canvas,
     sceneVersion,
     allowStaleZoom || !!r.sceneBackingBuild,
-    positionPreviewVersion
+    positionPreviewVersion,
+    canPreviewCurrentBacking || !!r.sceneBackingBuild
   )
 }
