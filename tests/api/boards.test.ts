@@ -1,12 +1,10 @@
 import { describe, expect, test } from 'bun:test'
 
-import { createApiApp } from '../../packages/api/src/server.js'
-
-const SECRET = 'test-secret'
+import { TEST_API_SECRET, createTestApiApp } from '../helpers/api.js'
 
 describe('board routes', () => {
   test('creates, lists, and deletes boards by anonymous owner', async () => {
-    const { app } = createApiApp({ secret: SECRET })
+    const { app, database } = createTestApiApp({ secret: TEST_API_SECRET })
     const createResponse = await app.request('/api/boards', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -46,10 +44,11 @@ describe('board routes', () => {
     })
     expect(deleteResponse.status).toBe(200)
     expect(await deleteResponse.json()).toEqual({ deleted: true })
+    database.close()
   })
 
   test('rejects delete and invitation listing for non-owners', async () => {
-    const { app } = createApiApp({ secret: SECRET })
+    const { app, database } = createTestApiApp({ secret: TEST_API_SECRET })
     const ownerId = 'anon-owner'
     const createResponse = await app.request('/api/boards', {
       method: 'POST',
@@ -71,10 +70,11 @@ describe('board routes', () => {
       headers: { 'X-Inkly-Anonymous-Id': 'anon-stranger' }
     })
     expect(listInvitationsResponse.status).toBe(403)
+    database.close()
   })
 
   test('lists invitations and accepted collaborators for the board owner', async () => {
-    const { app } = createApiApp({ secret: SECRET })
+    const { app, database } = createTestApiApp({ secret: TEST_API_SECRET })
     const ownerId = 'anon-owner'
     const createBoardResponse = await app.request('/api/boards', {
       method: 'POST',
@@ -130,5 +130,6 @@ describe('board routes', () => {
       }),
       invitations: [expect.objectContaining({ id: invite.invitationId, boardId: board.id })]
     })
+    database.close()
   })
 })

@@ -1,10 +1,12 @@
 import { describe, expect, test } from 'bun:test'
 
 import { createInvitationStore } from '../../packages/api/src/store.js'
+import { createTestApiDatabase } from '../helpers/api.js'
 
 describe('invitation store', () => {
   test('creates, finds, and revokes invitations', () => {
-    const store = createInvitationStore()
+    const database = createTestApiDatabase()
+    const store = createInvitationStore({ database })
     const invitation = store.createInvitation({
       boardId: 'board-123',
       sentToEmailHash: 'a'.repeat(64),
@@ -26,5 +28,6 @@ describe('invitation store', () => {
     expect(store.findInvitation(invitation.id)?.revoked).toBe(true)
     expect(store.revokeInvitation('missing-id')).toBeNull()
     expect(store.findInvitation('missing-id')).toBeNull()
+    database.close()
   })
 })

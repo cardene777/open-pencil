@@ -13,6 +13,7 @@ type SignalingMessage = {
 
 const sockets = new Set<WebSocket>()
 const servers: Array<{ stop: () => void }> = []
+const databases: Array<{ close: () => void } | null> = []
 
 afterEach(() => {
   for (const socket of sockets) {
@@ -22,6 +23,10 @@ afterEach(() => {
 
   for (const server of servers.splice(0)) {
     server.stop()
+  }
+
+  for (const database of databases.splice(0)) {
+    database?.close()
   }
 })
 
@@ -67,8 +72,17 @@ function connect(url: string): Promise<TestSocket> {
 
 describe('signaling websocket', () => {
   test('forwards offer, answer, and ice candidate messages within the same room', async () => {
-    const { server } = startApiServer({ secret: SECRET, host: '127.0.0.1', port: 0 })
+    const { server, database } = startApiServer({
+      secret: SECRET,
+      host: '127.0.0.1',
+      port: 0,
+      env: {
+        ...process.env,
+        INKLY_API_DB_MODE: 'memory'
+      }
+    })
     servers.push(server)
+    databases.push(database)
 
     const url = `ws://127.0.0.1:${server.port}/api/ws/signaling?room=board-123`
     const first = await connect(url)

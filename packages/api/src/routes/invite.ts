@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { resolveAnonymousId } from '../anonymousId.js'
+import type { InvitationEmailSender } from '../email/resend.js'
 import {
   hashInvitationEmail,
   INVITATION_TTL_MS,
@@ -37,6 +38,7 @@ export interface InviteRoutesOptions {
   secret: string
   store: InvitationStore
   boardStore?: BoardStore
+  emailSender?: InvitationEmailSender
   now?: () => number
 }
 
@@ -98,13 +100,25 @@ export function createInviteRoutes(options: InviteRoutesOptions): Hono {
 
     const token = await signInvitationToken(payload, options.secret)
     options.store.attachInvitationToken(invitation.id, token)
+    const relativeUrl = `/invite/${token}`
+    const invitationUrl = new URL(relativeUrl, c.req.url).toString()
+
+    if (options.emailSender) {
+      await options.emailSender.sendInvitation({
+        boardName: board?.name ?? 'Untitled board',
+        invitationUrl,
+        inviterAnonymousId: anonymousId,
+        role: invitation.role,
+        to: parsed.data.email
+      })
+    }
 
     return c.json(
       {
         invitationId: invitation.id,
         token,
         expiresAt: invitation.expiresAt,
-        url: `/invite/${token}`
+        url: relativeUrl
       },
       201
     )
