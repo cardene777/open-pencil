@@ -27,6 +27,7 @@ async function runEncodeWorker(req: EncodeRequest): Promise<EncodeResult> {
         reject(new Error(event.data.error))
       }
       worker.onerror = (event) => reject(new Error(event.message))
+      // eslint-disable-next-line unicorn/require-post-message-target-origin -- Worker.postMessage has no targetOrigin parameter.
       worker.postMessage(req)
     })
   } finally {
@@ -96,6 +97,74 @@ test(
 
     expect(workerResult.kiwiData).toEqual(compiled.encodeMessage(msg))
     expect(workerResult.schemaDeflated).toEqual(schemaDeflated)
+  },
+  30_000
+)
+
+test(
+  'encode worker produces byte-identical kiwi for messages with variable bindings',
+  async () => {
+    const { initCodec, getCompiledSchema } = await import('#core/kiwi/fig/codec')
+    await initCodec()
+    const compiled = getCompiledSchema()
+
+    const msg = {
+      type: 'NODE_CHANGES',
+      sessionID: 0,
+      ackID: 0,
+      nodeChanges: [
+        {
+          guid: { sessionID: 0, localID: 1 },
+          phase: 'CREATED' as const,
+          type: 'FRAME',
+          name: 'Bound Frame',
+          fillPaints: [
+            {
+              type: 'SOLID',
+              color: { r: 1, g: 0, b: 0, a: 1 },
+              opacity: 1,
+              visible: true,
+              blendMode: 'NORMAL',
+              colorVariableBinding: { variableID: { sessionID: 0, localID: 99 } }
+            }
+          ]
+        }
+      ]
+    }
+
+    const mainKiwi = compiled.encodeMessage(msg)
+    const workerResult = await runEncodeWorker({ msg, figSchemaDeflated: undefined })
+    expect(workerResult.kiwiData).toEqual(mainKiwi)
+  },
+  30_000
+)
+
+test(
+  'encode worker produces byte-identical kiwi for messages with blobs',
+  async () => {
+    const { initCodec, getCompiledSchema } = await import('#core/kiwi/fig/codec')
+    await initCodec()
+    const compiled = getCompiledSchema()
+
+    const blobBytes = new Uint8Array([1, 2, 3, 4, 5])
+    const msg = {
+      type: 'NODE_CHANGES',
+      sessionID: 0,
+      ackID: 0,
+      nodeChanges: [
+        {
+          guid: { sessionID: 0, localID: 1 },
+          phase: 'CREATED' as const,
+          type: 'VECTOR',
+          name: 'Blob carrier'
+        }
+      ],
+      blobs: [{ bytes: blobBytes }]
+    }
+
+    const mainKiwi = compiled.encodeMessage(msg)
+    const workerResult = await runEncodeWorker({ msg, figSchemaDeflated: undefined })
+    expect(workerResult.kiwiData).toEqual(mainKiwi)
   },
   30_000
 )

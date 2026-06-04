@@ -42,6 +42,7 @@ self.onmessage = async (event: MessageEvent<EncodeRequest>) => {
       kiwiData: compiled.encodeMessage(event.data.msg),
       schemaDeflated
     }
+    // eslint-disable-next-line unicorn/require-post-message-target-origin -- DedicatedWorkerGlobalScope.postMessage has no targetOrigin.
     self.postMessage(result)
   } catch (error) {
     const result: EncodeError = {
@@ -49,6 +50,7 @@ self.onmessage = async (event: MessageEvent<EncodeRequest>) => {
       error:
         error instanceof Error ? `${error.message}\n${error.stack ?? ''}`.trim() : String(error)
     }
+    // eslint-disable-next-line unicorn/require-post-message-target-origin -- DedicatedWorkerGlobalScope.postMessage has no targetOrigin.
     self.postMessage(result)
   }
 }

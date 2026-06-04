@@ -29,6 +29,8 @@ const THUMBNAIL_1X1 = Uint8Array.from(
   ),
   (c) => c.charCodeAt(0)
 )
+const ENCODE_WORKER_MIN_NODECHANGE_COUNT = 50
+const ENCODE_WORKER_MAX_TOTAL_BYTES = 100 * 1024 * 1024
 
 type KiwiNodeChange = NodeChange & Record<string, unknown>
 type FigExportPage = ReturnType<SceneGraph['getPages']>[number]
@@ -375,9 +377,10 @@ export async function exportFigFile(
     msg.blobs = blobs.map((bytes) => ({ bytes }))
   }
 
-  const { kiwiData, schemaDeflated } = canUseEncodeWorker()
-    ? await encodeViaWorker(msg, graph.figSchemaDeflated ?? undefined)
-    : await encodeViaMainThread(msg, graph.figSchemaDeflated ?? undefined)
+  const { kiwiData, schemaDeflated } = await encodeMessageWithFallback(
+    msg,
+    graph.figSchemaDeflated ?? undefined
+  )
 
   const currentPageId = pageId ?? pages[0]?.id
   const thumbnailPng = await renderFigThumbnail(
@@ -418,7 +421,33 @@ export async function exportFigFile(
 export { compressFigDataSync } from './compress'
 
 function canUseEncodeWorker(): boolean {
-  return typeof Worker !== 'undefined' && IS_BROWSER
+  return typeof Worker !== 'undefined' && IS_BROWSER && !IS_TAURI
+}
+
+function shouldUseEncodeWorker(
+  msg: Record<string, unknown>,
+  _figSchemaDeflated?: Uint8Array
+): boolean {
+  if (!canUseEncodeWorker()) return false
+  const nodeChanges = msg.nodeChanges as unknown[] | undefined
+  const nodeChangeCount = nodeChanges?.length ?? 0
+  if (nodeChangeCount < ENCODE_WORKER_MIN_NODECHANGE_COUNT) return false
+  const blobs = msg.blobs as Array<{ bytes: Uint8Array }> | undefined
+  const totalBlobBytes = (blobs ?? []).reduce((sum, b) => sum + b.bytes.byteLength, 0)
+  if (totalBlobBytes > ENCODE_WORKER_MAX_TOTAL_BYTES) return false
+  return true
+}
+
+async function encodeMessageWithFallback(
+  msg: Record<string, unknown>,
+  figSchemaDeflated?: Uint8Array
+): Promise<{ kiwiData: Uint8Array; schemaDeflated: Uint8Array }> {
+  if (!shouldUseEncodeWorker(msg, figSchemaDeflated)) {
+    return encodeViaMainThread(msg, figSchemaDeflated)
+  }
+  return encodeViaWorker(msg, figSchemaDeflated).catch(() =>
+    encodeViaMainThread(msg, figSchemaDeflated)
+  )
 }
 
 async function encodeViaMainThread(
