@@ -124,6 +124,44 @@ test.describe('perf-trace hotpaths', () => {
     editor.canvas.assertNoErrors()
   })
 
+  test('同じ内容で再 autosave トリガーすると bytes fingerprint で write skip される', async () => {
+    test.setTimeout(60_000)
+
+    await editor.page.evaluate(() => {
+      window.__pencilPerf?.enable()
+      window.__pencilPerf?.clear()
+    })
+
+    await editor.canvas.drawRect(120, 120, 60, 40)
+    await editor.canvas.waitForRender()
+
+    await editor.page.waitForTimeout(5500)
+
+    const firstSummary = await editor.page.evaluate(() => window.__pencilPerf?.summary())
+    const firstWrite = firstSummary?.stats.find((s) => s.name === 'autosave:write')
+    expect(firstWrite?.count ?? 0).toBeGreaterThanOrEqual(1)
+
+    await editor.page.evaluate(() => window.__pencilPerf?.clear())
+
+    await editor.canvas.click(50, 50)
+    await editor.canvas.waitForRender()
+
+    await editor.page.evaluate(() => {
+      const store = window.inkly?.getStore?.()
+      if (!store) return
+      store.requestRender()
+    })
+
+    await editor.page.waitForTimeout(7000)
+
+    const secondSummary = await editor.page.evaluate(() => window.__pencilPerf?.summary())
+    const secondWrite = secondSummary?.stats.find((s) => s.name === 'autosave:write')
+    const secondFingerprint = secondSummary?.stats.find((s) => s.name === 'autosave:fingerprint')
+
+    expect(secondFingerprint?.count ?? 0).toBeGreaterThanOrEqual(1)
+    expect(secondWrite?.count ?? 0).toBeLessThanOrEqual(1)
+  })
+
   test('連続編集 30 秒中の autosave 起動回数が throttle scheduler で抑制される', async () => {
     test.setTimeout(180_000)
 

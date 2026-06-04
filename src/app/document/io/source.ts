@@ -5,6 +5,11 @@ import { exportFigFile } from '@inkly/core/io/formats/fig'
 import { perfTracer } from '@inkly/core/profiler'
 
 import { createAutosave } from '@/app/document/autosave'
+import {
+  type BytesFingerprint,
+  fingerprint,
+  fingerprintEquals
+} from '@/app/document/autosave/bytes-hash'
 import { createThrottleScheduler } from '@/app/document/autosave/throttle-scheduler'
 import {
   documentNameFromFigPath,
@@ -84,6 +89,7 @@ export function createDocumentSourceActions({
   })
 
   let lastCachedVersion = state.sceneVersion
+  let lastCachedFingerprint: BytesFingerprint | null = null
   let savedResetTimer: ReturnType<typeof setTimeout> | null = null
   const runOnIdle = (cb: () => void): void => {
     const ric = (globalThis as { requestIdleCallback?: (cb: () => void) => void })
@@ -105,6 +111,21 @@ export function createDocumentSourceActions({
         () => buildFigFile(),
         { version }
       )
+      const nextFingerprint = perfTracer.measure(
+        'autosave:fingerprint',
+        'IO',
+        () => fingerprint(bytes),
+        { version, bytes: bytes.byteLength }
+      )
+      if (fingerprintEquals(lastCachedFingerprint, nextFingerprint)) {
+        lastCachedVersion = version
+        state.autosaveStatus = 'saved'
+        if (savedResetTimer) clearTimeout(savedResetTimer)
+        savedResetTimer = setTimeout(() => {
+          state.autosaveStatus = 'idle'
+        }, 2000)
+        return
+      }
       const cacheName = getDownloadName() ?? `${state.documentName}.fig`
       await perfTracer.measureAsync(
         'autosave:write',
@@ -112,6 +133,7 @@ export function createDocumentSourceActions({
         () => savePenToCache(cacheName, 'application/octet-stream', bytes),
         { version, bytes: bytes.byteLength }
       )
+      lastCachedFingerprint = nextFingerprint
       lastCachedVersion = version
       state.autosaveStatus = 'saved'
       if (savedResetTimer) clearTimeout(savedResetTimer)
