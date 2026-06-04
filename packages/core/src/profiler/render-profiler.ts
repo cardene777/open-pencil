@@ -7,6 +7,7 @@ import type { FrameCapture } from './frame/capture'
 import { FrameStats } from './frame/stats'
 import { GPUTimer } from './gpu-timer'
 import { HudController } from './hud-controller'
+import { perfTracer } from './perf-tracer'
 import { PhaseTimer } from './phase-timer'
 import { exportSpeedscopeCapture } from './speedscope-export'
 
@@ -33,6 +34,10 @@ export class RenderProfiler {
     this.hud = new HudController(ck)
   }
 
+  private get effectiveEnabled(): boolean {
+    return this.enabled || perfTracer.enabled
+  }
+
   setVisible(visible: boolean): void {
     this.hudVisible = visible
     this.enabled = visible
@@ -45,7 +50,7 @@ export class RenderProfiler {
   }
 
   beginFrame(): void {
-    if (!this.enabled) return
+    if (!this.effectiveEnabled) return
     this.renderStartTime = now()
     this.phases.beginPhase('frame')
     this.gpuTimer.beginFrame()
@@ -53,7 +58,7 @@ export class RenderProfiler {
   }
 
   endFrame(): void {
-    if (!this.enabled) return
+    if (!this.effectiveEnabled) return
 
     this.gpuTimer.endFrame()
     this.gpuTimer.pollResults()
@@ -67,12 +72,12 @@ export class RenderProfiler {
   }
 
   beginPhase(name: string): void {
-    if (!this.enabled) return
+    if (!this.effectiveEnabled) return
     this.phases.beginPhase(name)
   }
 
   endPhase(name: string): void {
-    if (!this.enabled) return
+    if (!this.effectiveEnabled) return
     this.phases.endPhase(name)
   }
 
