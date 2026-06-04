@@ -6,7 +6,7 @@ import type { EditorState } from '#core/editor/types'
 import { computeDescendantVisualBounds } from '#core/geometry'
 import type { SceneGraph } from '#core/scene-graph'
 
-import { renderSceneBacking, updateSceneBackingPreviewState } from './retained-backing'
+import { cachedSubtreePicture, renderSceneBacking, updateSceneBackingPreviewState } from './retained-backing'
 
 export function renderSceneToCanvas(
   r: SkiaRenderer,
@@ -280,7 +280,7 @@ function renderSceneContent(
     r._nodeCount = 0
     r._culledCount = 0
     p.beginPhase('render:volatile')
-    renderPageChildren(r, canvas, graph, overlays)
+    renderPageChildren(r, canvas, graph, overlays, sceneVersion)
     p.endPhase('render:volatile')
   } else {
     p.setScenePictureMode('record', cacheMissReason)
@@ -297,12 +297,18 @@ function renderPageChildren(
   r: SkiaRenderer,
   canvas: Canvas,
   graph: SceneGraph,
-  overlays: RenderOverlays
+  overlays: RenderOverlays,
+  sceneVersion: number
 ): void {
   const pageNode = graph.getNode(r.pageId ?? graph.rootId)
   if (!pageNode) return
   for (const childId of pageNode.childIds) {
-    r.renderNode(canvas, graph, childId, overlays)
+    const picture = cachedSubtreePicture(r, graph, childId, sceneVersion)
+    if (picture) {
+      canvas.drawPicture(picture)
+    } else {
+      r.renderNode(canvas, graph, childId, overlays)
+    }
   }
 }
 
