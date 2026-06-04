@@ -64,21 +64,22 @@ function createRenderer() {
       delete: mock()
     }
   })
+  const ckSubset: Pick<SkiaRenderer['ck'], 'LTRBRect' | 'PictureRecorder'> = {
+    LTRBRect: mock((left: number, top: number, right: number, bottom: number) => [
+      left,
+      top,
+      right,
+      bottom
+    ]),
+    PictureRecorder
+  }
 
   const renderer: Partial<SkiaRenderer> = {
-    ck: {
-      LTRBRect: mock((left: number, top: number, right: number, bottom: number) => [
-        left,
-        top,
-        right,
-        bottom
-      ]),
-      PictureRecorder
-    } as unknown as SkiaRenderer['ck'],
+    ck: ckSubset as SkiaRenderer['ck'],
     dpr: 1,
     zoom: 1,
     pageId: 'page',
-    subtreePictureCache: cache as unknown as SkiaRenderer['subtreePictureCache'],
+    subtreePictureCache: cache as SkiaRenderer['subtreePictureCache'],
     subtreePictureCachePageId: 'page',
     subtreePictureCacheSceneVersion: 1,
     worldViewport: { x: 0, y: 0, w: 100, h: 100 },
@@ -303,7 +304,6 @@ describe('integration via updateNodePreview (AC3 full path)', () => {
     const frameB = graph.createNode('FRAME', page.id, { width: 200, height: 200 })
     const { renderer } = prepareIntegrationRenderer(page.id)
     graph.getAbsolutePosition = mock(() => ({ x: 0, y: 0 }))
-    ;(renderer as any).renderNode = mock()
     const cachedA = setCacheEntry(renderer, frameA.id, { subtreeVersion: 0 })
     const cachedB = setCacheEntry(renderer, frameB.id, { subtreeVersion: 0 })
 
@@ -327,7 +327,6 @@ describe('integration via updateNodePreview (AC3 full path)', () => {
     const frameB = graph.createNode('FRAME', page.id, { width: 200, height: 200 })
     const { renderer } = prepareIntegrationRenderer(page.id)
     graph.getAbsolutePosition = mock(() => ({ x: 0, y: 0 }))
-    ;(renderer as any).renderNode = mock()
     const cachedA = setCacheEntry(renderer, frameA.id, { subtreeVersion: 0 })
     const cachedB = setCacheEntry(renderer, frameB.id, { subtreeVersion: 0 })
 
@@ -349,7 +348,6 @@ describe('integration via updateNodePreview (AC3 full path)', () => {
     const { frameA, graph, leaf, page } = createIntegrationFixture()
     const { clearSpy, renderer } = prepareIntegrationRenderer(page.id)
     graph.getAbsolutePosition = mock(() => ({ x: 0, y: 0 }))
-    ;(renderer as any).renderNode = mock()
     setCacheEntry(renderer, frameA.id, { subtreeVersion: 0 })
 
     // When

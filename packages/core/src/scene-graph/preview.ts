@@ -62,6 +62,19 @@ const TEXT_PICTURE_KEYS = new Set<string>([
   'height'
 ])
 
+function collectAncestorChain(
+  graph: PreviewGraph,
+  startId: string | null | undefined,
+  collected: Set<string>
+): void {
+  let cursor = startId ?? undefined
+  while (cursor) {
+    if (collected.has(cursor)) break
+    collected.add(cursor)
+    cursor = graph.nodes.get(cursor)?.parentId ?? undefined
+  }
+}
+
 export function updateNodePreview(
   graph: PreviewGraph,
   id: string,
@@ -76,18 +89,8 @@ export function updateNodePreview(
   const oldParentId = node.parentId
   const newParentId = 'parentId' in changes ? changes.parentId : oldParentId
   const affected = new Set<string>([id])
-  let cursor = oldParentId ?? undefined
-  while (cursor) {
-    if (affected.has(cursor)) break
-    affected.add(cursor)
-    cursor = graph.nodes.get(cursor)?.parentId ?? undefined
-  }
-  cursor = newParentId ?? undefined
-  while (cursor) {
-    if (affected.has(cursor)) break
-    affected.add(cursor)
-    cursor = graph.nodes.get(cursor)?.parentId ?? undefined
-  }
+  collectAncestorChain(graph, oldParentId, affected)
+  collectAncestorChain(graph, newParentId, affected)
   for (const nodeId of affected) {
     graph.subtreeVersion.set(nodeId, (graph.subtreeVersion.get(nodeId) ?? 0) + 1)
   }
