@@ -1,3 +1,4 @@
+import { perfTracer } from '@inkly/core/profiler'
 import { getNodeEditState, handleNodeEditDown } from '#vue/shared/input/node-edit'
 export { resolveHit } from '#vue/shared/input/select/hit'
 import { resolveHit } from '#vue/shared/input/select/hit'
@@ -47,7 +48,7 @@ export function handleSelectDown(
     return
   }
 
-  const hit = resolveHit(cx, cy, editor, fns)
+  const hit = perfTracer.measure('hit-test:single-click', 'Custom', () => resolveHit(cx, cy, editor, fns))
   if (!hit) {
     if (!editor.state.enteredContainerId) {
       editor.clearSelection()

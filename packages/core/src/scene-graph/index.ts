@@ -1,4 +1,5 @@
 export * from './snap'
+export * from './spatial-index'
 export { UndoManager, type UndoEntry, type UndoManagerOptions } from './undo'
 
 import { createNanoEvents } from 'nanoevents'
@@ -17,9 +18,10 @@ export * from './types'
 
 import type { Emitter } from 'nanoevents'
 
-import { getAbsolutePosition } from '#core/canvas/coordinate'
+import { getAbsolutePosition, getAbsolutePositionFull } from '#core/canvas/coordinate'
 import type { Color, Rect, Vector } from '#core/types'
 
+import { SpatialIndex, type SpatialIndexBounds, type SpatialIndexViewport } from './spatial-index'
 import type {
   DocumentColorSpace,
   NodeType,
@@ -35,6 +37,7 @@ import type {
 export { cloneVectorNetwork, normalizeVectorNetwork, validateVectorNetwork } from './vector-network'
 
 let nextLocalID = 1
+const SPATIAL_INDEX_REBUILD_DEBOUNCE_MS = 30
 
 export function generateId(): string {
   return `0:${nextLocalID++}`
@@ -71,6 +74,16 @@ export class SceneGraph {
   positionPreviewVersion = 0
   subtreeVersion = new Map<string, number>()
   instanceIndex = new Map<string, Set<string>>()
+  private spatialIndex = new SpatialIndex()
+  private spatialIndexViewport: SpatialIndexViewport = {
+    width: 1024,
+    height: 768,
+    panX: 0,
+    panY: 0,
+    zoom: 1
+  }
+  private spatialIndexDirty = false
+  private spatialIndexRebuildTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor() {
     const root = createDefaultNode(generateId, 'FRAME', {
@@ -82,6 +95,8 @@ export class SceneGraph {
     this.nodes.set(root.id, root)
 
     this.addPage('Page 1')
+    this.spatialIndex.setViewport(this.spatialIndexViewport)
+    this.rebuildSpatialIndex()
   }
 
   addPage(name: string): SceneNode {
@@ -290,6 +305,118 @@ export class SceneGraph {
     }
   }
 
+  private getSpatialIndexBounds(nodeId: string): SpatialIndexBounds | null {
+    const node = this.nodes.get(nodeId)
+    if (!node || nodeId === this.rootId) return null
+
+    const world = getAbsolutePositionFull(node, this)
+    return {
+      minX: world.boundX,
+      minY: world.boundY,
+      maxX: world.boundX + world.width,
+      maxY: world.boundY + world.height
+    }
+  }
+
+  private rebuildSpatialIndex(): void {
+    this.spatialIndex.rebuild(this.nodes.keys(), (nodeId) => this.getSpatialIndexBounds(nodeId))
+    this.spatialIndexDirty = false
+  }
+
+  private scheduleSpatialIndexRebuild(): void {
+    this.spatialIndexDirty = true
+    if (this.spatialIndexRebuildTimer) clearTimeout(this.spatialIndexRebuildTimer)
+    this.spatialIndexRebuildTimer = setTimeout(() => {
+      this.spatialIndexRebuildTimer = null
+      this.rebuildSpatialIndex()
+    }, SPATIAL_INDEX_REBUILD_DEBOUNCE_MS)
+  }
+
+  private updateSpatialIndexNode(nodeId: string): void {
+    const bounds = this.getSpatialIndexBounds(nodeId)
+    if (!bounds) {
+      this.spatialIndex.remove(nodeId)
+      return
+    }
+    this.spatialIndex.update(nodeId, bounds)
+  }
+
+  private updateSpatialIndexSubtree(nodeId: string): void {
+    const stack = [nodeId]
+    while (stack.length > 0) {
+      const currentId = stack.pop()
+      if (currentId === undefined) break
+      this.updateSpatialIndexNode(currentId)
+      const node = this.nodes.get(currentId)
+      if (!node) continue
+      for (const childId of node.childIds) stack.push(childId)
+    }
+  }
+
+  private removeSpatialIndexSubtree(nodeId: string): void {
+    const stack = [nodeId]
+    while (stack.length > 0) {
+      const currentId = stack.pop()
+      if (currentId === undefined) break
+      const node = this.nodes.get(currentId)
+      if (node) {
+        for (const childId of node.childIds) stack.push(childId)
+      }
+      this.spatialIndex.remove(currentId)
+    }
+  }
+
+  private shouldRefreshSpatialIndexSubtree(
+    node: SceneNode,
+    changes: Partial<SceneNode>,
+    affectsLayout: boolean
+  ): boolean {
+    if (!affectsLayout) return false
+    if (node.childIds.length > 0) return true
+    return 'parentId' in changes
+  }
+
+  setHitTestViewport(viewport: Partial<SpatialIndexViewport>): void {
+    const nextViewport: SpatialIndexViewport = {
+      width: viewport.width ?? this.spatialIndexViewport.width,
+      height: viewport.height ?? this.spatialIndexViewport.height,
+      panX: viewport.panX ?? this.spatialIndexViewport.panX,
+      panY: viewport.panY ?? this.spatialIndexViewport.panY,
+      zoom: viewport.zoom ?? this.spatialIndexViewport.zoom
+    }
+    this.spatialIndexViewport = nextViewport
+    if (this.spatialIndex.setViewport(nextViewport)) {
+      this.scheduleSpatialIndexRebuild()
+    }
+  }
+
+  getSpatialIndexCellSize(): number {
+    return this.spatialIndex.getCellSize()
+  }
+
+  getHitTestCandidateIds(px: number, py: number, scopeId?: string): Set<string> | null {
+    if (this.spatialIndexDirty) return null
+
+    const scope = scopeId ?? this.rootId
+    const hits = this.spatialIndex.queryPoint(px, py)
+    const candidates = new Set<string>()
+
+    for (const nodeId of hits) {
+      const path: string[] = []
+      let cursor: string | null | undefined = nodeId
+      while (cursor) {
+        path.push(cursor)
+        if (cursor === scope) {
+          for (const pathId of path) candidates.add(pathId)
+          break
+        }
+        cursor = this.nodes.get(cursor)?.parentId
+      }
+    }
+
+    return candidates
+  }
+
   createNode(type: NodeType, parentId: string, overrides: Partial<SceneNode> = {}): SceneNode {
     const node = createDefaultNode(() => this.generateNodeId(), type, overrides)
     node.parentId = parentId
@@ -310,6 +437,7 @@ export class SceneGraph {
     }
 
     this.bumpSubtreeVersions(node.id, parentId, parentId)
+    this.updateSpatialIndexNode(node.id)
     this.emitter.emit('node:created', node)
     return node
   }
@@ -457,6 +585,11 @@ export class SceneGraph {
     }
     this.bumpSubtreeVersions(id, oldParentId, newParentId)
     Object.assign(node, changes)
+    if (this.shouldRefreshSpatialIndexSubtree(node, changes, affectsLayout)) {
+      this.updateSpatialIndexSubtree(id)
+    } else if (affectsLayout || 'visible' in changes) {
+      this.updateSpatialIndexNode(id)
+    }
     const augmentedChanges = this.buildAugmentedChanges(node, changes, {
       textPicture: prevTextPicture,
       figmaDerivedTextGlyphs: prevFigmaDerivedTextGlyphs,
@@ -502,6 +635,7 @@ export class SceneGraph {
     node.y = absPos.y - newParentAbs.y
 
     this.bumpSubtreeVersions(nodeId, oldParentId, newParentId)
+    this.updateSpatialIndexSubtree(nodeId)
     this.emitter.emit('node:reparented', nodeId, oldParentId, newParentId)
   }
 
@@ -555,6 +689,7 @@ export class SceneGraph {
     const node = this.nodes.get(id)
     if (!node || id === this.rootId) return
     this.bumpSubtreeVersions(id, node.parentId, node.parentId)
+    this.removeSpatialIndexSubtree(id)
 
     if (node.parentId) {
       const parent = this.nodes.get(node.parentId)

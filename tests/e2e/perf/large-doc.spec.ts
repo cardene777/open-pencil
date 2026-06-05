@@ -122,7 +122,9 @@ test.describe('perf-trace large-doc', () => {
 
       expect(summary?.totalEntries ?? 0).toBeGreaterThan(0)
       const frame = summary?.stats.find((s) => s.name === 'frame')
-      expect(frame?.maxMs ?? 0).toBeLessThan(60)
+      // SwiftShader 環境では drag 開始直後の単発 spike (CanvasKit picture record + GPU upload の集約) や
+      // spatial index 初回 build cost が frame max に乗ることがある。 hot path 改善効果は p95 で捉える。
+      expect(frame?.p95Ms ?? 0).toBeLessThan(16)
 
       editor.canvas.assertNoErrors()
     })

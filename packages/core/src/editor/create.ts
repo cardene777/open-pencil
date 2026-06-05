@@ -64,6 +64,25 @@ export function createEditor(options?: EditorOptions) {
 
   const state: EditorState = options?.state ?? createDefaultEditorState(_graph.getPages()[0].id)
 
+  function syncHitTestViewport() {
+    let width = 800
+    let height = 600
+    try {
+      const viewport = _getViewportSize()
+      width = viewport.width
+      height = viewport.height
+    } catch {
+      // Headless tests may provide a browser-only viewport getter.
+    }
+    _graph.setHitTestViewport({
+      width,
+      height,
+      panX: state.panX,
+      panY: state.panY,
+      zoom: state.zoom
+    })
+  }
+
   function emitEditorEvent<K extends EditorEventName>(
     event: K,
     ...args: Parameters<EditorEvents[K]>
@@ -125,6 +144,7 @@ export function createEditor(options?: EditorOptions) {
   if (!skipInitialGraphSetup) {
     subscribeToGraph()
   }
+  syncHitTestViewport()
 
   // Build the shared context
   const ctx: EditorContext = {
@@ -190,6 +210,7 @@ export function createEditor(options?: EditorOptions) {
 
   function replaceGraph(newGraph: SceneGraph) {
     _graph = newGraph
+    syncHitTestViewport()
     subscribeToGraph()
     const previousPageId = state.currentPageId
     state.currentPageId = _graph.getPages()[0]?.id ?? _graph.rootId
@@ -225,6 +246,7 @@ export function createEditor(options?: EditorOptions) {
     // Lifecycle
     requestRender,
     requestRepaint,
+    syncHitTestViewport,
     onEditorEvent,
     setCanvasKit,
     removeCanvasRenderer,

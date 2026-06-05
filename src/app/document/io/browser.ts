@@ -7,6 +7,7 @@ export function yieldToUI(): Promise<void> {
 }
 
 type ViewportEditor = {
+  syncHitTestViewport?: () => void
   zoomToFit: () => void
 }
 
@@ -14,6 +15,7 @@ export function createDocumentViewportActions(editor: ViewportEditor, viewportSi
   function setViewportSize(width: number, height: number) {
     viewportSize.width = width
     viewportSize.height = height
+    editor.syncHitTestViewport?.()
   }
 
   async function fitCurrentPageToViewport() {
