@@ -1,7 +1,9 @@
 import { createHead } from '@unhead/vue/client'
+import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 
 import './app.css'
+import { useAuthStore } from '@/app/auth/store'
 import { preloadFonts } from '@/app/editor/fonts'
 import { startPerfTraceReporter } from '@/app/perf-trace/reporter'
 import { IS_TAURI } from '@/constants'
@@ -9,10 +11,25 @@ import { IS_TAURI } from '@/constants'
 import App from './App.vue'
 import router from './router'
 
+function shouldInitAuth(pathname: string) {
+  return pathname === '/boards' || pathname === '/account'
+}
+
 preloadFonts()
 startPerfTraceReporter()
 const head = createHead()
-createApp(App).use(router).use(head).mount('#app')
+const pinia = createPinia()
+const app = createApp(App)
+
+app.use(pinia)
+app.use(router)
+app.use(head)
+
+if (typeof window !== 'undefined' && shouldInitAuth(window.location.pathname)) {
+  void useAuthStore(pinia).init()
+}
+
+app.mount('#app')
 
 if (!IS_TAURI) {
   void import('virtual:pwa-register').then(({ registerSW }) => {

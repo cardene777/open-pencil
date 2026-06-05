@@ -91,16 +91,12 @@
       "indexes": {
         "collaborators_anonymous_id_idx": {
           "name": "collaborators_anonymous_id_idx",
-          "columns": [
-            "anonymous_id"
-          ],
+          "columns": ["anonymous_id"],
           "isUnique": false
         },
         "collaborators_invitation_id_idx": {
           "name": "collaborators_invitation_id_idx",
-          "columns": [
-            "invitation_id"
-          ],
+          "columns": ["invitation_id"],
           "isUnique": false
         }
       },
@@ -109,22 +105,15 @@
           "name": "collaborators_board_id_boards_id_fk",
           "tableFrom": "collaborators",
           "tableTo": "boards",
-          "columnsFrom": [
-            "board_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["board_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "collaborators_board_id_anonymous_id_pk": {
-          "columns": [
-            "board_id",
-            "anonymous_id"
-          ],
+          "columns": ["board_id", "anonymous_id"],
           "name": "collaborators_board_id_anonymous_id_pk"
         }
       },
@@ -202,9 +191,7 @@
       "indexes": {
         "invitations_board_id_idx": {
           "name": "invitations_board_id_idx",
-          "columns": [
-            "board_id"
-          ],
+          "columns": ["board_id"],
           "isUnique": false
         }
       },

@@ -5,6 +5,7 @@ const router = createRouter({
   routes: [
     { path: '/', component: () => import('./views/EditorView.vue') },
     { path: '/boards', component: () => import('./views/BoardsView.vue') },
+    { path: '/account', component: () => import('./views/AccountView.vue') },
     { path: '/board/:id/settings', component: () => import('./views/BoardSettingsView.vue') },
     { path: '/invite/:token', component: () => import('./views/InviteRedirectView.vue') },
     { path: '/demo', component: () => import('./views/EditorView.vue'), meta: { demo: true } },

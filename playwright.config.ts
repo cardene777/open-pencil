@@ -45,13 +45,13 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'bun run dev',
+      command: 'VITE_INKLY_AUTH_TEST_MODE=1 bun run dev',
       port: 1420,
       reuseExistingServer: true
     },
     {
       command:
-        'INKLY_API_DB_MODE=memory INKLY_API_JWT_SECRET=playwright-secret bun --filter @inkly/api dev',
+        'INKLY_API_DB_MODE=memory INKLY_API_JWT_SECRET=playwright-secret INKLY_API_AUTH_ENABLE_TEST_UTILS=1 bun --filter @inkly/api dev',
       port: 3001,
       reuseExistingServer: true
     }

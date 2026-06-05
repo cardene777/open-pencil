@@ -9,6 +9,7 @@ export interface InklyAuthConfig {
   basePath: string
   secret: string
   google: GoogleOAuthConfig | null
+  enableTestUtils: boolean
   warnings: string[]
 }
 
@@ -22,14 +23,18 @@ function readEnv(value: string | undefined): string | null {
   return trimmed && trimmed.length > 0 ? trimmed : null
 }
 
-export function resolveInklyAuthConfig(
-  options: ResolveInklyAuthConfigOptions
-): InklyAuthConfig {
+function readEnvFlag(value: string | undefined): boolean {
+  const normalized = value?.trim().toLowerCase()
+  return normalized === '1' || normalized === 'true' || normalized === 'yes'
+}
+
+export function resolveInklyAuthConfig(options: ResolveInklyAuthConfigOptions): InklyAuthConfig {
   const env = options.env ?? process.env
   const warnings: string[] = []
   const authSecret = readEnv(env.INKLY_API_AUTH_SECRET)
   const googleClientId = readEnv(env.INKLY_API_GOOGLE_CLIENT_ID)
   const googleClientSecret = readEnv(env.INKLY_API_GOOGLE_CLIENT_SECRET)
+  const enableTestUtils = readEnvFlag(env.INKLY_API_AUTH_ENABLE_TEST_UTILS)
 
   if (!authSecret) {
     warnings.push(
@@ -58,6 +63,7 @@ export function resolveInklyAuthConfig(
     basePath: INKLY_API_AUTH_BASE_PATH,
     secret: authSecret ?? options.fallbackSecret,
     google,
+    enableTestUtils,
     warnings
   }
 }

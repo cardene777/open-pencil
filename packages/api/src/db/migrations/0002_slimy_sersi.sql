@@ -1,0 +1,1 @@
+ALTER TABLE `boards` ADD `creator_user_id` text REFERENCES users(id);
