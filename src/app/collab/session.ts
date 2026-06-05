@@ -4,7 +4,7 @@ import * as awarenessProtocol from 'y-protocols/awareness'
 import type { Awareness } from 'y-protocols/awareness'
 import * as Y from 'yjs'
 
-import { colorFromAnonymousId } from '@/app/collab/cursor-color'
+import { colorFromIdentity } from '@/app/collab/cursor-color'
 import type { CollabState } from '@/app/collab/types'
 import {
   connectWebRtcProvider,
@@ -80,13 +80,17 @@ export function createCollabRuntime(): CollabRuntime {
   }
 }
 
-export function createInitialCollabState(localName: string, anonymousId: string | null): CollabState {
+export function createInitialCollabState(
+  localName: string,
+  anonymousId: string | null,
+  userId: string | null = null
+): CollabState {
   return {
     connected: false,
     roomId: null,
     peers: [],
     localName,
-    localColor: colorFromAnonymousId(anonymousId)
+    localColor: colorFromIdentity(userId, anonymousId)
   }
 }
 
