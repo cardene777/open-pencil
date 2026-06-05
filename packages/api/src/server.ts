@@ -70,6 +70,7 @@ export function createApiApp(options: CreateApiAppOptions) {
   app.route(
     '/api',
     createInviteRoutes({
+      auth,
       secret: options.secret,
       store,
       boardStore,
@@ -81,12 +82,13 @@ export function createApiApp(options: CreateApiAppOptions) {
   app.route(
     '/api',
     createBoardRoutes({
+      auth,
       boardStore,
       invitationStore: store
     })
   )
 
-  app.route('/api/auth', createAuthRoutes({ auth }))
+  app.route('/api/auth', createAuthRoutes({ auth, database, now: options.now }))
 
   return { app, store, boardStore, database, emailSender, auth }
 }

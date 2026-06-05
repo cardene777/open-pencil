@@ -1,11 +1,8 @@
-import { createMockEmailSender } from '../../packages/api/src/email/mock.js'
 import type { InklyAuth } from '../../packages/api/src/auth/index.js'
 import type { ApiDatabase } from '../../packages/api/src/db/client.js'
 import { createMigratedApiDatabase } from '../../packages/api/src/db/migrate.js'
-import {
-  createApiApp,
-  type CreateApiAppOptions
-} from '../../packages/api/src/server.js'
+import { createMockEmailSender } from '../../packages/api/src/email/mock.js'
+import { createApiApp, type CreateApiAppOptions } from '../../packages/api/src/server.js'
 
 export const TEST_API_SECRET = 'test-secret'
 

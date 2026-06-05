@@ -3,21 +3,29 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 
+import { useAuthStore } from '@/app/auth/store'
 import { readBoardPreview } from '@/app/boards/preview'
+import { initials, toast } from '@/app/shell/ui'
 import BoardCard from '@/components/BoardCard.vue'
+import LoginBanner from '@/components/LoginBanner.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import { createBoard, deleteBoard, listBoards, type Board } from '@/app/api/client'
-import { toast } from '@/app/shell/ui'
 
 useHead({ title: 'Boards' })
 
 const router = useRouter()
+const auth = useAuthStore()
 const boards = ref<Board[]>([])
 const boardName = ref('Untitled board')
 const searchQuery = ref('')
 const loading = ref(false)
 const creating = ref(false)
 const previews = ref<Record<string, string>>({})
+
+const authDisplayName = computed(() => auth.user?.name?.trim() || auth.user?.email || 'Inkly User')
+const authInitials = computed(() => initials(authDisplayName.value))
+const showLoginBanner = computed(() => auth.initialized && !auth.isAuthenticated)
+const showAccountLink = computed(() => auth.isAuthenticated)
 
 const filteredBoards = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
@@ -106,7 +114,17 @@ async function removeBoard(board: Board) {
   }
 }
 
+async function startGoogleLogin() {
+  try {
+    await auth.signInWithGoogle(window.location.toString())
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to start Google login'
+    toast.error(message)
+  }
+}
+
 onMounted(() => {
+  void auth.init()
   void loadBoards()
 })
 </script>
@@ -117,16 +135,40 @@ onMounted(() => {
     class="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(89,140,255,0.16),transparent_30%),linear-gradient(180deg,var(--color-canvas),#0d1017)] px-6 py-10"
   >
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-8">
-      <section class="flex flex-col gap-6 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl">
+      <section
+        class="flex flex-col gap-6 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+      >
+        <div v-if="showAccountLink" class="flex justify-end">
+          <RouterLink
+            to="/account"
+            data-test-id="boards-account-link"
+            class="inline-flex items-center gap-3 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
+          >
+            <img
+              v-if="auth.user?.image"
+              :src="auth.user.image"
+              :alt="`${authDisplayName} avatar`"
+              data-test-id="boards-account-avatar-image"
+              class="size-8 rounded-full object-cover"
+            />
+            <span
+              v-else
+              data-test-id="boards-account-avatar-fallback"
+              class="flex size-8 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(103,149,255,0.85),rgba(78,95,172,0.85))] text-[11px] font-semibold text-white"
+            >
+              {{ authInitials }}
+            </span>
+            <span>アカウント</span>
+          </RouterLink>
+        </div>
+
         <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div class="space-y-2">
-            <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">
-              Dashboard
-            </p>
+            <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">Dashboard</p>
             <h1 class="text-3xl font-semibold text-surface">Your boards</h1>
             <p class="max-w-2xl text-sm text-muted">
-              Create a board, open it in the editor, and manage invitation links without
-              leaving Inkly.
+              Create a board, open it in the editor, and manage invitation links without leaving
+              Inkly.
             </p>
           </div>
 
@@ -148,13 +190,22 @@ onMounted(() => {
             </button>
           </div>
         </div>
+
+        <LoginBanner
+          v-if="showLoginBanner"
+          :loading="auth.loginPending"
+          :migrating="auth.migrating"
+          @login="startGoogleLogin"
+        />
       </section>
 
       <section class="space-y-4">
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div class="space-y-1">
             <h2 class="text-sm font-medium text-surface">Recent boards</h2>
-            <p class="text-xs text-muted">Search by board name or reopen a recently edited board.</p>
+            <p class="text-xs text-muted">
+              Search by board name or reopen a recently edited board.
+            </p>
           </div>
           <div class="flex w-full max-w-lg items-center gap-2">
             <AppInput

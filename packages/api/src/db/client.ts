@@ -1,8 +1,8 @@
+import { Database } from 'bun:sqlite'
 import { mkdirSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { Database } from 'bun:sqlite'
 import { drizzle, type BunSQLiteDatabase } from 'drizzle-orm/bun-sqlite'
 
 import * as schema from './schema.js'
