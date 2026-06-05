@@ -86,4 +86,26 @@ describe('subtree picture cache LRU eviction', () => {
     expect(rerecordedB).not.toBe(pictureB)
     expect(recordedPictures).toHaveLength(6)
   })
+
+  test('re-recorded stale entry becomes the newest cache entry before eviction runs', () => {
+    const graph = new SceneGraph()
+    const page = graph.getPages()[0]
+    const nodeA = graph.createNode('FRAME', page.id, { x: 0, y: 0, width: 100, height: 100 })
+    const nodeB = graph.createNode('FRAME', page.id, { x: 120, y: 0, width: 100, height: 100 })
+    const { renderer } = createRenderer(page.id)
+
+    renderer.subtreePictureCacheLruLimit = 1
+
+    const pictureA1 = cachedSubtreePicture(renderer, graph, nodeA.id, 1)
+    const pictureB1 = cachedSubtreePicture(renderer, graph, nodeB.id, 1)
+
+    graph.updateNode(nodeA.id, { x: 20 })
+    const pictureA2 = cachedSubtreePicture(renderer, graph, nodeA.id, 2)
+
+    expect(pictureA1?.delete).toHaveBeenCalledTimes(1)
+    expect(pictureB1?.delete).toHaveBeenCalledTimes(1)
+    expect(pictureA2?.delete).not.toHaveBeenCalled()
+    expect(renderer.subtreePictureCache.size).toBe(1)
+    expect(renderer.subtreePictureCache.has(nodeA.id)).toBe(true)
+  })
 })

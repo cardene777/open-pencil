@@ -255,6 +255,7 @@ function touchSubtreePictureCacheLru(r: SkiaRenderer, childId: string): void {
 
 function evictSubtreePictureCacheLruIfNeeded(r: SkiaRenderer): void {
   const limit = r.subtreePictureCacheLruLimit ?? DEFAULT_SUBTREE_CACHE_LRU_LIMIT
+  let evicted = false
   while (r.subtreePictureCache.size > limit) {
     const oldest = r.subtreePictureCache.keys().next().value
     if (typeof oldest !== 'string') break
@@ -265,7 +266,9 @@ function evictSubtreePictureCacheLruIfNeeded(r: SkiaRenderer): void {
     }
     entry.picture.delete()
     r.subtreePictureCache.delete(oldest)
+    evicted = true
   }
+  if (evicted) r.surface?.flush()
 }
 
 export function getSubtreeVisualBounds(
@@ -310,6 +313,7 @@ export function cachedSubtreePicture(
   if (!visualBoundsIntersectsViewport(bounds, r.worldViewport)) return null
 
   r.subtreePictureCache.get(childId)?.picture.delete()
+  r.subtreePictureCache.delete(childId)
 
   const recorder = new r.ck.PictureRecorder()
   const recCanvas = recorder.beginRecording(
