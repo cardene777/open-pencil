@@ -11,11 +11,15 @@ import {
 } from 'reka-ui'
 
 import AppInput from '@/components/ui/AppInput.vue'
+import { isValidEmail } from '@/app/auth/email'
 import { inviteUser, type InvitationRole } from '@/app/api/client'
 import { toast } from '@/app/shell/ui'
 import { useDialogUI } from '@/components/ui/dialog'
 
 const open = defineModel<boolean>('open', { required: true })
+const emit = defineEmits<{
+  created: []
+}>()
 
 const { boardId, boardName = 'Board' } = defineProps<{
   boardId: string | null
@@ -32,7 +36,15 @@ const cls = useDialogUI({
   content: 'w-[min(32rem,calc(100vw-2rem))] rounded-2xl p-5 shadow-2xl'
 })
 
-const canSubmit = computed(() => !!boardId && email.value.trim().length > 0 && !loading.value)
+const normalizedEmail = computed(() => email.value.trim())
+const emailError = computed(() => {
+  if (normalizedEmail.value.length === 0) return 'Email is required'
+  if (!isValidEmail(normalizedEmail.value)) return 'Enter a valid email address'
+  return ''
+})
+const canSubmit = computed(
+  () => !!boardId && emailError.value.length === 0 && !loading.value
+)
 
 watch(open, (value) => {
   if (value) return
@@ -50,11 +62,12 @@ async function onSubmit() {
 
   try {
     const invitation = await inviteUser({
-      email: email.value.trim(),
+      email: normalizedEmail.value,
       boardId,
       role: role.value
     })
     invitationUrl.value = new URL(invitation.url, window.location.origin).toString()
+    emit('created')
     toast.info('Invitation link created')
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to create invitation'
@@ -89,14 +102,22 @@ function copyInvitationUrl() {
 
           <label class="block space-y-1.5">
             <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Email</span>
-            <AppInput
-              v-model="email"
-              test-id="share-email-input"
-              type="text"
-              placeholder="collaborator@example.com"
-              :disabled="loading || !boardId"
-            />
-          </label>
+              <AppInput
+                v-model="email"
+                test-id="share-email-input"
+                type="email"
+                placeholder="collaborator@example.com"
+                :disabled="loading || !boardId"
+              />
+            </label>
+
+          <div
+            v-if="email.length > 0 && emailError"
+            data-test-id="share-email-error"
+            class="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-100"
+          >
+            {{ emailError }}
+          </div>
 
           <label class="block space-y-1.5">
             <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Role</span>

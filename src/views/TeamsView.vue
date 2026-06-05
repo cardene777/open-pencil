@@ -34,6 +34,10 @@ const cls = useDialogUI({
 })
 
 const showLoginBanner = computed(() => auth.initialized && !auth.isAuthenticated)
+const trimmedTeamName = computed(() => teamName.value.trim())
+const canSubmitCreate = computed(
+  () => auth.isAuthenticated && trimmedTeamName.value.length > 0 && !creating.value
+)
 
 watch(createOpen, (value) => {
   if (value) return
@@ -68,12 +72,13 @@ async function submitCreate() {
     toast.info('Login required')
     return
   }
+  if (!canSubmitCreate.value) return
 
   creating.value = true
   errorMessage.value = ''
 
   try {
-    const team = await createTeam({ name: teamName.value.trim() || 'New team' })
+    const team = await createTeam({ name: trimmedTeamName.value })
     teams.value = [team, ...teams.value.filter((candidate) => candidate.id !== team.id)]
     createOpen.value = false
     await router.push(`/team/${team.id}`)
@@ -171,7 +176,7 @@ onMounted(async () => {
     <DialogRoot v-model:open="createOpen">
       <DialogPortal>
         <DialogOverlay :class="cls.overlay" />
-        <DialogContent :class="cls.content">
+        <DialogContent data-test-id="team-create-dialog" :class="cls.content">
           <DialogTitle :class="cls.title">Create team</DialogTitle>
           <DialogDescription :class="cls.description">
             Team owners can attach boards and manage member roles.
@@ -202,7 +207,7 @@ onMounted(async () => {
                 type="button"
                 data-test-id="team-create-submit"
                 class="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
-                :disabled="creating"
+                :disabled="!canSubmitCreate"
                 @click="submitCreate"
               >
                 {{ creating ? 'Creating…' : 'Create team' }}

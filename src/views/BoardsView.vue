@@ -2,6 +2,16 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
+import {
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogRoot,
+  AlertDialogTitle
+} from 'reka-ui'
 
 import { useAuthStore } from '@/app/auth/store'
 import { readBoardPreview } from '@/app/boards/preview'
@@ -18,6 +28,7 @@ import {
   type Board
 } from '@/app/api/client'
 import { listTeams, type TeamSummary } from '@/app/api/teams'
+import { useDialogUI } from '@/components/ui/dialog'
 
 useHead({ title: 'Boards' })
 
@@ -31,6 +42,11 @@ const searchQuery = ref('')
 const loading = ref(false)
 const creating = ref(false)
 const previews = ref<Record<string, string>>({})
+const deleteDialogOpen = ref(false)
+const deleteTarget = ref<Board | null>(null)
+const dialogCls = useDialogUI({
+  content: 'w-[min(28rem,calc(100vw-2rem))] rounded-2xl p-5 shadow-2xl'
+})
 
 const authDisplayName = computed(() => auth.user?.name?.trim() || auth.user?.email || 'Inkly User')
 const authInitials = computed(() => initials(authDisplayName.value))
@@ -121,7 +137,6 @@ function openSettings(board: Board) {
 }
 
 async function removeBoard(board: Board) {
-  if (!window.confirm(`Delete "${board.name}"?`)) return
   try {
     await deleteBoard(board.id)
     boards.value = boards.value.filter((candidate) => candidate.id !== board.id)
@@ -131,6 +146,19 @@ async function removeBoard(board: Board) {
     const message = error instanceof Error ? error.message : 'Failed to delete board'
     toast.error(message)
   }
+}
+
+function requestRemoveBoard(board: Board) {
+  deleteTarget.value = board
+  deleteDialogOpen.value = true
+}
+
+async function confirmRemoveBoard() {
+  const board = deleteTarget.value
+  deleteDialogOpen.value = false
+  deleteTarget.value = null
+  if (!board) return
+  await removeBoard(board)
 }
 
 async function startGoogleLogin() {
@@ -303,10 +331,47 @@ onMounted(async () => {
             :preview-url="previews[board.id] ?? null"
             @open="openBoard"
             @settings="openSettings"
-            @delete="removeBoard"
+            @delete="requestRemoveBoard"
           />
         </div>
       </section>
     </div>
+
+    <AlertDialogRoot :open="deleteDialogOpen">
+      <AlertDialogPortal>
+        <AlertDialogOverlay :class="dialogCls.overlay" @click="deleteDialogOpen = false" />
+        <AlertDialogContent
+          data-test-id="board-delete-dialog"
+          :class="dialogCls.content"
+          @escape-key-down="deleteDialogOpen = false"
+        >
+          <AlertDialogTitle :class="dialogCls.title">Delete board</AlertDialogTitle>
+          <AlertDialogDescription :class="dialogCls.description">
+            This permanently removes the board and its invitation links.
+          </AlertDialogDescription>
+
+          <div class="mt-4 rounded-xl border border-red-500/20 bg-red-500/8 p-3 text-xs text-red-100">
+            {{ deleteTarget?.name ?? 'This board' }} will be deleted.
+          </div>
+
+          <div class="mt-5 flex justify-end gap-2">
+            <AlertDialogCancel
+              data-test-id="board-delete-cancel"
+              class="rounded-md border border-border bg-canvas px-3 py-1.5 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
+              @click="deleteDialogOpen = false"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-test-id="board-delete-confirm"
+              class="rounded-md bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500/90"
+              @click="confirmRemoveBoard"
+            >
+              Delete board
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialogPortal>
+    </AlertDialogRoot>
   </main>
 </template>

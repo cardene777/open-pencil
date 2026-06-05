@@ -63,6 +63,7 @@ onMounted(() => {
         </p>
         <RouterLink
           to="/boards"
+          data-test-id="invite-invalid-boards-link"
           class="mt-6 inline-flex rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
         >
           Go to boards

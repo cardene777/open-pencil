@@ -241,6 +241,7 @@ onMounted(() => {
               <div class="flex items-center gap-2">
                 <select
                   :value="member.role === 'owner' ? 'owner' : member.role"
+                  data-test-id="team-settings-role-select"
                   class="rounded border border-border bg-input px-2 py-1.5 text-xs text-surface outline-none focus:border-accent disabled:cursor-not-allowed disabled:opacity-50"
                   :disabled="!isOwner || member.role === 'owner'"
                   @change="onRoleChange(member, $event)"

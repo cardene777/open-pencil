@@ -29,7 +29,9 @@ const { dialogs } = useI18n()
       <icon-lucide-check v-if="t.variant === 'default'" class="mt-0.5 size-3 shrink-0" />
       <icon-lucide-triangle-alert v-else class="mt-0.5 size-3 shrink-0" />
       <ToastDescription class="min-w-0 flex-1 select-text">
-        {{ t.message }}<span v-if="t.count > 1" class="ml-1.5 opacity-70">×{{ t.count }}</span>
+        <span data-test-id="toast">
+          {{ t.message }}<span v-if="t.count > 1" class="ml-1.5 opacity-70">×{{ t.count }}</span>
+        </span>
       </ToastDescription>
       <Tip
         v-if="t.variant !== 'default'"

@@ -1,17 +1,34 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
+import {
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogRoot,
+  AlertDialogTitle
+} from 'reka-ui'
 
 import { useAuthStore } from '@/app/auth/store'
 import { toast, initials } from '@/app/shell/ui'
+import { useDialogUI } from '@/components/ui/dialog'
 
 useHead({ title: 'Account' })
 
 const auth = useAuthStore()
+const router = useRouter()
 void auth.init()
 
 const displayName = computed(() => auth.user?.name?.trim() || auth.user?.email || 'Inkly User')
 const avatarInitials = computed(() => initials(displayName.value))
+const logoutDialogOpen = ref(false)
+const dialogCls = useDialogUI({
+  content: 'w-[min(28rem,calc(100vw-2rem))] rounded-2xl p-5 shadow-2xl'
+})
 
 async function startLogin() {
   try {
@@ -26,10 +43,20 @@ async function signOut() {
   try {
     await auth.signOut()
     toast.info('Signed out')
+    await router.push('/boards')
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to sign out'
     toast.error(message)
   }
+}
+
+function requestSignOut() {
+  logoutDialogOpen.value = true
+}
+
+async function confirmSignOut() {
+  logoutDialogOpen.value = false
+  await signOut()
 }
 </script>
 
@@ -121,7 +148,7 @@ async function signOut() {
             data-test-id="account-logout-button"
             class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-border px-4 py-2 text-sm font-medium text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="auth.logoutPending"
-            @click="signOut"
+            @click="requestSignOut"
           >
             <icon-lucide-log-out class="size-4" />
             {{ auth.logoutPending ? 'Signing out…' : 'Log out' }}
@@ -129,5 +156,42 @@ async function signOut() {
         </div>
       </section>
     </div>
+
+    <AlertDialogRoot :open="logoutDialogOpen">
+      <AlertDialogPortal>
+        <AlertDialogOverlay :class="dialogCls.overlay" @click="logoutDialogOpen = false" />
+        <AlertDialogContent
+          data-test-id="account-logout-dialog"
+          :class="dialogCls.content"
+          @escape-key-down="logoutDialogOpen = false"
+        >
+          <AlertDialogTitle :class="dialogCls.title">Log out</AlertDialogTitle>
+          <AlertDialogDescription :class="dialogCls.description">
+            You will return to anonymous mode on this device.
+          </AlertDialogDescription>
+
+          <div class="mt-4 rounded-xl border border-border bg-canvas/70 p-3 text-xs text-muted">
+            Your boards remain available. Sign in again to restore account notifications and teams.
+          </div>
+
+          <div class="mt-5 flex justify-end gap-2">
+            <AlertDialogCancel
+              data-test-id="account-logout-cancel"
+              class="rounded-md border border-border bg-canvas px-3 py-1.5 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
+              @click="logoutDialogOpen = false"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-test-id="account-logout-confirm"
+              class="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent/90"
+              @click="confirmSignOut"
+            >
+              Log out
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialogPortal>
+    </AlertDialogRoot>
   </main>
 </template>

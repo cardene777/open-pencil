@@ -44,6 +44,12 @@ export interface SeedNotificationsOptions {
   >
 }
 
+export interface SeedInvitationOptions {
+  email: string
+  role?: 'editor' | 'viewer'
+  expiresInMs?: number
+}
+
 async function readSession(page: Page): Promise<AuthSession | null> {
   const response = await page.request.get('/api/auth/session')
   if (response.status() === 401) return null
@@ -161,11 +167,55 @@ export async function seedNotifications(page: Page, options: SeedNotificationsOp
   })
 
   if (!response.ok()) {
-    throw new Error(`Failed to seed notifications: ${response.status()} ${response.statusText()}`)
+    const body = await response.text().catch(() => '')
+    throw new Error(
+      `Failed to seed notifications: ${response.status()} ${response.statusText()} body=${body}`
+    )
   }
 
   const payload = (await response.json()) as { notifications: NotificationRecord[] }
   return payload.notifications
+}
+
+export async function seedInvitations(
+  page: Page,
+  boardId: string,
+  items: string[] | SeedInvitationOptions[]
+) {
+  const response = await page.request.post('/api/test/seed/invitations', {
+    data: {
+      boardId,
+      items: items.map((item) =>
+        typeof item === 'string'
+          ? {
+              email: item,
+              role: 'editor'
+            }
+          : {
+              email: item.email,
+              role: item.role ?? 'editor',
+              expiresInMs: item.expiresInMs
+            }
+      )
+    }
+  })
+
+  if (!response.ok()) {
+    throw new Error(`Failed to seed invitations: ${response.status()} ${response.statusText()}`)
+  }
+
+  const payload = (await response.json()) as {
+    invitations: Array<{
+      id: string
+      token: string
+      expiresAt: number
+      role: 'editor' | 'viewer'
+      createdAt: number
+      revoked: boolean
+      boardId: string
+    }>
+  }
+  return payload.invitations
 }
 
 export async function readAnonymousId(page: Page) {

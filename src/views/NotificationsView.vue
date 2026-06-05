@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 
 import { useAuthStore } from '@/app/auth/store'
@@ -19,6 +19,7 @@ useHead({ title: 'Notifications' })
 
 const auth = useAuthStore()
 const notifications = useNotificationsStore()
+const router = useRouter()
 
 const showLoginBanner = computed(() => auth.initialized && !auth.isAuthenticated)
 
@@ -54,6 +55,22 @@ async function removeNotification(notificationId: string) {
     await notifications.remove(notificationId)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to delete notification'
+    toast.error(message)
+  }
+}
+
+async function openNotification(notificationId: string) {
+  const notification = notifications.items.find((candidate) => candidate.id === notificationId) ?? null
+  if (!notification) return
+
+  try {
+    if (isNotificationUnread(notification)) {
+      await notifications.markRead(notification.id)
+    }
+
+    await router.push(getNotificationTarget(notification))
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to open notification'
     toast.error(message)
   }
 }
@@ -179,14 +196,15 @@ onUnmounted(() => {
             </div>
 
             <div class="flex items-center gap-2">
-              <RouterLink
-                :to="getNotificationTarget(notification)"
+              <button
+                type="button"
                 data-test-id="notification-open-link"
                 class="inline-flex items-center gap-2 rounded-md border border-border bg-canvas/55 px-3 py-1.5 text-xs text-surface transition-colors hover:bg-hover"
+                @click="openNotification(notification.id)"
               >
                 <icon-lucide-arrow-up-right class="size-3.5" />
                 <span>Open</span>
-              </RouterLink>
+              </button>
               <button
                 v-if="isNotificationUnread(notification)"
                 type="button"

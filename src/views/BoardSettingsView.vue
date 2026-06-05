@@ -93,6 +93,10 @@ function copyInvitationUrl(token: string | null) {
   toast.info('Link copied to clipboard')
 }
 
+function onInvitationCreated() {
+  void loadBoardSettings()
+}
+
 function openBoard() {
   if (!payload.value) return
   void router.push(createBoardEditorLocation(payload.value.board))
@@ -194,6 +198,7 @@ onMounted(() => {
                 <div class="flex items-center gap-2">
                   <button
                     type="button"
+                    data-test-id="board-copy-invitation"
                     class="cursor-pointer rounded-md border border-border bg-panel px-2 py-1 text-[11px] text-surface transition-colors hover:bg-hover"
                     :disabled="!invitation.token"
                     @click="copyInvitationUrl(invitation.token)"
@@ -249,6 +254,7 @@ onMounted(() => {
       v-model:open="shareOpen"
       :board-id="payload?.board.id ?? boardId"
       :board-name="payload?.board.name ?? 'Board'"
+      @created="onInvitationCreated"
     />
 
     <AlertDialogRoot :open="revokeOpen">
@@ -271,6 +277,7 @@ onMounted(() => {
 
           <div class="mt-5 flex justify-end gap-2">
             <AlertDialogCancel
+              data-test-id="board-revoke-cancel"
               class="rounded-md border border-border bg-canvas px-3 py-1.5 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="revokeOpen = false"
             >

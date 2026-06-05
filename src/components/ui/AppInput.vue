@@ -4,7 +4,7 @@ import type { TestIdProps } from '@inkly/vue'
 import { useInputUI } from '@/components/ui/input'
 
 interface AppInputProps extends TestIdProps {
-  type?: 'text' | 'password' | 'number' | 'search'
+  type?: 'text' | 'password' | 'number' | 'search' | 'email'
   placeholder?: string
   readonly?: boolean
   disabled?: boolean

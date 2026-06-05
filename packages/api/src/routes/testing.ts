@@ -124,7 +124,8 @@ const seedInvitationsSchema = z.object({
     .array(
       z.object({
         email: z.string().trim().email(),
-        role: z.enum(['editor', 'viewer']).default('editor')
+        role: z.enum(['editor', 'viewer']).default('editor'),
+        expiresInMs: z.number().int().optional()
       })
     )
     .min(0)
@@ -411,18 +412,19 @@ function seedNotifications(options: TestingRoutesOptions, input: z.infer<typeof 
 function seedInvitations(options: TestingRoutesOptions, input: z.infer<typeof seedInvitationsSchema>) {
   const created = input.items.map((item, index) => {
     const createdAt = nextTimestamp()
+    const expiresAt = createdAt + (item.expiresInMs ?? INVITATION_TTL_MS)
     const invitation = options.invitationStore.createInvitation({
       boardId: input.boardId,
       sentToEmailHash: item.email,
       role: item.role,
-      expiresAt: createdAt + INVITATION_TTL_MS
+      expiresAt
     })
     const token = `test-invitation-${index + 1}-${invitation.id}`
     options.database.db
       .update(invitations)
       .set({
         createdAt,
-        expiresAt: createdAt + INVITATION_TTL_MS,
+        expiresAt,
         token
       })
       .where(eq(invitations.id, invitation.id))

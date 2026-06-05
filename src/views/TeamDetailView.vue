@@ -3,6 +3,14 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 import {
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogRoot,
+  AlertDialogTitle,
   DialogContent,
   DialogDescription,
   DialogOverlay,
@@ -11,8 +19,14 @@ import {
   DialogTitle
 } from 'reka-ui'
 
+import { isValidEmail } from '@/app/auth/email'
 import { createBoardEditorLocation } from '@/app/api/client'
-import { addTeamMember, getTeam, type TeamDetailResponse } from '@/app/api/teams'
+import {
+  addTeamMember,
+  getTeam,
+  removeTeamMember,
+  type TeamDetailResponse
+} from '@/app/api/teams'
 import { toast } from '@/app/shell/ui'
 import AppInput from '@/components/ui/AppInput.vue'
 import { useDialogUI } from '@/components/ui/dialog'
@@ -26,12 +40,23 @@ const inviteOpen = ref(false)
 const inviteEmail = ref('')
 const inviteRole = ref<'editor' | 'viewer'>('editor')
 const inviting = ref(false)
+const removeDialogOpen = ref(false)
+const removeTarget = ref<TeamDetailResponse['members'][number] | null>(null)
 const cls = useDialogUI({
   content: 'w-[min(30rem,calc(100vw-2rem))] rounded-2xl p-5 shadow-2xl'
 })
 
 const teamId = computed(() => (typeof route.params.id === 'string' ? route.params.id : ''))
 const isOwner = computed(() => payload.value?.team.role === 'owner')
+const normalizedInviteEmail = computed(() => inviteEmail.value.trim())
+const inviteEmailError = computed(() => {
+  if (normalizedInviteEmail.value.length === 0) return 'Email is required'
+  if (!isValidEmail(normalizedInviteEmail.value)) return 'Enter a valid email address'
+  return ''
+})
+const canInvite = computed(
+  () => isOwner.value && inviteEmailError.value.length === 0 && !inviting.value
+)
 
 useHead({
   title: computed(() => (payload.value ? `${payload.value.team.name} Team` : 'Team'))
@@ -55,11 +80,12 @@ async function loadTeam() {
 
 async function inviteMember() {
   if (!teamId.value) return
+  if (!canInvite.value) return
   inviting.value = true
 
   try {
     await addTeamMember(teamId.value, {
-      email: inviteEmail.value.trim(),
+      email: normalizedInviteEmail.value,
       role: inviteRole.value
     })
     inviteOpen.value = false
@@ -72,6 +98,27 @@ async function inviteMember() {
     toast.error(message)
   } finally {
     inviting.value = false
+  }
+}
+
+function requestRemoveMember(member: TeamDetailResponse['members'][number]) {
+  removeTarget.value = member
+  removeDialogOpen.value = true
+}
+
+async function confirmRemoveMember() {
+  const member = removeTarget.value
+  removeDialogOpen.value = false
+  removeTarget.value = null
+  if (!teamId.value || !member) return
+
+  try {
+    await removeTeamMember(teamId.value, member.userId)
+    await loadTeam()
+    toast.info('Member removed')
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to remove member'
+    toast.error(message)
   }
 }
 
@@ -120,6 +167,7 @@ onMounted(() => {
             </button>
             <button
               type="button"
+              data-test-id="team-detail-settings-link"
               class="cursor-pointer rounded-xl border border-border bg-canvas px-3 py-2 text-xs text-surface transition-colors hover:bg-hover"
               @click="router.push(`/team/${teamId}/settings`)"
             >
@@ -151,7 +199,7 @@ onMounted(() => {
             </span>
           </div>
 
-          <ul class="mt-4 space-y-3">
+          <ul data-test-id="team-detail-member-list" class="mt-4 space-y-3">
             <li
               v-for="member in payload.members"
               :key="member.userId"
@@ -161,11 +209,22 @@ onMounted(() => {
                 <p class="text-sm font-medium text-surface">{{ member.user.name }}</p>
                 <p class="text-[11px] text-muted">{{ member.user.email }}</p>
               </div>
-              <span
-                class="rounded-full border border-white/10 bg-panel px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-muted"
-              >
-                {{ member.role }}
-              </span>
+              <div class="flex items-center gap-2">
+                <span
+                  class="rounded-full border border-white/10 bg-panel px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-muted"
+                >
+                  {{ member.role }}
+                </span>
+                <button
+                  v-if="isOwner && member.role !== 'owner'"
+                  type="button"
+                  data-test-id="team-detail-remove-member"
+                  class="cursor-pointer rounded-md px-2 py-1 text-xs text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200"
+                  @click="requestRemoveMember(member)"
+                >
+                  Remove
+                </button>
+              </div>
             </li>
           </ul>
         </section>
@@ -216,7 +275,7 @@ onMounted(() => {
     <DialogRoot v-model:open="inviteOpen">
       <DialogPortal>
         <DialogOverlay :class="cls.overlay" />
-        <DialogContent :class="cls.content">
+        <DialogContent data-test-id="team-invite-dialog" :class="cls.content">
           <DialogTitle :class="cls.title">Invite member</DialogTitle>
           <DialogDescription :class="cls.description">
             Add an existing Inkly user to this workspace by email.
@@ -228,10 +287,18 @@ onMounted(() => {
               <AppInput
                 v-model="inviteEmail"
                 test-id="team-invite-email-input"
-                type="text"
+                type="email"
                 placeholder="member@example.com"
               />
             </label>
+
+            <div
+              v-if="inviteEmail.length > 0 && inviteEmailError"
+              data-test-id="team-invite-email-error"
+              class="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-100"
+            >
+              {{ inviteEmailError }}
+            </div>
 
             <label class="block space-y-1.5">
               <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Role</span>
@@ -257,7 +324,7 @@ onMounted(() => {
                 type="button"
                 data-test-id="team-invite-submit"
                 class="cursor-pointer rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
-                :disabled="inviting || !inviteEmail.trim()"
+                :disabled="!canInvite"
                 @click="inviteMember"
               >
                 {{ inviting ? 'Adding…' : 'Add member' }}
@@ -267,5 +334,42 @@ onMounted(() => {
         </DialogContent>
       </DialogPortal>
     </DialogRoot>
+
+    <AlertDialogRoot :open="removeDialogOpen">
+      <AlertDialogPortal>
+        <AlertDialogOverlay :class="cls.overlay" @click="removeDialogOpen = false" />
+        <AlertDialogContent
+          data-test-id="team-detail-remove-dialog"
+          :class="cls.content"
+          @escape-key-down="removeDialogOpen = false"
+        >
+          <AlertDialogTitle :class="cls.title">Remove member</AlertDialogTitle>
+          <AlertDialogDescription :class="cls.description">
+            This removes the member from the workspace immediately.
+          </AlertDialogDescription>
+
+          <div class="mt-4 rounded-xl border border-red-500/20 bg-red-500/8 p-3 text-xs text-red-100">
+            {{ removeTarget?.user.email ?? 'This member' }} will lose access.
+          </div>
+
+          <div class="mt-5 flex justify-end gap-2">
+            <AlertDialogCancel
+              data-test-id="team-detail-remove-cancel"
+              class="rounded-md border border-border bg-canvas px-3 py-1.5 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
+              @click="removeDialogOpen = false"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-test-id="team-detail-remove-confirm"
+              class="rounded-md bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500/90"
+              @click="confirmRemoveMember"
+            >
+              Remove member
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialogPortal>
+    </AlertDialogRoot>
   </main>
 </template>
