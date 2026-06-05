@@ -139,6 +139,9 @@ export class SkiaRenderer {
   nodePictureCache = new Map<string, SkPicture | null>()
   subtreePictureCache = new Map<string, SubtreePictureCacheEntry>()
   subtreePictureCacheLruLimit = 2000
+  maxPictureRecordsPerFrame = 100
+  pendingSubtreePictureRecordQueue: string[] = []
+  isDragInProgress = false
   subtreePictureCachePageId: string | null = null
   subtreePictureCacheSceneVersion = -1
   readonly labelCache = new LabelCache()
@@ -437,8 +440,34 @@ export class SkiaRenderer {
     RendererState.invalidateAllPictures(this)
   }
 
+  clearSubtreePictureCache(options?: { flushSurface?: boolean }): void {
+    RendererState.clearSubtreePictureCache(this, options)
+  }
+
   invalidateNodePicture(nodeId: string): void {
     RendererState.invalidateNodePicture(this, nodeId)
+  }
+
+  computeSubtreePictureCacheLruLimit(viewportChildCount: number): number {
+    if (this.isDragInProgress) return Math.max(viewportChildCount + 50, 50)
+    return Math.max(Math.ceil(viewportChildCount * 1.5), 500)
+  }
+
+  updateSubtreePictureCacheLruLimit(viewportChildCount: number): number {
+    const limit = this.computeSubtreePictureCacheLruLimit(viewportChildCount)
+    this.subtreePictureCacheLruLimit = limit
+    return limit
+  }
+
+  setDragInProgress(
+    value: boolean,
+    options?: { flushSubtreePictureCacheOnEnd?: boolean }
+  ): void {
+    const wasDragging = this.isDragInProgress
+    this.isDragInProgress = value
+    if (!value && wasDragging && options?.flushSubtreePictureCacheOnEnd) {
+      this.clearSubtreePictureCache({ flushSurface: true })
+    }
   }
 
   flashNode(nodeId: string): void {

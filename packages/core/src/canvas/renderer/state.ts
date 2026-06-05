@@ -12,11 +12,16 @@ export function invalidateScenePicture(r: SkiaRenderer): void {
   r.sceneBackingBuild = null
 }
 
-export function clearSubtreePictureCache(r: SkiaRenderer): void {
+export function clearSubtreePictureCache(
+  r: SkiaRenderer,
+  options?: { flushSurface?: boolean }
+): void {
   for (const entry of r.subtreePictureCache.values()) entry.picture.delete()
   r.subtreePictureCache.clear()
+  r.pendingSubtreePictureRecordQueue = []
   r.subtreePictureCachePageId = null
   r.subtreePictureCacheSceneVersion = -1
+  if (options?.flushSurface) r.surface?.flush()
 }
 
 export function invalidateAllPictures(r: SkiaRenderer): void {

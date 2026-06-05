@@ -3,7 +3,6 @@ import type { Canvas } from 'canvaskit-wasm'
 import { drawPageGuides } from '#core/canvas/page-guides'
 import type { RenderOverlays, SkiaRenderer } from '#core/canvas/renderer'
 import type { EditorState } from '#core/editor/types'
-import { computeDescendantVisualBounds } from '#core/geometry'
 import type { SceneGraph } from '#core/scene-graph'
 
 import {
@@ -14,6 +13,7 @@ import {
   updateSceneBackingPreviewState,
   visualBoundsIntersectsViewport
 } from './retained-backing'
+import { clearSubtreePictureCache } from './state'
 
 export function renderSceneToCanvas(
   r: SkiaRenderer,
@@ -110,6 +110,7 @@ function scenePictureMissReason(
     return 'position-preview-version'
   if (sceneVersion !== r.scenePictureVersion) return 'scene-version'
   if (r.pageId !== r.scenePicturePageId) return 'page'
+  if ((r.pendingSubtreePictureRecordQueue?.length ?? 0) > 0) return 'record-budget'
   return 'unknown'
 }
 
@@ -119,6 +120,63 @@ function measure<T>(fn: () => T): { value: T; duration: number } {
   const start = now()
   const value = fn()
   return { value, duration: now() - start }
+}
+
+type ViewportPageChild = {
+  childId: string
+  bounds: ReturnType<typeof getSubtreeVisualBounds>
+}
+
+function setDragInProgress(r: SkiaRenderer, value: boolean): void {
+  if (typeof r.setDragInProgress === 'function') {
+    r.setDragInProgress(value, { flushSubtreePictureCacheOnEnd: true })
+    return
+  }
+  const wasDragging = Boolean(r.isDragInProgress)
+  r.isDragInProgress = value
+  if (!value && wasDragging) clearSubtreePictureCache(r, { flushSurface: true })
+}
+
+function updateSubtreePictureCacheLruLimit(r: SkiaRenderer, viewportChildCount: number): number {
+  if (typeof r.updateSubtreePictureCacheLruLimit === 'function') {
+    return r.updateSubtreePictureCacheLruLimit(viewportChildCount)
+  }
+  const limit = r.isDragInProgress
+    ? Math.max(viewportChildCount + 50, 50)
+    : Math.max(Math.ceil(viewportChildCount * 1.5), 500)
+  r.subtreePictureCacheLruLimit = limit
+  return limit
+}
+
+function collectViewportPageChildren(r: SkiaRenderer, graph: SceneGraph): ViewportPageChild[] {
+  const pageNode = graph.getNode(r.pageId ?? graph.rootId)
+  if (!pageNode) return []
+
+  const children: ViewportPageChild[] = []
+  for (const childId of pageNode.childIds) {
+    const bounds = getSubtreeVisualBounds(r, graph, childId)
+    if (bounds && !visualBoundsIntersectsViewport(bounds, r.worldViewport)) continue
+    children.push({ childId, bounds })
+  }
+  return children
+}
+
+function normalizePendingPictureRecordQueue(
+  r: SkiaRenderer,
+  pageChildren: ViewportPageChild[]
+): string[] {
+  const visibleIds = new Set(pageChildren.map(({ childId }) => childId))
+  const seen = new Set<string>()
+  const queue = Array.isArray(r.pendingSubtreePictureRecordQueue)
+    ? r.pendingSubtreePictureRecordQueue
+    : []
+  const normalized = queue.filter((childId) => {
+    if (!visibleIds.has(childId) || seen.has(childId)) return false
+    seen.add(childId)
+    return true
+  })
+  r.pendingSubtreePictureRecordQueue = normalized
+  return normalized
 }
 
 export function render(
@@ -156,6 +214,16 @@ export function render(
     graph.positionPreviewVersion !== r.scenePicturePositionPreviewVersion &&
     sceneVersion === r.scenePictureVersion
   const hasVolatileOverlays = hasPositionPreview || hasVolatileOverlay(overlays)
+  setDragInProgress(
+    r,
+    hasPositionPreview || Boolean(overlays.draggingClipBypassAll) || overlays.rotationPreview != null
+  )
+  const viewportPageChildren =
+    layer === 'overlays' ? [] : collectViewportPageChildren(r, graph)
+  if (layer !== 'overlays') {
+    updateSubtreePictureCacheLruLimit(r, viewportPageChildren.length)
+    normalizePendingPictureRecordQueue(r, viewportPageChildren)
+  }
 
   const cacheMissReason = scenePictureMissReason(
     r,
@@ -186,7 +254,8 @@ export function render(
         overlays,
         sceneVersion,
         cacheMissReason,
-        hasVolatileOverlays
+        hasVolatileOverlays,
+        viewportPageChildren
       )
     }
     p.endPhase('render:scene')
@@ -252,24 +321,29 @@ function renderSceneContent(
   overlays: RenderOverlays,
   sceneVersion: number,
   cacheMissReason: string,
-  hasVolatileOverlays: boolean
+  hasVolatileOverlays: boolean,
+  pageChildren: ViewportPageChild[]
 ): void {
   const p = r.profiler
+  const pageNode = graph.getNode(r.pageId ?? graph.rootId)
+  const culledCount = Math.max(0, (pageNode?.childIds.length ?? 0) - pageChildren.length)
   if (hasVolatileOverlays) {
     p.setScenePictureMode('volatile', cacheMissReason)
     r._nodeCount = 0
-    r._culledCount = 0
+    r._culledCount = culledCount
     p.beginPhase('render:volatile')
-    renderPageChildren(r, canvas, graph, overlays, sceneVersion)
+    renderPageChildren(r, canvas, graph, overlays, sceneVersion, pageChildren)
     p.endPhase('render:volatile')
   } else {
     r._nodeCount = 0
-    r._culledCount = 0
-    const allHit = canDrawPageChildrenFromCache(r, graph, sceneVersion)
+    r._culledCount = culledCount
+    const allHit = canDrawPageChildrenFromCache(r, graph, sceneVersion, pageChildren)
     const phase = allHit ? 'render:drawPicture' : 'render:recordPicture'
     p.setScenePictureMode(allHit ? 'hit' : 'record', allHit ? '' : cacheMissReason)
     p.beginPhase(phase)
-    const { duration } = measure(() => renderPageChildren(r, canvas, graph, overlays, sceneVersion))
+    const { duration } = measure(() =>
+      renderPageChildren(r, canvas, graph, overlays, sceneVersion, pageChildren)
+    )
     if (allHit) p.setScenePictureDrawTime(duration)
     else p.setScenePictureRecordTime(duration)
     p.endPhase(phase)
@@ -280,11 +354,10 @@ function renderSceneContent(
 function canDrawPageChildrenFromCache(
   r: SkiaRenderer,
   graph: SceneGraph,
-  sceneVersion: number
+  sceneVersion: number,
+  pageChildren: ViewportPageChild[]
 ): boolean {
-  const pageNode = graph.getNode(r.pageId ?? graph.rootId)
-  if (!pageNode) return true
-  return pageNode.childIds.every((childId) =>
+  return pageChildren.every(({ childId }) =>
     hasCachedSubtreePictureHit(r, graph, childId, sceneVersion)
   )
 }
@@ -294,23 +367,55 @@ function renderPageChildren(
   canvas: Canvas,
   graph: SceneGraph,
   overlays: RenderOverlays,
-  sceneVersion: number
+  sceneVersion: number,
+  pageChildren: ViewportPageChild[]
 ): void {
-  const pageNode = graph.getNode(r.pageId ?? graph.rootId)
-  if (!pageNode) return
-  for (const childId of pageNode.childIds) {
-    const bounds = getSubtreeVisualBounds(r, graph, childId)
-    if (bounds && !visualBoundsIntersectsViewport(bounds, r.worldViewport)) {
-      r._culledCount++
-      continue
-    }
-    const picture = cachedSubtreePicture(r, graph, childId, sceneVersion, bounds)
-    if (picture) {
-      canvas.drawPicture(picture)
-    } else {
-      r.renderNode(canvas, graph, childId, overlays)
-    }
+  if (pageChildren.length === 0) {
+    r.pendingSubtreePictureRecordQueue = []
+    return
   }
+
+  const pendingQueue = normalizePendingPictureRecordQueue(r, pageChildren)
+  const pageChildrenById = new Map(pageChildren.map((child) => [child.childId, child]))
+  const orderedChildren: ViewportPageChild[] = []
+  const seen = new Set<string>()
+  for (const childId of pendingQueue) {
+    const child = pageChildrenById.get(childId)
+    if (!child || seen.has(childId)) continue
+    seen.add(childId)
+    orderedChildren.push(child)
+  }
+  for (const child of pageChildren) {
+    if (seen.has(child.childId)) continue
+    seen.add(child.childId)
+    orderedChildren.push(child)
+  }
+
+  const nextPendingQueue: string[] = []
+  let remainingBudget = r.maxPictureRecordsPerFrame ?? 100
+  for (const { childId, bounds } of orderedChildren) {
+    if (hasCachedSubtreePictureHit(r, graph, childId, sceneVersion)) {
+      const picture = cachedSubtreePicture(r, graph, childId, sceneVersion, bounds)
+      if (picture) {
+        canvas.drawPicture(picture)
+        continue
+      }
+    }
+
+    if (remainingBudget > 0) {
+      const picture = cachedSubtreePicture(r, graph, childId, sceneVersion, bounds)
+      if (picture) {
+        remainingBudget--
+        canvas.drawPicture(picture)
+        continue
+      }
+    }
+
+    nextPendingQueue.push(childId)
+    r.renderNode(canvas, graph, childId, overlays)
+  }
+
+  r.pendingSubtreePictureRecordQueue = nextPendingQueue
 }
 
 function updateStableScenePictureState(
