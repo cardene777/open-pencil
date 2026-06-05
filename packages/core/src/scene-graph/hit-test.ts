@@ -52,52 +52,13 @@ function containsPoint(px: number, py: number, node: SceneNode, graph: SceneGrap
   return localX >= 0 && localX <= node.width && localY >= 0 && localY <= node.height
 }
 
-function hitTestOpaqueContainer(
-  graph: SceneGraph,
-  px: number,
-  py: number,
-  child: SceneNode,
-  childId: string,
-  deep: boolean
-): SceneNode | null {
-  if (!containsPoint(px, py, child, graph)) return null
-  const childHit = hitTestChildren(graph, px, py, childId, deep)
-  if (childHit) return child
-  if (hasVisibleFillOrStroke(child)) return child
-  return null
-}
-function hitTestTransparentContainer(
-  graph: SceneGraph,
-  px: number,
-  py: number,
-  child: SceneNode,
-  childId: string,
-  deep: boolean
-): SceneNode | null {
-  if (child.type === 'GROUP') {
-    if (!containsPoint(px, py, child, graph)) return null
-
-    if (deep) return hitTestChildren(graph, px, py, childId, deep) ?? child
-
-    return child
-  }
-
-  const childHit = hitTestChildren(graph, px, py, childId, deep)
-  if (childHit) {
-    if (child.locked) return child
-    return childHit
-  }
-
-  if (containsPoint(px, py, child, graph) && hasVisibleFillOrStroke(child)) return child
-  return null
-}
-
 function hitTestChildren(
   graph: SceneGraph,
   px: number,
   py: number,
   parentId: string,
-  deep = false
+  deep = false,
+  candidateIds: ReadonlySet<string> | null = null
 ): SceneNode | null {
   const parent = graph.nodes.get(parentId)
   if (!parent) return null
@@ -108,16 +69,33 @@ function hitTestChildren(
 
   for (let i = parent.childIds.length - 1; i >= 0; i--) {
     const childId = parent.childIds[i]
+    if (candidateIds && !candidateIds.has(childId)) continue
     const child = graph.nodes.get(childId)
     if (!child || !child.visible) continue
     if (CONTAINER_TYPES.has(child.type)) {
       if (OPAQUE_CONTAINER_TYPES.has(child.type) && !deep) {
-        const hit = hitTestOpaqueContainer(graph, px, py, child, childId, deep)
+        const hit = hitTestOpaqueContainerWithCandidates(
+          graph,
+          px,
+          py,
+          child,
+          childId,
+          deep,
+          candidateIds
+        )
         if (hit) return hit
         continue
       }
 
-      const hit = hitTestTransparentContainer(graph, px, py, child, childId, deep)
+      const hit = hitTestTransparentContainerWithCandidates(
+        graph,
+        px,
+        py,
+        child,
+        childId,
+        deep,
+        candidateIds
+      )
       if (hit) return hit
       continue
     }
@@ -128,6 +106,49 @@ function hitTestChildren(
   return null
 }
 
+function hitTestOpaqueContainerWithCandidates(
+  graph: SceneGraph,
+  px: number,
+  py: number,
+  child: SceneNode,
+  childId: string,
+  deep: boolean,
+  candidateIds: ReadonlySet<string> | null
+): SceneNode | null {
+  if (!containsPoint(px, py, child, graph)) return null
+  const childHit = hitTestChildren(graph, px, py, childId, deep, candidateIds)
+  if (childHit) return child
+  if (hasVisibleFillOrStroke(child)) return child
+  return null
+}
+
+function hitTestTransparentContainerWithCandidates(
+  graph: SceneGraph,
+  px: number,
+  py: number,
+  child: SceneNode,
+  childId: string,
+  deep: boolean,
+  candidateIds: ReadonlySet<string> | null
+): SceneNode | null {
+  if (child.type === 'GROUP') {
+    if (!containsPoint(px, py, child, graph)) return null
+
+    if (deep) return hitTestChildren(graph, px, py, childId, deep, candidateIds) ?? child
+
+    return child
+  }
+
+  const childHit = hitTestChildren(graph, px, py, childId, deep, candidateIds)
+  if (childHit) {
+    if (child.locked) return child
+    return childHit
+  }
+
+  if (containsPoint(px, py, child, graph) && hasVisibleFillOrStroke(child)) return child
+  return null
+}
+
 export function hitTest(
   graph: SceneGraph,
   px: number,
@@ -135,7 +156,8 @@ export function hitTest(
   scopeId?: string
 ): SceneNode | null {
   const scope = scopeId ?? graph.rootId
-  return hitTestChildren(graph, px, py, scope, false)
+  const candidateIds = graph.getHitTestCandidateIds(px, py, scope)
+  return hitTestChildren(graph, px, py, scope, false, candidateIds)
 }
 
 export function hitTestDeep(
@@ -145,7 +167,8 @@ export function hitTestDeep(
   scopeId?: string
 ): SceneNode | null {
   const scope = scopeId ?? graph.rootId
-  return hitTestChildren(graph, px, py, scope, true)
+  const candidateIds = graph.getHitTestCandidateIds(px, py, scope)
+  return hitTestChildren(graph, px, py, scope, true, candidateIds)
 }
 
 function hitTestFrameChildren(
@@ -155,7 +178,8 @@ function hitTestFrameChildren(
   parentId: string,
   offsetX: number,
   offsetY: number,
-  excludeIds: Set<string>
+  excludeIds: Set<string>,
+  candidateIds: ReadonlySet<string> | null = null
 ): SceneNode | null {
   const parent = graph.nodes.get(parentId)
   if (!parent) return null
@@ -164,6 +188,7 @@ function hitTestFrameChildren(
 
   for (const childId of parent.childIds) {
     if (excludeIds.has(childId)) continue
+    if (candidateIds && !candidateIds.has(childId)) continue
     const child = graph.nodes.get(childId)
     if (!child || !child.visible) continue
 
@@ -175,7 +200,7 @@ function hitTestFrameChildren(
 
     best = child
 
-    const deeper = hitTestFrameChildren(graph, px, py, childId, ax, ay, excludeIds)
+    const deeper = hitTestFrameChildren(graph, px, py, childId, ax, ay, excludeIds, candidateIds)
     if (deeper) best = deeper
   }
 
@@ -189,5 +214,7 @@ export function hitTestFrame(
   excludeIds: Set<string>,
   scopeId?: string
 ): SceneNode | null {
-  return hitTestFrameChildren(graph, px, py, scopeId ?? graph.rootId, 0, 0, excludeIds)
+  const scope = scopeId ?? graph.rootId
+  const candidateIds = graph.getHitTestCandidateIds(px, py, scope)
+  return hitTestFrameChildren(graph, px, py, scope, 0, 0, excludeIds, candidateIds)
 }

@@ -11,6 +11,7 @@ export function createViewportActions(ctx: EditorContext) {
   function emitViewportChanged(previous: ReturnType<typeof currentViewport>) {
     const next = currentViewport()
     if (next.panX !== previous.panX || next.panY !== previous.panY || next.zoom !== previous.zoom) {
+      ctx.graph.setHitTestViewport(next)
       ctx.emitEditorEvent('viewport:changed', next, previous)
     }
   }

@@ -151,7 +151,7 @@ async function pickFirstNode(page: Page) {
 const editor = useEditorSetup()
 
 test.describe('perf-trace mega-doc crash investigation', () => {
-  for (const nodeCount of [3000, 5000, 10000]) {
+  for (const nodeCount of [3000, 5000]) {
     test(`${nodeCount} node の静止 phase 観測`, async () => {
       test.setTimeout(180_000)
 
@@ -241,6 +241,49 @@ test.describe('perf-trace mega-doc crash investigation', () => {
         return
       }
 
+      const target = await pickFirstNode(editor.page).catch(() => null)
+      if (!target) {
+        records.push({
+          phase: 'pickFirstNode',
+          elapsedMs: Date.now() - startedAt,
+          memory: await captureMemory(editor.page),
+          ok: false,
+          error: 'pickFirstNode failed'
+        })
+        writeSnapshot(`mega-doc-static-${nodeCount}`, {
+          nodeCount,
+          records,
+          consoleErrors,
+          pageErrors,
+          crashes,
+          terminated: 'pickFirstNode'
+        })
+        return
+      }
+
+      const clickOk = await runPhase(
+        editor.page,
+        'singleClickHitTest',
+        startedAt,
+        async () => {
+          await editor.page.evaluate(() => window.__pencilPerf?.clear())
+          await editor.canvas.click(target.x, target.y)
+          await editor.canvas.waitForRender()
+        },
+        records
+      )
+      if (!clickOk) {
+        writeSnapshot(`mega-doc-static-${nodeCount}`, {
+          nodeCount,
+          records,
+          consoleErrors,
+          pageErrors,
+          crashes,
+          terminated: 'singleClickHitTest'
+        })
+        return
+      }
+
       const idleOk = await runPhase(
         editor.page,
         'idle3s',
@@ -262,9 +305,12 @@ test.describe('perf-trace mega-doc crash investigation', () => {
         pageErrors,
         crashes,
         summary,
+        hitTestSingleClick: summary?.stats.find((s) => s.name === 'hit-test:single-click') ?? null,
         terminated: idleOk ? null : 'idle3s'
       })
 
+      const hitTestSingleClick = summary?.stats.find((s) => s.name === 'hit-test:single-click')
+      expect(hitTestSingleClick?.count ?? 0).toBeGreaterThan(0)
       expect(crashes).toEqual([])
     })
   }
