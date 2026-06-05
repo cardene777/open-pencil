@@ -1,8 +1,10 @@
 import { tryOnScopeDispose, useLocalStorage } from '@vueuse/core'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { getAnonymousId } from '@/app/api/client'
+import { useAuthStore } from '@/app/auth/store'
 import { createFollowActions, generateRoomId } from '@/app/collab/awareness'
+import { colorFromIdentity } from '@/app/collab/cursor-color'
 import { createLocalAwarenessActions } from '@/app/collab/local-awareness'
 import {
   createCollabConnectionActions,
@@ -21,7 +23,12 @@ export function useCollab(storeOrGetter: EditorStore | (() => EditorStore)) {
   const getStore = () =>
     typeof storeOrGetter === 'function' ? (storeOrGetter as () => EditorStore)() : storeOrGetter
   const storedName = useLocalStorage('op-collab-name', '')
-  const state = ref<CollabState>(createInitialCollabState(storedName.value, getAnonymousId()))
+  const auth = useAuthStore()
+  const resolvedInitialName =
+    auth.user?.name?.trim() || auth.user?.email?.trim() || storedName.value
+  const state = ref<CollabState>(
+    createInitialCollabState(resolvedInitialName, getAnonymousId(), auth.user?.id ?? null)
+  )
   const runtime = createCollabRuntime()
   const remotePeers = computed(() => state.value.peers)
   const getActiveStore = () => runtime.connectedStore ?? getStore()
@@ -64,6 +71,23 @@ export function useCollab(storeOrGetter: EditorStore | (() => EditorStore)) {
     connect(roomId, { seedIfEmpty: true })
     return roomId
   }
+
+  // login/logout で cursor 表示名と color を user identity に追従させる。
+  // user.name が空になった (logout) なら storedName (localStorage) に fallback、
+  // color は user.id 優先、 未 login 時は anonymous_id にfallback。
+  watch(
+    () => auth.user,
+    (user) => {
+      const nextName = user?.name?.trim() || user?.email?.trim() || storedName.value
+      if (nextName && nextName !== state.value.localName) {
+        setLocalName(nextName)
+      }
+      const nextColor = colorFromIdentity(user?.id ?? null, getAnonymousId())
+      state.value.localColor = nextColor
+      broadcastAwareness()
+    },
+    { immediate: false }
+  )
 
   tryOnScopeDispose(disconnect)
 
