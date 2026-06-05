@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { getAuthSession, type InklyAuth } from '../auth/index.js'
-import type { BoardStore, TeamStore } from '../types.js'
+import type { BoardStore, NotificationStore, TeamStore } from '../types.js'
 
 const createTeamSchema = z.object({
   name: z.string().trim().min(1).max(120)
@@ -28,6 +28,7 @@ export interface TeamRoutesOptions {
   auth: InklyAuth
   boardStore: BoardStore
   teamStore: TeamStore
+  notificationStore?: NotificationStore
 }
 
 function errorResponse(
@@ -197,6 +198,21 @@ export function createTeamRoutes(options: TeamRoutesOptions): Hono {
       role: parsed.data.role
     })
     if (!member) return errorResponse(404, 'user_not_found', 'User not found')
+
+    if (!existingMembership && options.notificationStore) {
+      options.notificationStore.createNotification({
+        userId: targetUser.id,
+        type: 'team_invite',
+        payload: {
+          teamId: team.id,
+          teamName: team.name,
+          role: parsed.data.role,
+          inviterDisplayName: session.user.name.trim() || session.user.email,
+          inviteeEmail: targetUser.email,
+          url: `/team/${team.id}`
+        }
+      })
+    }
 
     return c.json({ member }, existingMembership ? 200 : 201)
   })

@@ -30,6 +30,7 @@ Or download from the [releases page](https://github.com/cardene777/open-pencil/r
 - **Design-to-code export** — export selections as JSX/Tailwind, generate token outputs, and map designs into component-oriented code workflows
 - **Vue SDK for custom editors** — headless components and composables for embedding Inkly into other apps or building workflow-specific editing surfaces. [Read the SDK docs →](https://inkly.dev/programmable/sdk/)
 - **Real-time collaboration** — P2P via WebRTC, no server, no account. Cursors, presence, follow mode
+- **Notification inbox for signed-in users** — unread badges and a notification center for board invites, team invites, and mentions
 - **Auto layout & CSS Grid** — flex and grid layout via Yoga WASM, with gap, padding, alignment, track sizing
 - **~7 MB desktop app** — Tauri v2 for macOS, Windows, Linux. Also runs in the browser as a PWA
 

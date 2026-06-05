@@ -5,6 +5,7 @@
 ### Added
 
 - Persist board, invitation, and collaborator API records in SQLite with drizzle migrations, and send invitation emails through Resend with a dry-run fallback when no API key is configured.
+- Add a notification center for signed-in users with unread badges, dashboard popovers, and inbox views for board invites, team invites, and mentions.
 
 ### Changed
 

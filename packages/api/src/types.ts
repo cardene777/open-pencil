@@ -8,6 +8,10 @@ export const TEAM_MEMBER_ROLES = ['owner', 'editor', 'viewer'] as const
 
 export type TeamMemberRole = (typeof TEAM_MEMBER_ROLES)[number]
 
+export const NOTIFICATION_TYPES = ['invitation', 'team_invite', 'mention'] as const
+
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number]
+
 export interface InvitationPayload {
   iss: typeof INVITATION_ISSUER
   sub: string
@@ -141,6 +145,63 @@ export interface AddTeamMemberInput {
 
 export interface UpdateTeamInput {
   name: string
+}
+
+export interface InvitationNotificationPayload {
+  invitationId: string
+  boardId: string
+  boardName: string
+  role: InvitationRole
+  inviterDisplayName: string
+  inviteeEmail: string
+  url: string
+}
+
+export interface TeamInviteNotificationPayload {
+  teamId: string
+  teamName: string
+  role: Exclude<TeamMemberRole, 'owner'>
+  inviterDisplayName: string
+  inviteeEmail: string
+  url: string
+}
+
+export interface MentionNotificationPayload {
+  boardId: string
+  boardName: string
+  mentionedByDisplayName: string
+  message: string
+  url: string
+}
+
+export type NotificationPayload =
+  | InvitationNotificationPayload
+  | TeamInviteNotificationPayload
+  | MentionNotificationPayload
+
+export interface NotificationRecord {
+  id: string
+  userId: string
+  type: NotificationType
+  payload: NotificationPayload
+  readAt: number | null
+  createdAt: number
+}
+
+export interface CreateNotificationInput {
+  userId: string
+  type: NotificationType
+  payload: NotificationPayload
+}
+
+export interface NotificationStore {
+  createNotification(input: CreateNotificationInput): NotificationRecord
+  findNotification(id: string): NotificationRecord | null
+  findUserByEmail(email: string): TeamUserRecord | null
+  listNotificationsForUser(userId: string): NotificationRecord[]
+  markNotificationRead(id: string, userId: string): NotificationRecord | null
+  markAllNotificationsRead(userId: string): number
+  deleteNotification(id: string, userId: string): NotificationRecord | null
 }
 
 export interface TeamStore {

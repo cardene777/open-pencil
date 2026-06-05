@@ -113,6 +113,25 @@ export const sessions = sqliteTable(
   ]
 )
 
+export const notifications = sqliteTable(
+  'notifications',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    payload: text('payload').notNull(),
+    readAt: integer('read_at', { mode: 'number' }),
+    createdAt: integer('created_at', { mode: 'number' }).notNull()
+  },
+  (table) => [
+    index('notifications_user_id_idx').on(table.userId),
+    index('notifications_read_at_idx').on(table.readAt),
+    index('notifications_created_at_idx').on(table.createdAt)
+  ]
+)
+
 export const accounts = sqliteTable(
   'accounts',
   {

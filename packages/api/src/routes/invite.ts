@@ -3,8 +3,9 @@ import { z } from 'zod'
 
 import { resolveAnonymousId } from '../anonymousId.js'
 import { isBoardOwner, resolveRequestActor } from '../auth/actor.js'
-import type { InklyAuth } from '../auth/index.js'
+import { getAuthSession, type InklyAuth } from '../auth/index.js'
 import type { InvitationEmailSender } from '../email/resend.js'
+import { getInviterAnonymousLabel } from '../email/template.js'
 import {
   hashInvitationEmail,
   INVITATION_TTL_MS,
@@ -16,7 +17,8 @@ import {
   INVITATION_ROLES,
   type BoardStore,
   type InvitationPayload,
-  type InvitationStore
+  type InvitationStore,
+  type NotificationStore
 } from '../types.js'
 
 const inviteRequestSchema = z.object({
@@ -41,6 +43,7 @@ export interface InviteRoutesOptions {
   secret: string
   store: InvitationStore
   boardStore?: BoardStore
+  notificationStore?: NotificationStore
   emailSender?: InvitationEmailSender
   now?: () => number
 }
@@ -59,6 +62,7 @@ export function createInviteRoutes(options: InviteRoutesOptions): Hono {
   const now = options.now ?? Date.now
 
   app.post('/invite', async (c) => {
+    const session = await getAuthSession(options.auth, c.req.raw)
     const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
     const body = await c.req.json().catch(() => null)
     const parsed = inviteRequestSchema.safeParse(body)
@@ -105,6 +109,26 @@ export function createInviteRoutes(options: InviteRoutesOptions): Hono {
     options.store.attachInvitationToken(invitation.id, token)
     const relativeUrl = `/invite/${token}`
     const invitationUrl = new URL(relativeUrl, c.req.url).toString()
+    const recipientUser = options.notificationStore?.findUserByEmail(parsed.data.email) ?? null
+
+    if (recipientUser && options.notificationStore) {
+      options.notificationStore.createNotification({
+        userId: recipientUser.id,
+        type: 'invitation',
+        payload: {
+          invitationId: invitation.id,
+          boardId: invitation.boardId,
+          boardName: board?.name ?? 'Untitled board',
+          role: invitation.role,
+          inviterDisplayName:
+            session?.user.name?.trim() ||
+            session?.user.email ||
+            getInviterAnonymousLabel(actor.anonymousId ?? ''),
+          inviteeEmail: recipientUser.email,
+          url: relativeUrl
+        }
+      })
+    }
 
     if (options.emailSender) {
       await options.emailSender.sendInvitation({

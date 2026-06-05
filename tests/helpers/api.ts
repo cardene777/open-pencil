@@ -22,6 +22,8 @@ export function createTestApiApp(options: Partial<CreateApiAppOptions> = {}) {
     now: options.now,
     store: options.store,
     boardStore: options.boardStore,
+    teamStore: options.teamStore,
+    notificationStore: options.notificationStore,
     env: options.env
   })
 
