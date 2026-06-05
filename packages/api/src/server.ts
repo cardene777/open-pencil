@@ -5,14 +5,16 @@ import { createBoardStore } from './boardStore.js'
 import { resolveApiDatabaseOptions, type ApiDatabase } from './db/client.js'
 import { createMigratedApiDatabase } from './db/migrate.js'
 import { createResendEmailSender, type InvitationEmailSender } from './email/resend.js'
+import { createNotificationStore } from './notificationStore.js'
 import { createAuthRoutes } from './routes/auth.js'
 import { createBoardRoutes } from './routes/boards.js'
 import { createInviteRoutes } from './routes/invite.js'
+import { createNotificationRoutes } from './routes/notifications.js'
 import { createTeamRoutes } from './routes/teams.js'
 import { createInvitationStore } from './store.js'
 import { createTeamStore } from './teamStore.js'
 import { resolveJwtSecret } from './token.js'
-import type { BoardStore, InvitationStore, TeamStore } from './types.js'
+import type { BoardStore, InvitationStore, NotificationStore, TeamStore } from './types.js'
 import { createSignalingServer } from './ws/signaling.js'
 
 export const API_HOST = '127.0.0.1'
@@ -23,6 +25,7 @@ export interface CreateApiAppOptions {
   store?: InvitationStore
   boardStore?: BoardStore
   teamStore?: TeamStore
+  notificationStore?: NotificationStore
   database?: ApiDatabase
   auth?: InklyAuth
   emailSender?: InvitationEmailSender
@@ -41,6 +44,8 @@ export function createApiApp(options: CreateApiAppOptions) {
   const store = options.store ?? createInvitationStore({ database, now: options.now })
   const boardStore = options.boardStore ?? createBoardStore({ database, now: options.now })
   const teamStore = options.teamStore ?? createTeamStore({ database, now: options.now })
+  const notificationStore =
+    options.notificationStore ?? createNotificationStore({ database, now: options.now })
   const emailSender =
     options.emailSender ??
     createResendEmailSender({
@@ -78,6 +83,7 @@ export function createApiApp(options: CreateApiAppOptions) {
       secret: options.secret,
       store,
       boardStore,
+      notificationStore,
       emailSender,
       now: options.now
     })
@@ -98,30 +104,41 @@ export function createApiApp(options: CreateApiAppOptions) {
     createTeamRoutes({
       auth,
       boardStore,
-      teamStore
+      teamStore,
+      notificationStore
+    })
+  )
+
+  app.route(
+    '/api',
+    createNotificationRoutes({
+      auth,
+      notificationStore
     })
   )
 
   app.route('/api/auth', createAuthRoutes({ auth, database, now: options.now }))
 
-  return { app, store, boardStore, teamStore, database, emailSender, auth }
+  return { app, store, boardStore, teamStore, notificationStore, database, emailSender, auth }
 }
 
 export function startApiServer(options: Partial<StartApiServerOptions> = {}) {
   const secret = options.secret ?? resolveJwtSecret(options.env)
   const port = options.port ?? API_PORT
   const host = options.host ?? API_HOST
-  const { app, store, boardStore, teamStore, database, emailSender, auth } = createApiApp({
-    boardStore: options.boardStore,
-    teamStore: options.teamStore,
-    database: options.database,
-    auth: options.auth,
-    emailSender: options.emailSender,
-    env: options.env,
-    secret,
-    store: options.store,
-    now: options.now
-  })
+  const { app, store, boardStore, teamStore, notificationStore, database, emailSender, auth } =
+    createApiApp({
+      boardStore: options.boardStore,
+      teamStore: options.teamStore,
+      notificationStore: options.notificationStore,
+      database: options.database,
+      auth: options.auth,
+      emailSender: options.emailSender,
+      env: options.env,
+      secret,
+      store: options.store,
+      now: options.now
+    })
   const signaling = createSignalingServer()
 
   const server = Bun.serve({
@@ -137,7 +154,19 @@ export function startApiServer(options: Partial<StartApiServerOptions> = {}) {
 
   process.stderr.write(`Inkly API server listening on http://${host}:${port}\n`)
 
-  return { app, store, boardStore, teamStore, database, emailSender, auth, server, port, host }
+  return {
+    app,
+    store,
+    boardStore,
+    teamStore,
+    notificationStore,
+    database,
+    emailSender,
+    auth,
+    server,
+    port,
+    host
+  }
 }
 
 if (import.meta.main) {

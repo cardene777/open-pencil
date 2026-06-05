@@ -8,6 +8,7 @@ import { readBoardPreview } from '@/app/boards/preview'
 import { initials, toast } from '@/app/shell/ui'
 import BoardCard from '@/components/BoardCard.vue'
 import LoginBanner from '@/components/LoginBanner.vue'
+import NotificationBell from '@/components/NotificationBell.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import {
   createBoard,
@@ -157,6 +158,8 @@ onMounted(async () => {
         class="flex flex-col gap-6 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex items-center justify-end gap-3">
+          <NotificationBell v-if="showAccountLink" />
+
           <RouterLink
             to="/teams"
             data-test-id="boards-teams-link"

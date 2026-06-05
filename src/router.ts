@@ -5,6 +5,7 @@ const router = createRouter({
   routes: [
     { path: '/', component: () => import('./views/EditorView.vue') },
     { path: '/boards', component: () => import('./views/BoardsView.vue') },
+    { path: '/notifications', component: () => import('./views/NotificationsView.vue') },
     { path: '/teams', component: () => import('./views/TeamsView.vue') },
     { path: '/team/:id', component: () => import('./views/TeamDetailView.vue') },
     { path: '/team/:id/settings', component: () => import('./views/TeamSettingsView.vue') },

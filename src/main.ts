@@ -12,7 +12,7 @@ import App from './App.vue'
 import router from './router'
 
 function shouldInitAuth(pathname: string) {
-  return pathname === '/boards' || pathname === '/account'
+  return pathname === '/boards' || pathname === '/account' || pathname === '/notifications'
 }
 
 preloadFonts()
