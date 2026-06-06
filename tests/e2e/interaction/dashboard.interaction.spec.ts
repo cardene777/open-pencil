@@ -56,6 +56,27 @@ test.describe('dashboard interaction', () => {
     await expect(page.getByTestId('board-card')).toHaveCount(3)
   })
 
+  test('pinning a board moves it to the top of the list', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'pinner@inkly.test', name: 'Pinner' })
+    await seedBoards(page, 3)
+    await page.goto('/boards')
+
+    const cards = page.getByTestId('board-card')
+    await expect(cards).toHaveCount(3)
+
+    const lastCard = cards.last()
+    const lastName = await lastCard.locator('h2').textContent()
+    await lastCard.getByTestId('board-pin').click()
+
+    const updatedFirst = cards.first()
+    await expect(updatedFirst.locator('h2')).toHaveText(lastName ?? '')
+    await expect(updatedFirst.getByTestId('board-pin')).toHaveAttribute('aria-pressed', 'true')
+
+    // Toggle off restores original order (updatedAt-based)
+    await updatedFirst.getByTestId('board-pin').click()
+    await expect(cards.first().getByTestId('board-pin')).toHaveAttribute('aria-pressed', 'false')
+  })
+
   test('delete confirmation cancels and confirms correctly', async ({ page }) => {
     await mockGoogleLogin(page, { email: 'deleter@inkly.test', name: 'Deleter' })
     await seedBoards(page, 2)
