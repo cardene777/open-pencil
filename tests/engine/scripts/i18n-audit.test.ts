@@ -10,10 +10,11 @@ function runAuditOnSample(content: string): { stdout: string; output: string } {
   const tmp = mkdtempSync(join(tmpdir(), 'i18n-audit-'))
   try {
     const viewsDir = join(tmp, 'src', 'views')
+    const componentsDir = join(tmp, 'src', 'components')
     const docsDir = join(tmp, 'docs')
     const outPath = join(tmp, 'docs/i18n-audit.md')
 
-    // Copy the script with VIEWS_DIR / OUTPUT replaced to point at our tmp tree.
+    // Copy the script with VIEWS_DIR / COMPONENTS_DIR / OUTPUT replaced.
     const original = readFileSync(SCRIPT, 'utf8')
     const scriptPath = join(tmp, 'audit.ts')
     writeFileSync(
@@ -24,12 +25,17 @@ function runAuditOnSample(content: string): { stdout: string; output: string } {
           `const VIEWS_DIR = '${viewsDir.replace(/\\/g, '\\\\')}'`
         )
         .replace(
+          "const COMPONENTS_DIR = 'src/components'",
+          `const COMPONENTS_DIR = '${componentsDir.replace(/\\/g, '\\\\')}'`
+        )
+        .replace(
           "const OUTPUT = 'docs/i18n-audit.md'",
           `const OUTPUT = '${outPath.replace(/\\/g, '\\\\')}'`
         )
     )
 
     require('node:fs').mkdirSync(viewsDir, { recursive: true })
+    require('node:fs').mkdirSync(componentsDir, { recursive: true })
     require('node:fs').mkdirSync(docsDir, { recursive: true })
     writeFileSync(join(viewsDir, 'Sample.vue'), content)
 
@@ -132,7 +138,7 @@ describe('i18n audit-views', () => {
 </template>
 `)
     expect(output).toContain('## Next i18n migration priorities')
-    expect(output).toContain('All views are fully i18n-ready')
+    expect(output).toContain('All views and components are fully i18n-ready')
     expect(output).not.toContain('— 0 candidates')
   })
 })

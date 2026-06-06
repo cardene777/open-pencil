@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 /**
- * Scan src/views/*.vue files for English string literals that look like
- * UI-facing text. The goal is to surface candidates for i18n migration,
- * not to be exhaustive — heuristics aim for "obvious to a translator".
+ * Scan src/views/*.vue and src/components/*.vue files for English string
+ * literals that look like UI-facing text. The goal is to surface candidates
+ * for i18n migration, not to be exhaustive — heuristics aim for "obvious
+ * to a translator".
  *
  * Heuristics:
  *   - Take text between `>` and `<` inside the <template> block.
@@ -17,6 +18,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const VIEWS_DIR = 'src/views'
+const COMPONENTS_DIR = 'src/components'
 const OUTPUT = 'docs/i18n-audit.md'
 
 interface FileReport {
@@ -88,11 +90,30 @@ function auditFile(path: string): FileReport {
   return { file: path, count: unique.length, samples: unique.slice(0, 12) }
 }
 
+function collectVueFiles(dir: string): string[] {
+  let entries: string[]
+  try {
+    entries = readdirSync(dir, { withFileTypes: true }).map((entry) => {
+      if (entry.isDirectory()) return `dir:${join(dir, entry.name)}`
+      return `file:${join(dir, entry.name)}`
+    })
+  } catch {
+    return []
+  }
+  const files: string[] = []
+  for (const entry of entries) {
+    if (entry.startsWith('dir:')) {
+      files.push(...collectVueFiles(entry.slice(4)))
+    } else {
+      const path = entry.slice(5)
+      if (path.endsWith('.vue')) files.push(path)
+    }
+  }
+  return files
+}
+
 function main() {
-  const files = readdirSync(VIEWS_DIR)
-    .filter((name) => name.endsWith('.vue'))
-    .map((name) => join(VIEWS_DIR, name))
-    .sort()
+  const files = [...collectVueFiles(VIEWS_DIR), ...collectVueFiles(COMPONENTS_DIR)].sort()
 
   const reports = files.map(auditFile)
   reports.sort((a, b) => b.count - a.count)
@@ -108,7 +129,7 @@ function main() {
   lines.push('| File | Hardcoded candidates | First samples |')
   lines.push('|---|---|---|')
   for (const report of reports) {
-    const rel = report.file.replace(/^src\/views\//, '')
+    const rel = report.file.replace(/^src\//, '')
     const samples = report.samples
       .map((s) => `\`${s.replace(/`/g, '\\`')}\``)
       .join(' / ')
@@ -120,11 +141,11 @@ function main() {
   lines.push('')
   const remaining = reports.filter((report) => report.count > 0)
   if (remaining.length === 0) {
-    lines.push('All views are fully i18n-ready — no remaining candidates.')
+    lines.push('All views and components are fully i18n-ready — no remaining candidates.')
   } else {
     const topThree = remaining.slice(0, 3)
     for (const report of topThree) {
-      const rel = report.file.replace(/^src\/views\//, '')
+      const rel = report.file.replace(/^src\//, '')
       lines.push(`- ${rel} — ${report.count} candidates`)
     }
   }
