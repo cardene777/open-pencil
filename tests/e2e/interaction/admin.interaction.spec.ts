@@ -11,7 +11,7 @@ test.describe('admin view interaction', () => {
     await cleanState(page)
   })
 
-  test('renders the admin layout with all four tabs', async ({ page }) => {
+  test('renders the admin layout with all five tabs', async ({ page }) => {
     await page.goto('/admin')
 
     await expect(page.getByTestId('admin-view')).toBeVisible()
@@ -20,6 +20,7 @@ test.describe('admin view interaction', () => {
     await expect(page.getByTestId('admin-tab-boards')).toBeVisible()
     await expect(page.getByTestId('admin-tab-teams')).toBeVisible()
     await expect(page.getByTestId('admin-tab-activity')).toBeVisible()
+    await expect(page.getByTestId('admin-tab-members')).toBeVisible()
   })
 
   test('default tab shows the overview metrics', async ({ page }) => {
@@ -127,6 +128,13 @@ test.describe('admin view interaction', () => {
     await page.goto('/admin')
     await page.getByTestId('admin-tab-boards').click()
     await expect(page.getByTestId('admin-boards-export')).toBeDisabled()
+  })
+
+  test('members tab shows empty state when user has no teams', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-members-empty@inkly.test', name: 'Admin Members Empty' })
+    await page.goto('/admin')
+    await page.getByTestId('admin-tab-members').click()
+    await expect(page.getByTestId('admin-members-empty')).toBeVisible()
   })
 
   test('export CSV downloads a CSV file with all visible board rows', async ({ page }) => {

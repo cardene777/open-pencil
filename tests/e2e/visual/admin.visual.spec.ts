@@ -44,6 +44,18 @@ test.describe('admin view visual regression', () => {
     await expectPageScreenshot(page, 'admin-teams-empty.png')
   })
 
+  test('members tab empty state', async ({ page }) => {
+    await mockGoogleLogin(page, {
+      email: 'admin-visual-members@inkly.test',
+      name: 'Admin Visual Members'
+    })
+
+    await page.goto('/admin')
+    await page.getByTestId('admin-tab-members').click()
+    await expect(page.getByTestId('admin-members-empty')).toBeVisible()
+    await expectPageScreenshot(page, 'admin-members-empty.png')
+  })
+
   test('activity tab empty state', async ({ page }) => {
     await mockGoogleLogin(page, {
       email: 'admin-visual-activity@inkly.test',
