@@ -4,6 +4,7 @@ import {
   DEFAULT_DASHBOARD_LAYOUT,
   moveSection,
   readDashboardLayout,
+  reorderSection,
   resetDashboardLayout,
   toggleSection,
   writeDashboardLayout
@@ -66,6 +67,32 @@ describe('dashboard-layout', () => {
     const after = toggleSection(DEFAULT_DASHBOARD_LAYOUT, 'recent')
     expect(after.find((s) => s.id === 'recent')?.enabled).toBe(false)
     expect(after.find((s) => s.id === 'metrics')?.enabled).toBe(true)
+  })
+
+  test('reorderSection moves a section to the slot of the target id', () => {
+    const next = reorderSection(DEFAULT_DASHBOARD_LAYOUT, 'activity', 'metrics')
+    expect(next[0].id).toBe('activity')
+    expect(next[1].id).toBe('metrics')
+    expect(next.map((s) => s.id)).toEqual([
+      'activity',
+      'metrics',
+      'quickActions',
+      'pinned',
+      'recent'
+    ])
+  })
+
+  test('reorderSection is a no-op when fromId === toId or ids are unknown', () => {
+    expect(reorderSection(DEFAULT_DASHBOARD_LAYOUT, 'metrics', 'metrics')).toBe(
+      DEFAULT_DASHBOARD_LAYOUT
+    )
+    expect(
+      reorderSection(
+        DEFAULT_DASHBOARD_LAYOUT,
+        'metrics',
+        'unknown' as 'metrics'
+      )
+    ).toBe(DEFAULT_DASHBOARD_LAYOUT)
   })
 
   test('readDashboardLayout normalises unknown/incomplete entries and adds missing defaults', () => {

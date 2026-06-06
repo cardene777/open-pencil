@@ -103,6 +103,29 @@ test.describe('dashboard view interaction', () => {
     await expect(page.getByTestId('dashboard-section-metrics')).toHaveCount(0)
   })
 
+  test('drag and drop reorders sections in the customize panel', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'dash-dnd@inkly.test', name: 'Dash DnD' })
+    await page.goto('/dashboard')
+
+    await page.getByTestId('dashboard-customize-toggle').click()
+    const rows = page.locator('[data-test-id^="dashboard-customize-row-"]')
+    await expect(rows).toHaveCount(5)
+    await expect(rows.first()).toHaveAttribute('data-test-id', 'dashboard-customize-row-metrics')
+
+    const fromRow = page.getByTestId('dashboard-customize-row-activity')
+    const toRow = page.getByTestId('dashboard-customize-row-metrics')
+    await fromRow.dragTo(toRow)
+
+    await expect(rows.first()).toHaveAttribute('data-test-id', 'dashboard-customize-row-activity')
+
+    await page.reload()
+    await page.getByTestId('dashboard-customize-toggle').click()
+    await expect(rows.first()).toHaveAttribute(
+      'data-test-id',
+      'dashboard-customize-row-activity'
+    )
+  })
+
   test('customize panel reset restores the default layout', async ({ page }) => {
     await mockGoogleLogin(page, { email: 'dash-reset@inkly.test', name: 'Dash Reset' })
     await page.goto('/dashboard')
