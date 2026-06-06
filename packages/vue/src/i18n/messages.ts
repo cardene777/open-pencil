@@ -396,6 +396,33 @@ export const dialogMessages = i18n('dialogs', {
   updateCheckFailed: params('Could not check for updates: {error}')
 })
 
+export const boardsMessages = i18n('boards', {
+  heading: 'Your boards',
+  subtitle: 'Create a personal board or attach it to a team workspace without leaving Inkly.',
+  defaultBoardName: 'Untitled board',
+  boardNamePlaceholder: 'Board name',
+  personalBoardOption: 'Personal board',
+  newBoardButton: 'New board',
+  newBoardCreating: 'Creating…',
+  teamScopeHint: 'Team boards can be created only in teams you own.',
+  recentHeading: 'Recent boards',
+  recentSubtitle: 'Search by board name or reopen a recently edited board.',
+  searchPlaceholder: 'Search boards',
+  loadingBoards: 'Loading boards…',
+  emptyHeading: 'No boards yet',
+  emptyHint: 'Create your first board to start the invite and team sharing flows.',
+  emptySearchHeading: 'No matching boards',
+  emptySearchHint: 'Try a different name or clear the search box.',
+  deleteDialogTitle: 'Delete board',
+  deleteDialogDescription: 'This permanently removes the board and its invitation links.',
+  deleteDialogCancel: 'Cancel',
+  deleteDialogConfirm: 'Delete board',
+  toastLoadFail: 'Failed to load boards',
+  toastCreateFail: 'Failed to create board',
+  toastDeleteFail: 'Failed to delete board',
+  toastLoginFail: 'Failed to start Google login'
+})
+
 export const dashboardMessages = i18n('dashboard', {
   title: 'Dashboard',
   brand: 'Inkly',
