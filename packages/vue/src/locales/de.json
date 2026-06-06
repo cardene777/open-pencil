@@ -261,7 +261,8 @@
     "removeTrack": "Spur entfernen",
     "widthSizingMenu": "Breitengrößenoptionen",
     "heightSizingMenu": "Höhengrößenoptionen",
-    "colorPickerSwatch": "Farbauswahl öffnen"
+    "colorPickerSwatch": "Farbauswahl öffnen",
+    "colorHexInput": "Farb-Hex-Wert"
   },
   "pages": {
     "newPage": "Neue Seite",

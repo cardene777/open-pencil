@@ -20,32 +20,34 @@ const { panels } = useI18n()
     style="contain: paint layout style"
   >
     <TabsRoot v-model="activeTab" class="flex min-h-0 flex-1 flex-col">
-      <TabsList class="flex h-10 shrink-0 items-center gap-1 border-b border-border px-2">
-        <TabsTrigger
-          value="design"
-          data-test-id="properties-tab-design"
-          class="rounded px-2.5 py-1 text-xs text-muted hover:text-surface data-[state=active]:font-semibold data-[state=active]:text-surface"
-        >
-          {{ panels.design }}
-        </TabsTrigger>
-        <TabsTrigger
-          value="code"
-          data-test-id="properties-tab-code"
-          class="flex items-center gap-1 rounded px-2.5 py-1 text-xs text-muted hover:text-surface data-[state=active]:font-semibold data-[state=active]:text-surface"
-        >
-          <icon-lucide-code class="size-3" />
-          {{ panels.code }}
-        </TabsTrigger>
-        <TabsTrigger
-          value="ai"
-          data-test-id="properties-tab-ai"
-          class="flex items-center gap-1 rounded px-2.5 py-1 text-xs text-muted hover:text-surface data-[state=active]:font-semibold data-[state=active]:text-surface"
-        >
-          <icon-lucide-sparkles class="size-3" />
-          {{ panels.ai }}
-        </TabsTrigger>
+      <div class="flex h-10 shrink-0 items-center gap-1 border-b border-border px-2">
+        <TabsList class="flex items-center gap-1">
+          <TabsTrigger
+            value="design"
+            data-test-id="properties-tab-design"
+            class="rounded px-2.5 py-1 text-xs text-muted hover:text-surface data-[state=active]:font-semibold data-[state=active]:text-surface"
+          >
+            {{ panels.design }}
+          </TabsTrigger>
+          <TabsTrigger
+            value="code"
+            data-test-id="properties-tab-code"
+            class="flex items-center gap-1 rounded px-2.5 py-1 text-xs text-muted hover:text-surface data-[state=active]:font-semibold data-[state=active]:text-surface"
+          >
+            <icon-lucide-code class="size-3" />
+            {{ panels.code }}
+          </TabsTrigger>
+          <TabsTrigger
+            value="ai"
+            data-test-id="properties-tab-ai"
+            class="flex items-center gap-1 rounded px-2.5 py-1 text-xs text-muted hover:text-surface data-[state=active]:font-semibold data-[state=active]:text-surface"
+          >
+            <icon-lucide-sparkles class="size-3" />
+            {{ panels.ai }}
+          </TabsTrigger>
+        </TabsList>
         <ZoomDropdown v-if="activeTab === 'design'" />
-      </TabsList>
+      </div>
 
       <TabsContent
         value="design"

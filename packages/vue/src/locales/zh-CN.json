@@ -261,7 +261,8 @@
     "removeTrack": "删除轨道",
     "widthSizingMenu": "宽度尺寸选项",
     "heightSizingMenu": "高度尺寸选项",
-    "colorPickerSwatch": "打开颜色选择器"
+    "colorPickerSwatch": "打开颜色选择器",
+    "colorHexInput": "颜色十六进制值"
   },
   "pages": {
     "newPage": "新建页面",

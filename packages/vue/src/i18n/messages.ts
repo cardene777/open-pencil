@@ -304,7 +304,8 @@ export const panelMessages = i18n('panels', {
   removeTrack: 'Remove track',
   widthSizingMenu: 'Width sizing options',
   heightSizingMenu: 'Height sizing options',
-  colorPickerSwatch: 'Open color picker'
+  colorPickerSwatch: 'Open color picker',
+  colorHexInput: 'Color hex value'
 })
 
 export const variableTypeMessages = i18n('variableTypes', {

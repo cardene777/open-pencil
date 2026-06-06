@@ -261,7 +261,8 @@
     "removeTrack": "Rimuovi traccia",
     "widthSizingMenu": "Opzioni di dimensionamento larghezza",
     "heightSizingMenu": "Opzioni di dimensionamento altezza",
-    "colorPickerSwatch": "Apri selettore colore"
+    "colorPickerSwatch": "Apri selettore colore",
+    "colorHexInput": "Valore esadecimale colore"
   },
   "pages": {
     "newPage": "Nuova pagina",

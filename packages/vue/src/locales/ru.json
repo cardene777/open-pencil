@@ -261,7 +261,8 @@
     "removeTrack": "Удалить дорожку",
     "widthSizingMenu": "Параметры размера ширины",
     "heightSizingMenu": "Параметры размера высоты",
-    "colorPickerSwatch": "Открыть выбор цвета"
+    "colorPickerSwatch": "Открыть выбор цвета",
+    "colorHexInput": "Шестнадцатеричное значение цвета"
   },
   "pages": {
     "newPage": "Новая страница",

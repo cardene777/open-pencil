@@ -261,7 +261,8 @@
     "removeTrack": "トラックを削除",
     "widthSizingMenu": "幅サイズオプション",
     "heightSizingMenu": "高さサイズオプション",
-    "colorPickerSwatch": "カラーピッカーを開く"
+    "colorPickerSwatch": "カラーピッカーを開く",
+    "colorHexInput": "カラー HEX 値"
   },
   "pages": {
     "newPage": "新規ページ",
