@@ -457,7 +457,12 @@ export const dashboardMessages = i18n('dashboard', {
     sectionQuickActions: 'Quick actions',
     sectionPinned: 'Pinned boards',
     sectionRecent: 'Recent boards',
-    sectionActivity: 'Activity'
+    sectionActivity: 'Activity',
+    dragHandleAria: 'Drag to reorder {section}',
+    dragRowAria: '{section} section, draggable',
+    dragStartAnnounce: 'Grabbed {section}. Drop it on another section to reorder.',
+    dragDropAnnounce: 'Moved {section} before {target}.',
+    dragCancelAnnounce: 'Cancelled reorder of {section}.'
   }
 })
 

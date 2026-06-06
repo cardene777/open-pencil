@@ -83,9 +83,13 @@ function handleResetLayout() {
 }
 
 const draggingSectionId = ref<DashboardSectionId | null>(null)
+const dragAnnouncement = ref('')
 
 function handleDragStart(id: DashboardSectionId, event: DragEvent) {
   draggingSectionId.value = id
+  dragAnnouncement.value = formatTemplate(dashboard.value.customize.dragStartAnnounce, {
+    section: sectionLabel(id)
+  })
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData('text/plain', id)
@@ -103,14 +107,34 @@ function handleDragOver(event: DragEvent) {
 function handleDrop(targetId: DashboardSectionId) {
   const fromId = draggingSectionId.value
   draggingSectionId.value = null
-  if (!fromId || fromId === targetId) return
+  if (!fromId) return
+  if (fromId === targetId) {
+    dragAnnouncement.value = formatTemplate(dashboard.value.customize.dragCancelAnnounce, {
+      section: sectionLabel(fromId)
+    })
+    return
+  }
   const next = reorderSection(layout.value, fromId, targetId)
-  if (next === layout.value) return
+  if (next === layout.value) {
+    dragAnnouncement.value = formatTemplate(dashboard.value.customize.dragCancelAnnounce, {
+      section: sectionLabel(fromId)
+    })
+    return
+  }
   layout.value = next
   writeDashboardLayout(next)
+  dragAnnouncement.value = formatTemplate(dashboard.value.customize.dragDropAnnounce, {
+    section: sectionLabel(fromId),
+    target: sectionLabel(targetId)
+  })
 }
 
 function handleDragEnd() {
+  if (draggingSectionId.value) {
+    dragAnnouncement.value = formatTemplate(dashboard.value.customize.dragCancelAnnounce, {
+      section: sectionLabel(draggingSectionId.value)
+    })
+  }
   draggingSectionId.value = null
 }
 function sectionLabel(id: DashboardSectionId): string {
@@ -354,6 +378,16 @@ onMounted(async () => {
           </div>
         </div>
 
+        <div
+          data-test-id="dashboard-customize-announce"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          class="sr-only"
+        >
+          {{ dragAnnouncement }}
+        </div>
+
         <ul
           data-test-id="dashboard-customize-list"
           class="flex flex-col gap-2"
@@ -363,6 +397,9 @@ onMounted(async () => {
             :key="section.id"
             :data-test-id="`dashboard-customize-row-${section.id}`"
             :draggable="true"
+            :aria-label="formatTemplate(dashboard.customize.dragRowAria, { section: sectionLabel(section.id) })"
+            :aria-grabbed="draggingSectionId === section.id ? 'true' : 'false'"
+            role="listitem"
             :class="[
               'flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-canvas/55 px-3 py-2 transition-opacity',
               draggingSectionId === section.id ? 'opacity-40' : '',
@@ -376,7 +413,8 @@ onMounted(async () => {
             <div class="flex items-center gap-3">
               <span
                 :data-test-id="`dashboard-customize-handle-${section.id}`"
-                aria-hidden="true"
+                :aria-label="formatTemplate(dashboard.customize.dragHandleAria, { section: sectionLabel(section.id) })"
+                role="img"
                 class="text-muted"
               >
                 <icon-lucide-grip-vertical class="size-4" />

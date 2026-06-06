@@ -408,7 +408,12 @@
       "sectionQuickActions": "Быстрые действия",
       "sectionPinned": "Закреплённые доски",
       "sectionRecent": "Недавние доски",
-      "sectionActivity": "Активность"
+      "sectionActivity": "Активность",
+      "dragHandleAria": "Перетащите для изменения порядка {section}",
+      "dragRowAria": "Секция {section}, можно перетащить",
+      "dragStartAnnounce": "{section} захвачен. Отпустите на другой секции для изменения порядка.",
+      "dragDropAnnounce": "{section} перемещён перед {target}.",
+      "dragCancelAnnounce": "Изменение порядка {section} отменено."
     }
   },
   "admin": {

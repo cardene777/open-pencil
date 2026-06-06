@@ -408,7 +408,12 @@
       "sectionQuickActions": "Azioni rapide",
       "sectionPinned": "Bacheche fissate",
       "sectionRecent": "Bacheche recenti",
-      "sectionActivity": "Attività"
+      "sectionActivity": "Attività",
+      "dragHandleAria": "Trascina per riordinare {section}",
+      "dragRowAria": "Sezione {section}, trascinabile",
+      "dragStartAnnounce": "{section} afferrato. Rilascialo su un'altra sezione per riordinare.",
+      "dragDropAnnounce": "{section} spostato prima di {target}.",
+      "dragCancelAnnounce": "Riordino di {section} annullato."
     }
   },
   "admin": {

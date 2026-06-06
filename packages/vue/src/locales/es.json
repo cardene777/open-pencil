@@ -408,7 +408,12 @@
       "sectionQuickActions": "Acciones rápidas",
       "sectionPinned": "Tableros fijados",
       "sectionRecent": "Tableros recientes",
-      "sectionActivity": "Actividad"
+      "sectionActivity": "Actividad",
+      "dragHandleAria": "Arrastrar para reordenar {section}",
+      "dragRowAria": "Sección {section}, arrastrable",
+      "dragStartAnnounce": "{section} agarrado. Suéltalo en otra sección para reordenar.",
+      "dragDropAnnounce": "{section} movido antes de {target}.",
+      "dragCancelAnnounce": "Reordenación de {section} cancelada."
     }
   },
   "admin": {

@@ -408,7 +408,12 @@
       "sectionQuickActions": "快捷操作",
       "sectionPinned": "已固定看板",
       "sectionRecent": "最近的看板",
-      "sectionActivity": "动态"
+      "sectionActivity": "动态",
+      "dragHandleAria": "拖拽以重新排序 {section}",
+      "dragRowAria": "{section} 区块,可拖拽",
+      "dragStartAnnounce": "已抓取 {section}。拖放到其他区块以重新排序。",
+      "dragDropAnnounce": "已将 {section} 移动到 {target} 之前。",
+      "dragCancelAnnounce": "已取消 {section} 的重新排序。"
     }
   },
   "admin": {

@@ -408,7 +408,12 @@
       "sectionQuickActions": "Szybkie akcje",
       "sectionPinned": "Przypięte tablice",
       "sectionRecent": "Ostatnie tablice",
-      "sectionActivity": "Aktywność"
+      "sectionActivity": "Aktywność",
+      "dragHandleAria": "Przeciągnij, aby zmienić kolejność {section}",
+      "dragRowAria": "Sekcja {section}, przeciągalna",
+      "dragStartAnnounce": "{section} pochwycono. Upuść na innej sekcji, aby zmienić kolejność.",
+      "dragDropAnnounce": "Przeniesiono {section} przed {target}.",
+      "dragCancelAnnounce": "Zmianę kolejności {section} anulowano."
     }
   },
   "admin": {

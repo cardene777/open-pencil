@@ -408,7 +408,12 @@
       "sectionQuickActions": "クイックアクション",
       "sectionPinned": "ピン留めボード",
       "sectionRecent": "最近のボード",
-      "sectionActivity": "アクティビティ"
+      "sectionActivity": "アクティビティ",
+      "dragHandleAria": "{section} をドラッグして並び替え",
+      "dragRowAria": "{section} セクション、ドラッグ可能",
+      "dragStartAnnounce": "{section} を掴みました。 別のセクション上にドロップして並び替えてください。",
+      "dragDropAnnounce": "{section} を {target} の前に移動しました。",
+      "dragCancelAnnounce": "{section} の並び替えをキャンセルしました。"
     }
   },
   "admin": {

@@ -408,7 +408,12 @@
       "sectionQuickActions": "Schnellaktionen",
       "sectionPinned": "Angepinnte Boards",
       "sectionRecent": "Letzte Boards",
-      "sectionActivity": "Aktivität"
+      "sectionActivity": "Aktivität",
+      "dragHandleAria": "Ziehen, um {section} neu anzuordnen",
+      "dragRowAria": "Sektion {section}, verschiebbar",
+      "dragStartAnnounce": "{section} aufgenommen. Auf eine andere Sektion ablegen, um neu anzuordnen.",
+      "dragDropAnnounce": "{section} vor {target} verschoben.",
+      "dragCancelAnnounce": "Neuanordnung von {section} abgebrochen."
     }
   },
   "admin": {
