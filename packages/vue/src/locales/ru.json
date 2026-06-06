@@ -542,6 +542,19 @@
     "loading": "Загрузка уведомлений…",
     "empty": "Пока нет уведомлений."
   },
+  "boardCard": {
+    "previewPending": "Подготовка предпросмотра",
+    "previewAlt": "Предпросмотр доски {name}",
+    "badge": "Доска",
+    "peopleCount": "{count} человек",
+    "updatedPrefix": "Обновлено",
+    "pinAriaPin": "Закрепить доску",
+    "pinAriaUnpin": "Открепить доску",
+    "pinLabel": "Закрепить",
+    "pinnedLabel": "Закреплена",
+    "settings": "Настройки",
+    "delete": "Удалить"
+  },
   "teams": {
     "headTitle": "Команды",
     "eyebrow": "Рабочее пространство",

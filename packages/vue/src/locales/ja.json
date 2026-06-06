@@ -542,6 +542,19 @@
     "loading": "通知を読み込み中…",
     "empty": "通知はまだありません。"
   },
+  "boardCard": {
+    "previewPending": "プレビュー準備中",
+    "previewAlt": "{name} のプレビュー",
+    "badge": "ボード",
+    "peopleCount": "{count} 人",
+    "updatedPrefix": "更新",
+    "pinAriaPin": "ボードをピン留め",
+    "pinAriaUnpin": "ピン留めを解除",
+    "pinLabel": "ピン留め",
+    "pinnedLabel": "ピン留め済",
+    "settings": "設定",
+    "delete": "削除"
+  },
   "teams": {
     "headTitle": "チーム",
     "eyebrow": "ワークスペース",

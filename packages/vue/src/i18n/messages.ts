@@ -602,6 +602,20 @@ export const notificationBellMessages = i18n('notificationBell', {
   empty: 'No notifications yet.'
 })
 
+export const boardCardMessages = i18n('boardCard', {
+  previewPending: 'Preview pending',
+  previewAlt: params('{name} preview'),
+  badge: 'Board',
+  peopleCount: params('{count} people'),
+  updatedPrefix: 'Updated',
+  pinAriaPin: 'Pin board',
+  pinAriaUnpin: 'Unpin board',
+  pinLabel: 'Pin',
+  pinnedLabel: 'Pinned',
+  settings: 'Settings',
+  delete: 'Delete'
+})
+
 export const teamsMessages = i18n('teams', {
   headTitle: 'Teams',
   eyebrow: 'Workspace',

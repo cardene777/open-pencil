@@ -542,6 +542,19 @@
     "loading": "Benachrichtigungen werden geladen…",
     "empty": "Noch keine Benachrichtigungen."
   },
+  "boardCard": {
+    "previewPending": "Vorschau wird vorbereitet",
+    "previewAlt": "Vorschau von {name}",
+    "badge": "Board",
+    "peopleCount": "{count} Personen",
+    "updatedPrefix": "Aktualisiert",
+    "pinAriaPin": "Board anheften",
+    "pinAriaUnpin": "Board lösen",
+    "pinLabel": "Anheften",
+    "pinnedLabel": "Angeheftet",
+    "settings": "Einstellungen",
+    "delete": "Löschen"
+  },
   "teams": {
     "headTitle": "Teams",
     "eyebrow": "Workspace",

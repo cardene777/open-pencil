@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import { useI18n } from '@inkly/vue'
+
 import { colorToCSS } from '@inkly/core/color'
 
 import { colorFromAnonymousId } from '@/app/collab/cursor-color'
 import type { Board } from '@/app/api/client'
+
+const { boardCard: boardCardT } = useI18n()
 
 const { board, previewUrl = null, pinned = false } = defineProps<{
   board: Board
@@ -56,7 +60,7 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
         <img
           v-if="previewUrl"
           :src="previewUrl"
-          :alt="`${board.name} preview`"
+          :alt="boardCardT.previewAlt({ name: board.name })"
           data-test-id="board-preview-image"
           class="h-32 w-full object-cover"
         />
@@ -65,14 +69,14 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
           data-test-id="board-preview-placeholder"
           class="flex h-32 items-center justify-center bg-[radial-gradient(circle_at_top,rgba(126,164,255,0.18),transparent_50%),linear-gradient(180deg,rgba(11,15,24,0.35),rgba(11,15,24,0.8))] text-xs uppercase tracking-[0.2em] text-muted"
         >
-          Preview pending
+          {{ boardCardT.previewPending }}
         </div>
       </div>
 
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2">
           <span class="rounded-full border border-white/10 bg-canvas/60 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted">
-            Board
+            {{ boardCardT.badge }}
           </span>
           <span
             v-if="board.team"
@@ -102,13 +106,13 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
               +{{ hiddenCollaboratorCount }}
             </div>
           </div>
-          <span class="text-[11px] text-muted">{{ board.collaborators.length }} people</span>
+          <span class="text-[11px] text-muted">{{ boardCardT.peopleCount({ count: board.collaborators.length }) }}</span>
         </div>
       </div>
 
       <div class="space-y-2">
         <h2 class="line-clamp-2 text-lg font-semibold text-surface">{{ board.name }}</h2>
-        <p class="text-xs text-muted">Updated {{ updatedAtLabel }}</p>
+        <p class="text-xs text-muted">{{ boardCardT.updatedPrefix }} {{ updatedAtLabel }}</p>
       </div>
     </button>
 
@@ -117,7 +121,7 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
         <button
           type="button"
           data-test-id="board-pin"
-          :aria-label="pinned ? 'Unpin board' : 'Pin board'"
+          :aria-label="pinned ? boardCardT.pinAriaUnpin : boardCardT.pinAriaPin"
           :aria-pressed="pinned"
           :class="[
             'cursor-pointer rounded-md px-2 py-1 text-xs transition-colors',
@@ -127,8 +131,8 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
           ]"
           @click="emit('togglePin', board)"
         >
-          <icon-lucide-pin class="size-3.5 inline" />
-          <span class="ml-1">{{ pinned ? 'Pinned' : 'Pin' }}</span>
+          <icon-lucide-pin class="size-3.5 inline" :aria-hidden="true" />
+          <span class="ml-1">{{ pinned ? boardCardT.pinnedLabel : boardCardT.pinLabel }}</span>
         </button>
         <button
           type="button"
@@ -136,7 +140,7 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
           class="cursor-pointer rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
           @click="emit('settings', board)"
         >
-          Settings
+          {{ boardCardT.settings }}
         </button>
       </div>
       <button
@@ -145,7 +149,7 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
         class="cursor-pointer rounded-md px-2 py-1 text-xs text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200"
         @click="emit('delete', board)"
       >
-        Delete
+        {{ boardCardT.delete }}
       </button>
     </div>
   </article>

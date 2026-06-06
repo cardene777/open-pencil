@@ -542,6 +542,19 @@
     "loading": "Chargement des notifications…",
     "empty": "Aucune notification pour le moment."
   },
+  "boardCard": {
+    "previewPending": "Aperçu en attente",
+    "previewAlt": "Aperçu de {name}",
+    "badge": "Tableau",
+    "peopleCount": "{count} personnes",
+    "updatedPrefix": "Mis à jour",
+    "pinAriaPin": "Épingler le tableau",
+    "pinAriaUnpin": "Désépingler le tableau",
+    "pinLabel": "Épingler",
+    "pinnedLabel": "Épinglé",
+    "settings": "Paramètres",
+    "delete": "Supprimer"
+  },
   "teams": {
     "headTitle": "Équipes",
     "eyebrow": "Espace de travail",
