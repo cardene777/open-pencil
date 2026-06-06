@@ -14,6 +14,8 @@ import {
   AlertDialogTitle
 } from 'reka-ui'
 
+import { useI18n } from '@inkly/vue'
+
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ShareModal from '@/components/ShareModal.vue'
 import {
@@ -24,6 +26,8 @@ import {
 } from '@/app/api/client'
 import { toast } from '@/app/shell/ui'
 import { useDialogUI } from '@/components/ui/dialog'
+
+const { boardSettings: boardSettingsT } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -41,7 +45,11 @@ const cls = useDialogUI({
 })
 
 useHead({
-  title: computed(() => (payload.value ? `${payload.value.board.name} Settings` : 'Board Settings'))
+  title: computed(() =>
+    payload.value
+      ? boardSettingsT.value.headTitleWithName({ name: payload.value.board.name })
+      : boardSettingsT.value.headTitleDefault
+  )
 })
 
 async function loadBoardSettings() {
@@ -51,7 +59,7 @@ async function loadBoardSettings() {
   try {
     payload.value = await listInvitations(boardId.value)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to load board settings'
+    const message = error instanceof Error ? error.message : boardSettingsT.value.toastLoadFail
     errorMessage.value = message
     toast.error(message)
   } finally {
@@ -64,9 +72,9 @@ async function revoke(invitationId: string) {
   try {
     await revokeInvitation(payload.value.board.id, invitationId)
     await loadBoardSettings()
-    toast.info('Invitation revoked')
+    toast.info(boardSettingsT.value.toastInvitationRevoked)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to revoke invitation'
+    const message = error instanceof Error ? error.message : boardSettingsT.value.toastRevokeFail
     toast.error(message)
   }
 }
@@ -85,13 +93,13 @@ async function confirmRevoke() {
 }
 
 function invitationUrl(token: string | null) {
-  return token ? `${window.location.origin}/invite/${token}` : 'Link unavailable'
+  return token ? `${window.location.origin}/invite/${token}` : boardSettingsT.value.linkUnavailable
 }
 
 function copyInvitationUrl(token: string | null) {
   if (!token) return
   void copy(invitationUrl(token))
-  toast.info('Link copied to clipboard')
+  toast.info(boardSettingsT.value.toastLinkCopied)
 }
 
 function onInvitationCreated() {
@@ -122,13 +130,13 @@ onMounted(() => {
               class="cursor-pointer rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="router.push('/boards')"
             >
-              Back to boards
+              {{ boardSettingsT.backToBoards }}
             </button>
             <h1 class="text-3xl font-semibold text-surface">
-              {{ payload?.board.name ?? 'Board settings' }}
+              {{ payload?.board.name ?? boardSettingsT.headingFallback }}
             </h1>
             <p class="text-sm text-muted">
-              Review invitation links and the anonymous collaborators that have accepted them.
+              {{ boardSettingsT.subtitle }}
             </p>
           </div>
 
@@ -139,7 +147,7 @@ onMounted(() => {
               class="cursor-pointer rounded-xl border border-border bg-canvas px-3 py-2 text-xs text-surface transition-colors hover:bg-hover"
               @click="openBoard"
             >
-              Open board
+              {{ boardSettingsT.openBoard }}
             </button>
             <button
               type="button"
@@ -147,14 +155,14 @@ onMounted(() => {
               class="cursor-pointer rounded-xl bg-accent px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-accent/90"
               @click="shareOpen = true"
             >
-              New invite
+              {{ boardSettingsT.newInvite }}
             </button>
           </div>
         </div>
       </section>
 
       <section v-if="loading" class="rounded-2xl border border-border bg-panel/70 p-6 text-sm text-muted">
-        Loading board settings…
+        {{ boardSettingsT.loading }}
       </section>
 
       <section
@@ -167,13 +175,13 @@ onMounted(() => {
       <template v-else-if="payload">
         <section class="rounded-[24px] border border-border bg-panel/75 p-5">
           <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-surface">Invitation links</h2>
+            <h2 class="text-lg font-semibold text-surface">{{ boardSettingsT.invitationLinksHeading }}</h2>
             <button
               type="button"
               class="cursor-pointer rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="loadBoardSettings"
             >
-              Refresh
+              {{ boardSettingsT.refresh }}
             </button>
           </div>
 
@@ -186,13 +194,13 @@ onMounted(() => {
               <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div class="space-y-1">
                   <p class="text-sm font-medium text-surface">
-                    {{ invitation.role === 'editor' ? 'Editor invite' : 'Viewer invite' }}
+                    {{ invitation.role === 'editor' ? boardSettingsT.editorInvite : boardSettingsT.viewerInvite }}
                   </p>
                   <p class="break-all text-xs text-muted">
                     {{ invitationUrl(invitation.token) }}
                   </p>
                   <p class="text-[11px] text-muted">
-                    {{ invitation.revoked ? 'Revoked' : 'Active' }} · Expires
+                    {{ invitation.revoked ? boardSettingsT.statusRevoked : boardSettingsT.statusActive }}{{ boardSettingsT.statusSeparator }}{{ boardSettingsT.expiresPrefix }}
                     {{ new Date(invitation.expiresAt).toLocaleString() }}
                   </p>
                 </div>
@@ -205,7 +213,7 @@ onMounted(() => {
                     :disabled="!invitation.token"
                     @click="copyInvitationUrl(invitation.token)"
                   >
-                    {{ copied ? 'Copied' : 'Copy' }}
+                    {{ copied ? boardSettingsT.copied : boardSettingsT.copy }}
                   </button>
                   <button
                     type="button"
@@ -214,7 +222,7 @@ onMounted(() => {
                     :disabled="invitation.revoked"
                     @click="requestRevoke(invitation)"
                   >
-                    Revoke
+                    {{ boardSettingsT.revoke }}
                   </button>
                 </div>
               </div>
@@ -224,13 +232,13 @@ onMounted(() => {
               v-if="payload.invitations.length === 0"
               class="rounded-2xl border border-dashed border-border bg-canvas/50 p-5 text-sm text-muted"
             >
-              No invitation links yet.
+              {{ boardSettingsT.emptyInvitations }}
             </li>
           </ul>
         </section>
 
         <section class="rounded-[24px] border border-border bg-panel/75 p-5">
-          <h2 class="text-lg font-semibold text-surface">Collaborators</h2>
+          <h2 class="text-lg font-semibold text-surface">{{ boardSettingsT.collaboratorsHeading }}</h2>
           <ul data-test-id="board-collaborator-list" class="mt-4 space-y-3">
             <li
               v-for="collaborator in payload.board.collaborators"
@@ -240,7 +248,7 @@ onMounted(() => {
               <div>
                 <p class="text-sm font-medium text-surface">{{ collaborator.anonymousId }}</p>
                 <p class="text-[11px] text-muted">
-                  Added {{ new Date(collaborator.addedAt).toLocaleString() }}
+                  {{ boardSettingsT.addedPrefix }} {{ new Date(collaborator.addedAt).toLocaleString() }}
                 </p>
               </div>
               <span class="rounded-full border border-white/10 bg-panel px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-muted">
@@ -255,7 +263,7 @@ onMounted(() => {
     <ShareModal
       v-model:open="shareOpen"
       :board-id="payload?.board.id ?? boardId"
-      :board-name="payload?.board.name ?? 'Board'"
+      :board-name="payload?.board.name ?? boardSettingsT.shareModalBoardFallback"
       @created="onInvitationCreated"
     />
 
@@ -267,14 +275,13 @@ onMounted(() => {
           :class="cls.content"
           @escape-key-down="revokeOpen = false"
         >
-          <AlertDialogTitle :class="cls.title">Revoke invitation</AlertDialogTitle>
+          <AlertDialogTitle :class="cls.title">{{ boardSettingsT.revokeDialogTitle }}</AlertDialogTitle>
           <AlertDialogDescription :class="cls.description">
-            This invite link will stop working immediately. Existing collaborators keep their
-            current access.
+            {{ boardSettingsT.revokeDialogDescription }}
           </AlertDialogDescription>
 
           <div class="mt-4 rounded-xl border border-border bg-canvas/70 p-3 text-xs text-muted">
-            {{ revokeTarget?.token ? invitationUrl(revokeTarget.token) : 'Link unavailable' }}
+            {{ revokeTarget?.token ? invitationUrl(revokeTarget.token) : boardSettingsT.linkUnavailable }}
           </div>
 
           <div class="mt-5 flex justify-end gap-2">
@@ -283,14 +290,14 @@ onMounted(() => {
               class="rounded-md border border-border bg-canvas px-3 py-1.5 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="revokeOpen = false"
             >
-              Cancel
+              {{ boardSettingsT.revokeDialogCancel }}
             </AlertDialogCancel>
             <AlertDialogAction
               data-test-id="board-revoke-confirm"
               class="rounded-md bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500/90"
               @click="confirmRevoke"
             >
-              Revoke link
+              {{ boardSettingsT.revokeDialogConfirm }}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
