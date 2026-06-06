@@ -247,7 +247,10 @@
     "exportScale": "Масштаб экспорта",
     "exportFormat": "Формат экспорта",
     "gap": "Интервал",
-    "searchFonts": "Поиск шрифтов..."
+    "searchFonts": "Поиск шрифтов...",
+    "previousCategory": "Предыдущая категория",
+    "nextCategory": "Следующая категория",
+    "moreTools": "Больше инструментов"
   },
   "pages": {
     "newPage": "Новая страница",

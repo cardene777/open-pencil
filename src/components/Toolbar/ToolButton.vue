@@ -4,11 +4,12 @@ import type { Component } from 'vue'
 
 interface ToolButtonProps extends RequiredTestIdProps {
   icon: Component
+  label: string
   active?: boolean
   mobile?: boolean
 }
 
-const { icon, active = false, mobile = false, testId } = defineProps<ToolButtonProps>()
+const { icon, label, active = false, mobile = false, testId } = defineProps<ToolButtonProps>()
 
 const emit = defineEmits<{
   click: []
@@ -18,6 +19,7 @@ const emit = defineEmits<{
 <template>
   <button
     v-test-id="testId"
+    :aria-label="label"
     class="flex size-8 cursor-pointer items-center justify-center border-none transition-colors"
     :class="[
       mobile ? 'rounded-[6px] select-none' : 'rounded-lg',

@@ -290,7 +290,10 @@ export const panelMessages = i18n('panels', {
   setToCurrentHeight: 'Set to current height',
   sizingFillFr: 'Fill (fr)',
   sizingFixedPx: 'Fixed (px)',
-  searchFonts: 'Search fonts...'
+  searchFonts: 'Search fonts...',
+  previousCategory: 'Previous category',
+  nextCategory: 'Next category',
+  moreTools: 'More tools'
 })
 
 export const variableTypeMessages = i18n('variableTypes', {

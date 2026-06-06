@@ -2,7 +2,7 @@
 import Tip from '@/components/ui/Tip.vue'
 import ToolButton from '@/components/Toolbar/ToolButton.vue'
 import ToolFlyout from '@/components/Toolbar/ToolFlyout.vue'
-import { toolbarToolTestId, ToolbarItem } from '@inkly/vue'
+import { toolbarToolTestId, ToolbarItem, useI18n } from '@inkly/vue'
 
 import type { Tool } from '@inkly/vue'
 import type { EditorToolDef } from '@inkly/core/editor'
@@ -20,6 +20,8 @@ const { tools, activeTool, toolIcons, toolLabels, toolShortcuts, ui } = definePr
 const emit = defineEmits<{
   setTool: [tool: Tool]
 }>()
+
+const { panels } = useI18n()
 
 function isActive(tool: EditorToolDef) {
   return tool.key === activeTool || (tool.flyout?.includes(activeTool) ?? false)
@@ -47,6 +49,7 @@ function activeKeyForTool(tool: EditorToolDef) {
             :tool-icons="toolIcons"
             :tool-labels="toolLabels"
             :tool-shortcuts="toolShortcuts"
+            :flyout-label="panels.moreTools"
             :ui="ui"
             @select="emit('setTool', $event)"
           />
@@ -57,6 +60,7 @@ function activeKeyForTool(tool: EditorToolDef) {
             <ToolButton
               :test-id="toolbarToolTestId(tool.key)"
               :icon="toolIcons[tool.key]"
+              :label="toolLabels[tool.key]"
               :active="active || isActive(tool)"
               @click="actions.select"
             />

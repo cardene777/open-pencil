@@ -247,7 +247,10 @@
     "exportScale": "書き出しスケール",
     "exportFormat": "書き出し形式",
     "gap": "間隔",
-    "searchFonts": "フォントを検索..."
+    "searchFonts": "フォントを検索...",
+    "previousCategory": "前のカテゴリ",
+    "nextCategory": "次のカテゴリ",
+    "moreTools": "ツールを切り替え"
   },
   "pages": {
     "newPage": "新規ページ",

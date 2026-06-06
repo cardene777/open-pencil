@@ -7,7 +7,7 @@ import IconChevronRight from '~icons/lucide/chevron-right'
 import ToolButton from '@/components/Toolbar/ToolButton.vue'
 import ToolFlyout from '@/components/Toolbar/ToolFlyout.vue'
 import ToolbarActionGroup from '@/components/Toolbar/ToolbarActionGroup.vue'
-import { toolbarToolTestId, ToolbarItem } from '@inkly/vue'
+import { toolbarToolTestId, ToolbarItem, useI18n } from '@inkly/vue'
 
 import type { Tool } from '@inkly/vue'
 import type { EditorToolDef } from '@inkly/core/editor'
@@ -53,6 +53,8 @@ const emit = defineEmits<{
   action: [item: ToolbarActionItem]
 }>()
 
+const { panels } = useI18n()
+
 const slideVariants = {
   initial: (dir: unknown) => ({ opacity: 0, x: (dir as number) * 20 }),
   animate: { opacity: 1, x: 0 },
@@ -75,6 +77,7 @@ function activeKeyForTool(tool: EditorToolDef) {
   >
     <motion.button
       data-test-id="mobile-toolbar-prev"
+      :aria-label="panels.previousCategory"
       class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-panel shadow-sm select-none"
       :class="hasPrev ? 'text-muted' : 'pointer-events-none'"
       :animate="{ opacity: hasPrev ? 1 : 0 }"
@@ -111,6 +114,7 @@ function activeKeyForTool(tool: EditorToolDef) {
               :tool-icons="toolIcons"
               :tool-labels="toolLabels"
               :tool-shortcuts="toolShortcuts"
+              :flyout-label="panels.moreTools"
               :ui="ui"
               @select="emit('setTool', $event)"
             />
@@ -120,6 +124,7 @@ function activeKeyForTool(tool: EditorToolDef) {
                 mobile
                 :test-id="toolbarToolTestId(tool.key, true)"
                 :icon="toolIcons[tool.key]"
+                :label="toolLabels[tool.key]"
                 :active="active || activeKeyForTool(tool) === activeTool"
                 @click="actions.select"
               />
@@ -167,6 +172,7 @@ function activeKeyForTool(tool: EditorToolDef) {
 
     <motion.button
       data-test-id="mobile-toolbar-next"
+      :aria-label="panels.nextCategory"
       class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-panel shadow-sm select-none"
       :class="hasNext ? 'text-muted' : 'pointer-events-none'"
       :animate="{ opacity: hasNext ? 1 : 0 }"
