@@ -10,7 +10,7 @@ import {
   type AcceptableValue
 } from 'reka-ui'
 
-import type { TestIdProps } from '@inkly/vue'
+import { useI18n, type TestIdProps } from '@inkly/vue'
 
 import AppBadge from '@/components/ui/AppBadge.vue'
 import { useInputUI } from '@/components/ui/input'
@@ -43,6 +43,7 @@ const {
 
 const modelValue = defineModel<string>({ required: true })
 const open = ref(false)
+const { dialogs } = useI18n()
 
 const select = useSelectUI({
   content: ui?.content ?? 'max-h-56 min-w-[var(--reka-combobox-trigger-width)]',
@@ -112,7 +113,7 @@ function updateValue(value: AcceptableValue) {
             </div>
             <AppBadge v-if="option.meta">{{ option.meta }}</AppBadge>
           </ComboboxItem>
-          <div v-if="filteredOptions.length === 0" :class="emptyClass">No matching models</div>
+          <div v-if="filteredOptions.length === 0" :class="emptyClass">{{ dialogs.noResults }}</div>
         </ComboboxViewport>
       </ComboboxContent>
     </ComboboxPortal>
