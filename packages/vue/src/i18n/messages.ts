@@ -688,6 +688,34 @@ export const shareModalMessages = i18n('shareModal', {
   toastLinkCopied: 'Link copied to clipboard'
 })
 
+export const fontSettingsMessages = i18n('fontSettings', {
+  descriptionTauri: 'Access system fonts, Google Fonts, fallback packs, and cached downloads.',
+  descriptionBrowser: 'Allow browser access to local fonts and manage Google Fonts.',
+  localFontsLabel: 'Local fonts',
+  googleFontsLabel: 'Google Fonts',
+  cacheLabel: 'Downloaded cache',
+  cacheValue: params('{count} fonts · {size}'),
+  lastUpdatedLabel: 'Last updated',
+  systemAccessHeading: 'System font access',
+  systemAccessGranted: 'System fonts are available.',
+  systemAccessPrompt: 'Allow browser font access when system fonts are missing.',
+  allow: 'Allow',
+  requesting: 'Requesting…',
+  googleFontsHeading: 'Google Fonts',
+  googleFontsDescription: 'Show fonts from Google in the font picker.',
+  enable: 'Enable',
+  disable: 'Disable',
+  enabled: 'Enabled',
+  disabled: 'Disabled',
+  fallbackHeading: 'Fallback packs',
+  fallbackDescription:
+    'Download CJK and Arabic fallbacks before opening files that need them.',
+  download: 'Download',
+  downloading: 'Downloading…',
+  refresh: 'Refresh',
+  clearCache: 'Clear cache'
+})
+
 export const teamsMessages = i18n('teams', {
   headTitle: 'Teams',
   eyebrow: 'Workspace',
