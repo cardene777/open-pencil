@@ -447,6 +447,30 @@
       "keyboardCancelAnnounce": "Anulowano klawiaturową zmianę kolejności {section}."
     }
   },
+  "account": {
+    "headTitle": "Konto",
+    "eyebrow": "Konto",
+    "heading": "Profil",
+    "subtitle": "Inkly działa bez konta. Zaloguj się tylko, jeśli chcesz przenieść swoje anonimowe tablice i zachować je w swoim profilu użytkownika.",
+    "loading": "Ładowanie konta…",
+    "signInHeading": "Kontynuuj z Google",
+    "signInDescription": "Jeśli Google OAuth nie jest skonfigurowane w tym środowisku, przycisk poinformuje, że jest niedostępny, a tryb anonimowy będzie nadal działał.",
+    "signInButton": "Zaloguj się przez Google",
+    "signInPending": "Uruchamianie…",
+    "defaultDisplayName": "Użytkownik Inkly",
+    "avatarAlt": "Awatar użytkownika {name}",
+    "migrating": "Migracja Twoich tablic…",
+    "logoutButton": "Wyloguj się",
+    "logoutPending": "Wylogowywanie…",
+    "logoutDialogTitle": "Wyloguj się",
+    "logoutDialogDescription": "Wrócisz do trybu anonimowego na tym urządzeniu.",
+    "logoutDialogHint": "Twoje tablice pozostaną dostępne. Zaloguj się ponownie, aby przywrócić powiadomienia konta i zespoły.",
+    "logoutDialogCancel": "Anuluj",
+    "logoutDialogConfirm": "Wyloguj się",
+    "toastSignedOut": "Wylogowano",
+    "toastLoginFail": "Nie udało się rozpocząć logowania przez Google",
+    "toastLogoutFail": "Wylogowanie nie powiodło się"
+  },
   "admin": {
     "title": "Administracja",
     "badge": "Wewnętrzny",

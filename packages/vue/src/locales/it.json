@@ -447,6 +447,30 @@
       "keyboardCancelAnnounce": "Riordino da tastiera di {section} annullato."
     }
   },
+  "account": {
+    "headTitle": "Account",
+    "eyebrow": "Account",
+    "heading": "Profilo",
+    "subtitle": "Inkly funziona senza un account. Accedi solo se vuoi migrare le tue board anonime e mantenerle nel tuo profilo utente.",
+    "loading": "Caricamento account…",
+    "signInHeading": "Continua con Google",
+    "signInDescription": "Se Google OAuth non è configurato in questo ambiente, il pulsante segnalerà che non è disponibile e la modalità anonima continuerà a funzionare.",
+    "signInButton": "Accedi con Google",
+    "signInPending": "Avvio…",
+    "defaultDisplayName": "Utente Inkly",
+    "avatarAlt": "Avatar di {name}",
+    "migrating": "Migrazione delle tue board…",
+    "logoutButton": "Esci",
+    "logoutPending": "Disconnessione…",
+    "logoutDialogTitle": "Esci",
+    "logoutDialogDescription": "Tornerai alla modalità anonima su questo dispositivo.",
+    "logoutDialogHint": "Le tue board restano disponibili. Accedi di nuovo per ripristinare le notifiche dell'account e i team.",
+    "logoutDialogCancel": "Annulla",
+    "logoutDialogConfirm": "Esci",
+    "toastSignedOut": "Disconnesso",
+    "toastLoginFail": "Impossibile avviare l'accesso con Google",
+    "toastLogoutFail": "Disconnessione non riuscita"
+  },
   "admin": {
     "title": "Amministrazione",
     "badge": "Interno",

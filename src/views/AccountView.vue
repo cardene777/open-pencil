@@ -13,19 +13,28 @@ import {
   AlertDialogTitle
 } from 'reka-ui'
 
+import { useI18n } from '@inkly/vue'
+
 import { useAuthStore } from '@/app/auth/store'
 import { toast, initials } from '@/app/shell/ui'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import { useDialogUI } from '@/components/ui/dialog'
 
-useHead({ title: 'Account' })
+const { account: accountT } = useI18n()
+
+useHead({ title: () => accountT.value.headTitle })
 
 const auth = useAuthStore()
 const router = useRouter()
 void auth.init()
 
-const displayName = computed(() => auth.user?.name?.trim() || auth.user?.email || 'Inkly User')
+const displayName = computed(
+  () => auth.user?.name?.trim() || auth.user?.email || accountT.value.defaultDisplayName
+)
 const avatarInitials = computed(() => initials(displayName.value))
+const avatarAltText = computed(() =>
+  accountT.value.avatarAlt({ name: displayName.value })
+)
 const logoutDialogOpen = ref(false)
 const dialogCls = useDialogUI({
   content: 'w-[min(28rem,calc(100vw-2rem))] rounded-2xl p-5 shadow-2xl'
@@ -35,7 +44,7 @@ async function startLogin() {
   try {
     await auth.signInWithGoogle()
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to start Google login'
+    const message = error instanceof Error ? error.message : accountT.value.toastLoginFail
     toast.error(message)
   }
 }
@@ -43,10 +52,10 @@ async function startLogin() {
 async function signOut() {
   try {
     await auth.signOut()
-    toast.info('Signed out')
+    toast.info(accountT.value.toastSignedOut)
     await router.push('/boards')
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to sign out'
+    const message = error instanceof Error ? error.message : accountT.value.toastLogoutFail
     toast.error(message)
   }
 }
@@ -71,11 +80,12 @@ async function confirmSignOut() {
         class="flex flex-col gap-3 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl md:flex-row md:items-start md:justify-between"
       >
         <div>
-          <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">Account</p>
-          <h1 class="mt-2 text-3xl font-semibold text-surface">Profile</h1>
+          <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">
+            {{ accountT.eyebrow }}
+          </p>
+          <h1 class="mt-2 text-3xl font-semibold text-surface">{{ accountT.heading }}</h1>
           <p class="mt-2 max-w-2xl text-sm text-muted">
-            Inkly works without an account. Sign in only if you want to migrate your anonymous boards
-            and keep them under your user profile.
+            {{ accountT.subtitle }}
           </p>
         </div>
         <LocaleSwitcher test-id="account-locale-switcher" />
@@ -85,7 +95,7 @@ async function confirmSignOut() {
         v-if="!auth.initialized || auth.loading"
         class="rounded-[24px] border border-border bg-panel/70 p-6 text-sm text-muted"
       >
-        Loading account…
+        {{ accountT.loading }}
       </section>
 
       <section
@@ -94,10 +104,9 @@ async function confirmSignOut() {
       >
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div class="space-y-2">
-            <h2 class="text-xl font-semibold text-surface">Continue with Google</h2>
+            <h2 class="text-xl font-semibold text-surface">{{ accountT.signInHeading }}</h2>
             <p class="max-w-xl text-sm text-muted">
-              If Google OAuth is not configured in this environment, the button will report that it
-              is unavailable and anonymous mode will keep working.
+              {{ accountT.signInDescription }}
             </p>
           </div>
 
@@ -109,7 +118,7 @@ async function confirmSignOut() {
             @click="startLogin"
           >
             <icon-lucide-log-in class="size-4" />
-            {{ auth.loginPending ? 'Starting…' : 'Google でログイン' }}
+            {{ auth.loginPending ? accountT.signInPending : accountT.signInButton }}
           </button>
         </div>
       </section>
@@ -124,7 +133,7 @@ async function confirmSignOut() {
             <img
               v-if="auth.user?.image"
               :src="auth.user.image"
-              :alt="`${displayName} avatar`"
+              :alt="avatarAltText"
               data-test-id="account-avatar-image"
               class="size-16 rounded-full border border-white/10 object-cover"
             />
@@ -143,7 +152,7 @@ async function confirmSignOut() {
               <p data-test-id="account-email" class="text-sm text-muted">
                 {{ auth.user?.email }}
               </p>
-              <p v-if="auth.migrating" class="text-xs text-accent">Migrating your boards…</p>
+              <p v-if="auth.migrating" class="text-xs text-accent">{{ accountT.migrating }}</p>
             </div>
           </div>
 
@@ -155,7 +164,7 @@ async function confirmSignOut() {
             @click="requestSignOut"
           >
             <icon-lucide-log-out class="size-4" />
-            {{ auth.logoutPending ? 'Signing out…' : 'Log out' }}
+            {{ auth.logoutPending ? accountT.logoutPending : accountT.logoutButton }}
           </button>
         </div>
       </section>
@@ -169,13 +178,13 @@ async function confirmSignOut() {
           :class="dialogCls.content"
           @escape-key-down="logoutDialogOpen = false"
         >
-          <AlertDialogTitle :class="dialogCls.title">Log out</AlertDialogTitle>
+          <AlertDialogTitle :class="dialogCls.title">{{ accountT.logoutDialogTitle }}</AlertDialogTitle>
           <AlertDialogDescription :class="dialogCls.description">
-            You will return to anonymous mode on this device.
+            {{ accountT.logoutDialogDescription }}
           </AlertDialogDescription>
 
           <div class="mt-4 rounded-xl border border-border bg-canvas/70 p-3 text-xs text-muted">
-            Your boards remain available. Sign in again to restore account notifications and teams.
+            {{ accountT.logoutDialogHint }}
           </div>
 
           <div class="mt-5 flex justify-end gap-2">
@@ -184,14 +193,14 @@ async function confirmSignOut() {
               class="rounded-md border border-border bg-canvas px-3 py-1.5 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="logoutDialogOpen = false"
             >
-              Cancel
+              {{ accountT.logoutDialogCancel }}
             </AlertDialogCancel>
             <AlertDialogAction
               data-test-id="account-logout-confirm"
               class="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent/90"
               @click="confirmSignOut"
             >
-              Log out
+              {{ accountT.logoutDialogConfirm }}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>

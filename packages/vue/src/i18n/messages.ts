@@ -498,6 +498,34 @@ export const dashboardMessages = i18n('dashboard', {
   }
 })
 
+export const accountMessages = i18n('account', {
+  headTitle: 'Account',
+  eyebrow: 'Account',
+  heading: 'Profile',
+  subtitle:
+    'Inkly works without an account. Sign in only if you want to migrate your anonymous boards and keep them under your user profile.',
+  loading: 'Loading account…',
+  signInHeading: 'Continue with Google',
+  signInDescription:
+    'If Google OAuth is not configured in this environment, the button will report that it is unavailable and anonymous mode will keep working.',
+  signInButton: 'Google でログイン',
+  signInPending: 'Starting…',
+  defaultDisplayName: 'Inkly User',
+  avatarAlt: params('{name} avatar'),
+  migrating: 'Migrating your boards…',
+  logoutButton: 'Log out',
+  logoutPending: 'Signing out…',
+  logoutDialogTitle: 'Log out',
+  logoutDialogDescription: 'You will return to anonymous mode on this device.',
+  logoutDialogHint:
+    'Your boards remain available. Sign in again to restore account notifications and teams.',
+  logoutDialogCancel: 'Cancel',
+  logoutDialogConfirm: 'Log out',
+  toastSignedOut: 'Signed out',
+  toastLoginFail: 'Failed to start Google login',
+  toastLogoutFail: 'Failed to sign out'
+})
+
 export const adminMessages = i18n('admin', {
   title: 'Admin',
   badge: 'Internal',

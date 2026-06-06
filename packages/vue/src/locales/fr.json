@@ -447,6 +447,30 @@
       "keyboardCancelAnnounce": "Réorganisation au clavier de {section} annulée."
     }
   },
+  "account": {
+    "headTitle": "Compte",
+    "eyebrow": "Compte",
+    "heading": "Profil",
+    "subtitle": "Inkly fonctionne sans compte. Ne vous connectez que si vous souhaitez migrer vos tableaux anonymes et les conserver sous votre profil utilisateur.",
+    "loading": "Chargement du compte…",
+    "signInHeading": "Continuer avec Google",
+    "signInDescription": "Si Google OAuth n'est pas configuré dans cet environnement, le bouton indiquera qu'il est indisponible et le mode anonyme continuera de fonctionner.",
+    "signInButton": "Se connecter avec Google",
+    "signInPending": "Démarrage…",
+    "defaultDisplayName": "Utilisateur Inkly",
+    "avatarAlt": "Avatar de {name}",
+    "migrating": "Migration de vos tableaux…",
+    "logoutButton": "Se déconnecter",
+    "logoutPending": "Déconnexion…",
+    "logoutDialogTitle": "Se déconnecter",
+    "logoutDialogDescription": "Vous reviendrez en mode anonyme sur cet appareil.",
+    "logoutDialogHint": "Vos tableaux restent disponibles. Reconnectez-vous pour restaurer les notifications de compte et les équipes.",
+    "logoutDialogCancel": "Annuler",
+    "logoutDialogConfirm": "Se déconnecter",
+    "toastSignedOut": "Déconnecté",
+    "toastLoginFail": "Impossible de démarrer la connexion Google",
+    "toastLogoutFail": "Échec de la déconnexion"
+  },
   "admin": {
     "title": "Administration",
     "badge": "Interne",

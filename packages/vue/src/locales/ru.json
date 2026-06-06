@@ -447,6 +447,30 @@
       "keyboardCancelAnnounce": "Клавиатурное изменение порядка {section} отменено."
     }
   },
+  "account": {
+    "headTitle": "Учётная запись",
+    "eyebrow": "Учётная запись",
+    "heading": "Профиль",
+    "subtitle": "Inkly работает без учётной записи. Войдите только если хотите перенести свои анонимные доски и сохранить их в своём профиле.",
+    "loading": "Загрузка учётной записи…",
+    "signInHeading": "Продолжить с Google",
+    "signInDescription": "Если Google OAuth не настроен в этой среде, кнопка сообщит о недоступности, а анонимный режим продолжит работать.",
+    "signInButton": "Войти через Google",
+    "signInPending": "Запуск…",
+    "defaultDisplayName": "Пользователь Inkly",
+    "avatarAlt": "Аватар пользователя {name}",
+    "migrating": "Перенос ваших досок…",
+    "logoutButton": "Выйти",
+    "logoutPending": "Выход…",
+    "logoutDialogTitle": "Выйти",
+    "logoutDialogDescription": "На этом устройстве вы вернётесь в анонимный режим.",
+    "logoutDialogHint": "Ваши доски останутся доступны. Войдите снова, чтобы восстановить уведомления учётной записи и команды.",
+    "logoutDialogCancel": "Отмена",
+    "logoutDialogConfirm": "Выйти",
+    "toastSignedOut": "Вы вышли из системы",
+    "toastLoginFail": "Не удалось запустить вход через Google",
+    "toastLogoutFail": "Не удалось выйти"
+  },
   "admin": {
     "title": "Администрирование",
     "badge": "Внутренний",

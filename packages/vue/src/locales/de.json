@@ -447,6 +447,30 @@
       "keyboardCancelAnnounce": "Tastatur-Neuanordnung von {section} abgebrochen."
     }
   },
+  "account": {
+    "headTitle": "Konto",
+    "eyebrow": "Konto",
+    "heading": "Profil",
+    "subtitle": "Inkly funktioniert ohne Konto. Melden Sie sich nur an, wenn Sie Ihre anonymen Boards migrieren und unter Ihrem Benutzerprofil behalten möchten.",
+    "loading": "Konto wird geladen…",
+    "signInHeading": "Mit Google fortfahren",
+    "signInDescription": "Wenn Google OAuth in dieser Umgebung nicht konfiguriert ist, meldet die Schaltfläche, dass es nicht verfügbar ist, und der anonyme Modus funktioniert weiter.",
+    "signInButton": "Mit Google anmelden",
+    "signInPending": "Wird gestartet…",
+    "defaultDisplayName": "Inkly-Benutzer",
+    "avatarAlt": "Avatar von {name}",
+    "migrating": "Ihre Boards werden migriert…",
+    "logoutButton": "Abmelden",
+    "logoutPending": "Wird abgemeldet…",
+    "logoutDialogTitle": "Abmelden",
+    "logoutDialogDescription": "Sie kehren auf diesem Gerät in den anonymen Modus zurück.",
+    "logoutDialogHint": "Ihre Boards bleiben verfügbar. Melden Sie sich erneut an, um Kontobenachrichtigungen und Teams wiederherzustellen.",
+    "logoutDialogCancel": "Abbrechen",
+    "logoutDialogConfirm": "Abmelden",
+    "toastSignedOut": "Abgemeldet",
+    "toastLoginFail": "Google-Anmeldung konnte nicht gestartet werden",
+    "toastLogoutFail": "Abmeldung fehlgeschlagen"
+  },
   "admin": {
     "title": "Verwaltung",
     "badge": "Intern",
