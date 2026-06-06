@@ -13,6 +13,8 @@ import {
   AlertDialogTitle
 } from 'reka-ui'
 
+import { useI18n } from '@inkly/vue'
+
 import { useAuthStore } from '@/app/auth/store'
 import { readPinnedBoardIds, togglePinnedBoard } from '@/app/boards/pinned'
 import { readBoardPreview } from '@/app/boards/preview'
@@ -32,13 +34,15 @@ import {
 import { listTeams, type TeamSummary } from '@/app/api/teams'
 import { useDialogUI } from '@/components/ui/dialog'
 
-useHead({ title: 'Boards' })
+const { boards: boardsT } = useI18n()
+
+useHead({ title: () => boardsT.value.heading })
 
 const router = useRouter()
 const auth = useAuthStore()
 const boards = ref<Board[]>([])
 const ownedTeams = ref<TeamSummary[]>([])
-const boardName = ref('Untitled board')
+const boardName = ref(boardsT.value.defaultBoardName)
 const selectedTeamId = ref('personal')
 const searchQuery = ref('')
 const loading = ref(false)
@@ -105,7 +109,7 @@ async function loadBoardsView() {
     boards.value = await listBoards()
     syncPreviewsSoon(boards.value)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to load boards'
+    const message = error instanceof Error ? error.message : boardsT.value.toastLoadFail
     toast.error(message)
     console.warn('[boards]', error)
   } finally {
@@ -133,16 +137,16 @@ async function createAndOpenBoard() {
   creating.value = true
   try {
     const board = await createBoard({
-      name: boardName.value.trim() || 'Untitled board',
+      name: boardName.value.trim() || boardsT.value.defaultBoardName,
       teamId: selectedTeamId.value === 'personal' ? null : selectedTeamId.value
     })
     boards.value = [board, ...boards.value.filter((candidate) => candidate.id !== board.id)]
     syncPreviewsSoon(boards.value)
-    boardName.value = 'Untitled board'
+    boardName.value = boardsT.value.defaultBoardName
     selectedTeamId.value = 'personal'
     await router.push(createBoardEditorLocation(board))
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to create board'
+    const message = error instanceof Error ? error.message : boardsT.value.toastCreateFail
     toast.error(message)
   } finally {
     creating.value = false
@@ -164,7 +168,7 @@ async function removeBoard(board: Board) {
     syncPreviewsSoon(boards.value)
     toast.info('Board deleted')
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to delete board'
+    const message = error instanceof Error ? error.message : boardsT.value.toastDeleteFail
     toast.error(message)
   }
 }
@@ -186,7 +190,7 @@ async function startGoogleLogin() {
   try {
     await auth.signInWithGoogle(window.location.toString())
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to start Google login'
+    const message = error instanceof Error ? error.message : boardsT.value.toastLoginFail
     toast.error(message)
   }
 }
@@ -256,9 +260,9 @@ onMounted(async () => {
         <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div class="space-y-2">
             <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">Dashboard</p>
-            <h1 class="text-3xl font-semibold text-surface">Your boards</h1>
+            <h1 class="text-3xl font-semibold text-surface">{{ boardsT.heading }}</h1>
             <p class="max-w-2xl text-sm text-muted">
-              Create a personal board or attach it to a team workspace without leaving Inkly.
+              {{ boardsT.subtitle }}
             </p>
           </div>
 
@@ -267,7 +271,7 @@ onMounted(async () => {
               v-model="boardName"
               test-id="board-create-input"
               type="text"
-              placeholder="Board name"
+              :placeholder="boardsT.boardNamePlaceholder"
             />
             <div class="flex w-full gap-2">
               <select
@@ -275,7 +279,7 @@ onMounted(async () => {
                 data-test-id="board-team-select"
                 class="min-w-0 flex-1 rounded border border-border bg-input px-2 py-2 text-sm text-surface outline-none focus:border-accent"
               >
-                <option value="personal">Personal board</option>
+                <option value="personal">{{ boardsT.personalBoardOption }}</option>
                 <option v-for="team in ownedTeams" :key="team.id" :value="team.id">
                   {{ team.name }}
                 </option>
@@ -287,11 +291,11 @@ onMounted(async () => {
                 :disabled="creating"
                 @click="createAndOpenBoard"
               >
-                {{ creating ? 'Creating…' : 'New board' }}
+                {{ creating ? boardsT.newBoardCreating : boardsT.newBoardButton }}
               </button>
             </div>
             <p v-if="hasOwnedTeams" class="text-[11px] text-muted">
-              Team boards can be created only in teams you own.
+              {{ boardsT.teamScopeHint }}
             </p>
           </div>
         </div>
@@ -307,9 +311,9 @@ onMounted(async () => {
       <section class="space-y-4">
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div class="space-y-1">
-            <h2 class="text-sm font-medium text-surface">Recent boards</h2>
+            <h2 class="text-sm font-medium text-surface">{{ boardsT.recentHeading }}</h2>
             <p class="text-xs text-muted">
-              Search by board name or reopen a recently edited board.
+              {{ boardsT.recentSubtitle }}
             </p>
           </div>
           <div class="flex w-full max-w-lg items-center gap-2">
@@ -317,7 +321,7 @@ onMounted(async () => {
               v-model="searchQuery"
               test-id="board-search-input"
               type="search"
-              placeholder="Search boards"
+              :placeholder="boardsT.searchPlaceholder"
             />
             <button
               type="button"
@@ -333,16 +337,16 @@ onMounted(async () => {
           v-if="loading"
           class="rounded-2xl border border-border bg-panel/70 p-6 text-sm text-muted"
         >
-          Loading boards…
+          {{ boardsT.loadingBoards }}
         </div>
 
         <div
           v-else-if="boards.length === 0"
           class="rounded-[24px] border border-dashed border-border bg-panel/60 p-10 text-center"
         >
-          <p class="text-lg font-medium text-surface">No boards yet</p>
+          <p class="text-lg font-medium text-surface">{{ boardsT.emptyHeading }}</p>
           <p class="mt-2 text-sm text-muted">
-            Create your first board to start the invite and team sharing flows.
+            {{ boardsT.emptyHint }}
           </p>
         </div>
 
@@ -351,8 +355,8 @@ onMounted(async () => {
           data-test-id="board-search-empty"
           class="rounded-[24px] border border-dashed border-border bg-panel/60 p-10 text-center"
         >
-          <p class="text-lg font-medium text-surface">No matching boards</p>
-          <p class="mt-2 text-sm text-muted">Try a different name or clear the search box.</p>
+          <p class="text-lg font-medium text-surface">{{ boardsT.emptySearchHeading }}</p>
+          <p class="mt-2 text-sm text-muted">{{ boardsT.emptySearchHint }}</p>
         </div>
 
         <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -379,9 +383,9 @@ onMounted(async () => {
           :class="dialogCls.content"
           @escape-key-down="deleteDialogOpen = false"
         >
-          <AlertDialogTitle :class="dialogCls.title">Delete board</AlertDialogTitle>
+          <AlertDialogTitle :class="dialogCls.title">{{ boardsT.deleteDialogTitle }}</AlertDialogTitle>
           <AlertDialogDescription :class="dialogCls.description">
-            This permanently removes the board and its invitation links.
+            {{ boardsT.deleteDialogDescription }}
           </AlertDialogDescription>
 
           <div class="mt-4 rounded-xl border border-red-500/20 bg-red-500/8 p-3 text-xs text-red-100">
@@ -394,14 +398,14 @@ onMounted(async () => {
               class="rounded-md border border-border bg-canvas px-3 py-1.5 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="deleteDialogOpen = false"
             >
-              Cancel
+              {{ boardsT.deleteDialogCancel }}
             </AlertDialogCancel>
             <AlertDialogAction
               data-test-id="board-delete-confirm"
               class="rounded-md bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500/90"
               @click="confirmRemoveBoard"
             >
-              Delete board
+              {{ boardsT.deleteDialogConfirm }}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
