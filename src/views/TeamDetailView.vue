@@ -19,6 +19,8 @@ import {
   DialogTitle
 } from 'reka-ui'
 
+import { useI18n } from '@inkly/vue'
+
 import { isValidEmail } from '@/app/auth/email'
 import { createBoardEditorLocation } from '@/app/api/client'
 import {
@@ -31,6 +33,8 @@ import { toast } from '@/app/shell/ui'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import { useDialogUI } from '@/components/ui/dialog'
+
+const { teamDetail: teamDetailT } = useI18n()
 
 const route = useRoute()
 const router = useRouter()
@@ -51,16 +55,33 @@ const teamId = computed(() => (typeof route.params.id === 'string' ? route.param
 const isOwner = computed(() => payload.value?.team.role === 'owner')
 const normalizedInviteEmail = computed(() => inviteEmail.value.trim())
 const inviteEmailError = computed(() => {
-  if (normalizedInviteEmail.value.length === 0) return 'Email is required'
-  if (!isValidEmail(normalizedInviteEmail.value)) return 'Enter a valid email address'
+  if (normalizedInviteEmail.value.length === 0) return teamDetailT.value.emailRequired
+  if (!isValidEmail(normalizedInviteEmail.value)) return teamDetailT.value.emailInvalid
   return ''
 })
 const canInvite = computed(
   () => isOwner.value && inviteEmailError.value.length === 0 && !inviting.value
 )
 
+const summaryText = computed(() =>
+  teamDetailT.value.membersBoardsSummary({
+    members: payload.value?.team.memberCount ?? 0,
+    boards: payload.value?.team.boardCount ?? 0
+  })
+)
+
+const removeDialogLoseAccessText = computed(() => {
+  const email = removeTarget.value?.user.email
+  if (!email) return teamDetailT.value.removeDialogLoseAccessFallback
+  return teamDetailT.value.removeDialogLoseAccess({ email })
+})
+
 useHead({
-  title: computed(() => (payload.value ? `${payload.value.team.name} Team` : 'Team'))
+  title: computed(() =>
+    payload.value
+      ? teamDetailT.value.headTitleWithName({ name: payload.value.team.name })
+      : teamDetailT.value.headTitleDefault
+  )
 })
 
 async function loadTeam() {
@@ -71,7 +92,7 @@ async function loadTeam() {
   try {
     payload.value = await getTeam(teamId.value)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to load team'
+    const message = error instanceof Error ? error.message : teamDetailT.value.toastLoadFail
     errorMessage.value = message
     toast.error(message)
   } finally {
@@ -93,9 +114,9 @@ async function inviteMember() {
     inviteEmail.value = ''
     inviteRole.value = 'editor'
     await loadTeam()
-    toast.info('Member added')
+    toast.info(teamDetailT.value.toastMemberAdded)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to add member'
+    const message = error instanceof Error ? error.message : teamDetailT.value.toastAddFail
     toast.error(message)
   } finally {
     inviting.value = false
@@ -116,9 +137,9 @@ async function confirmRemoveMember() {
   try {
     await removeTeamMember(teamId.value, member.userId)
     await loadTeam()
-    toast.info('Member removed')
+    toast.info(teamDetailT.value.toastMemberRemoved)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to remove member'
+    const message = error instanceof Error ? error.message : teamDetailT.value.toastRemoveFail
     toast.error(message)
   }
 }
@@ -146,13 +167,13 @@ onMounted(() => {
               class="cursor-pointer rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="router.push('/teams')"
             >
-              Back to teams
+              {{ teamDetailT.backToTeams }}
             </button>
             <h1 class="text-3xl font-semibold text-surface">
-              {{ payload?.team.name ?? 'Team' }}
+              {{ payload?.team.name ?? teamDetailT.headingFallback }}
             </h1>
             <p class="text-sm text-muted">
-              {{ payload?.team.memberCount ?? 0 }} members · {{ payload?.team.boardCount ?? 0 }} boards
+              {{ summaryText }}
             </p>
           </div>
 
@@ -165,7 +186,7 @@ onMounted(() => {
               :disabled="!isOwner"
               @click="inviteOpen = true"
             >
-              Invite member
+              {{ teamDetailT.inviteButton }}
             </button>
             <button
               type="button"
@@ -173,14 +194,14 @@ onMounted(() => {
               class="cursor-pointer rounded-xl border border-border bg-canvas px-3 py-2 text-xs text-surface transition-colors hover:bg-hover"
               @click="router.push(`/team/${teamId}/settings`)"
             >
-              Settings
+              {{ teamDetailT.settingsButton }}
             </button>
           </div>
         </div>
       </section>
 
       <section v-if="loading" class="rounded-2xl border border-border bg-panel/70 p-6 text-sm text-muted">
-        Loading team…
+        {{ teamDetailT.loading }}
       </section>
 
       <section
@@ -193,7 +214,7 @@ onMounted(() => {
       <template v-else-if="payload">
         <section class="rounded-[24px] border border-border bg-panel/75 p-5">
           <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-surface">Members</h2>
+            <h2 class="text-lg font-semibold text-surface">{{ teamDetailT.membersHeading }}</h2>
             <span
               class="rounded-full border border-white/10 bg-canvas/60 px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-muted"
             >
@@ -224,7 +245,7 @@ onMounted(() => {
                   class="cursor-pointer rounded-md px-2 py-1 text-xs text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200"
                   @click="requestRemoveMember(member)"
                 >
-                  Remove
+                  {{ teamDetailT.removeMemberAction }}
                 </button>
               </div>
             </li>
@@ -233,13 +254,13 @@ onMounted(() => {
 
         <section class="rounded-[24px] border border-border bg-panel/75 p-5">
           <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-surface">Boards</h2>
+            <h2 class="text-lg font-semibold text-surface">{{ teamDetailT.boardsHeading }}</h2>
             <button
               type="button"
               class="cursor-pointer rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="loadTeam"
             >
-              Refresh
+              {{ teamDetailT.refresh }}
             </button>
           </div>
 
@@ -252,7 +273,7 @@ onMounted(() => {
               <div>
                 <p class="text-sm font-medium text-surface">{{ board.name }}</p>
                 <p class="text-[11px] text-muted">
-                  Updated {{ new Date(board.updatedAt).toLocaleString() }}
+                  {{ teamDetailT.boardUpdatedPrefix }} {{ new Date(board.updatedAt).toLocaleString() }}
                 </p>
               </div>
               <button
@@ -260,14 +281,14 @@ onMounted(() => {
                 class="cursor-pointer rounded-md border border-border bg-panel px-3 py-1.5 text-xs text-surface transition-colors hover:bg-hover"
                 @click="openBoard(board)"
               >
-                Open
+                {{ teamDetailT.openBoard }}
               </button>
             </li>
             <li
               v-if="payload.boards.length === 0"
               class="rounded-2xl border border-dashed border-border bg-canvas/50 p-5 text-sm text-muted"
             >
-              No boards attached to this team yet.
+              {{ teamDetailT.emptyBoards }}
             </li>
           </ul>
         </section>
@@ -278,19 +299,19 @@ onMounted(() => {
       <DialogPortal>
         <DialogOverlay :class="cls.overlay" />
         <DialogContent data-test-id="team-invite-dialog" :class="cls.content">
-          <DialogTitle :class="cls.title">Invite member</DialogTitle>
+          <DialogTitle :class="cls.title">{{ teamDetailT.inviteDialogTitle }}</DialogTitle>
           <DialogDescription :class="cls.description">
-            Add an existing Inkly user to this workspace by email.
+            {{ teamDetailT.inviteDialogDescription }}
           </DialogDescription>
 
           <div class="mt-4 space-y-4">
             <label class="block space-y-1.5">
-              <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Email</span>
+              <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">{{ teamDetailT.emailLabel }}</span>
               <AppInput
                 v-model="inviteEmail"
                 test-id="team-invite-email-input"
                 type="email"
-                placeholder="member@example.com"
+                :placeholder="teamDetailT.emailPlaceholder"
               />
             </label>
 
@@ -303,14 +324,14 @@ onMounted(() => {
             </div>
 
             <label class="block space-y-1.5">
-              <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Role</span>
+              <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">{{ teamDetailT.roleLabel }}</span>
               <select
                 v-model="inviteRole"
                 data-test-id="team-invite-role-select"
                 class="w-full rounded border border-border bg-input px-2 py-1.5 text-xs text-surface outline-none focus:border-accent"
               >
-                <option value="editor">Editor</option>
-                <option value="viewer">Viewer</option>
+                <option value="editor">{{ teamDetailT.roleEditor }}</option>
+                <option value="viewer">{{ teamDetailT.roleViewer }}</option>
               </select>
             </label>
 
@@ -320,7 +341,7 @@ onMounted(() => {
                 class="cursor-pointer rounded-md border border-border bg-canvas px-3 py-1.5 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
                 @click="inviteOpen = false"
               >
-                Cancel
+                {{ teamDetailT.inviteDialogCancel }}
               </button>
               <button
                 type="button"
@@ -329,7 +350,7 @@ onMounted(() => {
                 :disabled="!canInvite"
                 @click="inviteMember"
               >
-                {{ inviting ? 'Adding…' : 'Add member' }}
+                {{ inviting ? teamDetailT.inviteDialogSubmitPending : teamDetailT.inviteDialogSubmit }}
               </button>
             </div>
           </div>
@@ -345,13 +366,13 @@ onMounted(() => {
           :class="cls.content"
           @escape-key-down="removeDialogOpen = false"
         >
-          <AlertDialogTitle :class="cls.title">Remove member</AlertDialogTitle>
+          <AlertDialogTitle :class="cls.title">{{ teamDetailT.removeDialogTitle }}</AlertDialogTitle>
           <AlertDialogDescription :class="cls.description">
-            This removes the member from the workspace immediately.
+            {{ teamDetailT.removeDialogDescription }}
           </AlertDialogDescription>
 
           <div class="mt-4 rounded-xl border border-red-500/20 bg-red-500/8 p-3 text-xs text-red-100">
-            {{ removeTarget?.user.email ?? 'This member' }} will lose access.
+            {{ removeDialogLoseAccessText }}
           </div>
 
           <div class="mt-5 flex justify-end gap-2">
@@ -360,14 +381,14 @@ onMounted(() => {
               class="rounded-md border border-border bg-canvas px-3 py-1.5 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="removeDialogOpen = false"
             >
-              Cancel
+              {{ teamDetailT.removeDialogCancel }}
             </AlertDialogCancel>
             <AlertDialogAction
               data-test-id="team-detail-remove-confirm"
               class="rounded-md bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500/90"
               @click="confirmRemoveMember"
             >
-              Remove member
+              {{ teamDetailT.removeDialogConfirm }}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
