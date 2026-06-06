@@ -9,39 +9,54 @@
 | #76 | `button-name` (notification bell) | NotificationBell trigger に aria-label / icon に aria-hidden |
 | #77 | `select-name` (board team) | BoardsView board team select に aria-label |
 | #78 | TODO comment / disableRules cleanup | 上記 fix 済 rule を test 側から削除 |
-| #95 | `button-name` (editor toolbar 系 5 component) | ToolButton / ToolFlyout / ToolbarActionGroup / MobileToolbar prev,next に aria-label を i18n key (`tools.*` / `panels.previousCategory,nextCategory,moreTools`) で配線、 PropertiesPanel 系 / LayersPanel 系は後続 PR で対応するため editor.a11y.spec.ts の disableRules は残置 |
+| #95 | `button-name` (editor toolbar 系 5 button) | ToolButton / ToolFlyout / ToolbarActionGroup / MobileToolbar prev,next に aria-label を i18n key (`tools.*` / `panels.previousCategory,nextCategory,moreTools`) で配線、 PropertiesPanel 系 / LayersPanel 系は後続 PR で対応するため editor.a11y.spec.ts の disableRules は残置 |
+| #96 | `button-name` (PropertiesPanel 系 20 button) | Position / Effects / Color / Appearance / Fill / Typography / Export の Tip wrap 済 button に i18n key 経由 aria-label を直接配線 (Tip + button aria-label 二重配線パターン) |
+| #97 | `button-name` (Stroke / Layout / Variables 12 button) | StrokeSection / LayoutSection (AutoLayout/Flex/Grid) / VariablesSection / BoundVariableButton / BooleanOperationsControl + 新規 i18n key 8 件 (layoutDirection* / layoutWrap / toggleIndividualPadding / alignmentGridCell / addTrack / removeTrack) を 9 locale 一括追加 |
+| #98 | `button-name` (editor chrome 全域) | AppMenu / AppSelect / FillPicker swatch + 3 tab / SizeControls width/height sizing menu / ColorPickerRoot primitive の swatch、 `editor.a11y.spec.ts` の disableRules から `button-name` を削除 (今後 violation は即 fail)、 新規 i18n key 3 件 (widthSizingMenu / heightSizingMenu / colorPickerSwatch) を 9 locale 追加 |
+| #99 | `label` + `aria-required-children` (editor chrome) | ColorPicker/ColorInput.vue hex input に panels.colorHexInput を `aria-label` 配線 + PropertiesPanel.vue TabsList wrapper div 追加で ZoomDropdown を sibling 移動、 editor.a11y.spec.ts の disableRules から `label` / `aria-required-children` 両方削除 |
+
+editor 全 chrome (Toolbar + PropertiesPanel + LayersPanel + reka-ui primitive 全域) で button-name / label / aria-required-children rule は **完全解消** され、 `editor.a11y.spec.ts` の disableRules は `color-contrast` 1 rule のみとなった。
 
 ## 残っている rule (次の fix 候補)
 
-### color-contrast
+### color-contrast (大規模 design system 改修必要)
 
-design system 改修系。 accent button / destructive button / metric card / dashboard CTA の background-foreground contrast ratio を WCAG AA (4.5:1 normal text, 3:1 large text) 以上に調整する大規模 PR が必要。
+**現状分析 (2026-06-06 時点)** — color-contrast 違反は単一 CSS variable 改修では解消不能と判明した。 axe report (`notifications.a11y.spec.ts` で disableRules を一時的に外して走らせた結果) で以下の構造が確認された。
 
-対象 file (`tests/e2e/a11y/` の `disableRules` で言及あり):
+主要な違反パターン (背景色は `--color-panel` `#2a2a2a` ベース):
 
-- `admin.a11y.spec.ts` — `accent buttons / destructive buttons`
-- `dashboard.a11y.spec.ts` — `dashboard CTA controls`
-- `dashboard-view.a11y.spec.ts` — `accent CTA / metric cards`
-- `notifications.a11y.spec.ts` — `notifications surfaces`
-- `team-detail.a11y.spec.ts` — `team detail and invite dialog`
-- `teams.a11y.spec.ts` — `teams views and dialogs`
-- `boards-settings.a11y.spec.ts` — `board settings`
-- `editor.a11y.spec.ts` — `editor chrome`
+| 違反箇所 | fg color | bg color | 現状 ratio | 必要 | 解消方針 |
+|---|---|---|---|---|---|
+| `text-muted` 11px on bg-panel | `#888888` | `#2a2a2a` | 4.04 | 4.5 | `--color-muted` を明るく (`#a8a8a8`) |
+| `text-accent` 11px on bg-panel | `#3b82f6` | `#2a2a2a` | 3.9 | 4.5 | `--color-accent` を明るく (`#5b9eff`) |
+| `text-white` 14px on bg-accent | `#ffffff` | `#3b82f6` | 3.68 (fail) | 4.5 | accent を **暗く** すれば pass (例 `#1d4ed8` で 7.04 pass)、 ただし accent を明るくすると更に悪化 |
+| `text-muted` 12px on bg-accent/8 | `#888888` | `#2b313a` | 3.69 | 4.5 | `--color-muted` 改善で 4.74 (pass) |
+| `text-muted/80` 11px on bg-accent/8 | `#757778` | `#2b313a` | 2.91 | 4.5 | 80% alpha 自体を `text-muted` に置換 (NotificationBell L145 / NotificationsView L200) |
 
-進め方 — まず CSS variable (`var(--color-accent)` 等) の現在値を axe report で測定し、 contrast 計算 (WCAG AA 通過に必要な調整量) を出す。 design 側と擦り合わせて変更案を確定してから PR を起こす。
+**両立不能な物理制約** — `--color-accent` を 1 つの値で:
+- A. 「dark bg 上の text-accent text として 4.5:1 pass」 (明るい青が必要、 `#5b9eff` 以上で 4.5+)
+- B. 「accent bg 上の text-white text として 4.5:1 pass」 (暗い青が必要、 `#1d4ed8` 以下で 7.0+ pass、 `#2563eb` で 5.17 pass)
+両方は満たせない。 解消には accent token を **fg 用 / bg 用に分離** する design system 改修が必要 (例 `--color-accent-bg` + `--color-accent-fg-on-dark`)。
 
-### editor chrome (button-name / aria-required-children / label)
+**重要** — 現状の `#3b82f6` は **どちらも fail** している (text-white 上で 3.68 / text-accent on dark bg で 3.9)。 既に AA 不合格状態のため、 design 側との擦り合わせは緊急度が高い。
 
-editor 全体の icon-only chrome buttons + properties panel inputs + tablist の a11y 改修。 規模が大きく、 component 単位で分けて fix する。
+**推奨進め方** (まだ未実施):
 
-対象 file:
+1. **Phase A — token 分離 design**: design 側と `--color-accent` を fg 用 / bg 用に分離するかを擦り合わせ。 trade-off は (a) 「accent button の見た目を Tailwind blue-700 系で固定 (暗め)」 vs (b) 「token を 2 種類に分けて使い分け」。
+2. **Phase B — global token 改修**: `src/app.css` の `@theme` と `html[data-theme='light']` を改修、 全 component で `bg-accent` (button bg) と `text-accent` (link/highlight) の使い分けを統一。
+3. **Phase C — spec ごとの個別調整**: 残る違反は `text-muted/80` の透明度問題等で局所改修可能、 component 単位で `text-muted` 直接配線に置換。
+4. **Phase D — 8 spec の disableRules 削除**: 全 spec で color-contrast 違反 0 件を確認してから disableRules を削除。
 
-- `editor.a11y.spec.ts:20` — `aria-required-children` in the properties tablist
-- `editor.a11y.spec.ts:22` — `button-name` on icon-only editor chrome controls (Toolbar 系は #95 で解消済、 PropertiesPanel 系 30+ 件 + LayersPanel 系が未対応)
-- `editor.a11y.spec.ts:24` — `color-contrast` in editor chrome (上記 color-contrast カテゴリ)
-- `editor.a11y.spec.ts:26` — `label` on editor property inputs
+**未対応 spec list (`disableRules` で color-contrast を skip 中)**:
 
-進め方 — editor chrome の icon-only button を grep で列挙し、 1 PR で 5-10 件単位の `aria-label` / `aria-labelledby` を付与。 properties tablist は role / tabindex 構造の review が必要。 `button-name` rule を disableRules から削除できるのは Toolbar 系 / PropertiesPanel 系 / LayersPanel 系の全 PR 完了後 (#95 はその第 1 弾)。
+- `admin.a11y.spec.ts` — accent buttons / destructive buttons (dashboard の delete confirmation 等)
+- `dashboard.a11y.spec.ts` — dashboard CTA controls
+- `dashboard-view.a11y.spec.ts` — accent CTA / metric cards
+- `notifications.a11y.spec.ts` — notifications-read-all CTA + popover 内 text-muted / text-accent (本 issue で詳細分析済)
+- `team-detail.a11y.spec.ts` — team detail and invite dialog
+- `teams.a11y.spec.ts` — teams views and dialogs
+- `boards-settings.a11y.spec.ts` — board settings
+- `editor.a11y.spec.ts` — editor chrome (button-name / label / aria-required-children は #95-#99 で解消済、 color-contrast のみ残置)
 
 ## 進め方の SSOT
 
