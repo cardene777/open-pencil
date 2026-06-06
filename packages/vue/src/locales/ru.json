@@ -534,7 +534,10 @@
       "colTeam": "Команда",
       "colRole": "Роль",
       "colJoined": "Дата присоединения",
-      "namePlaceholder": "—"
+      "namePlaceholder": "—",
+      "exportCsv": "Экспорт CSV",
+      "exportToastSingular": "Экспортирован {count} участник",
+      "exportToastPlural": "Экспортировано {count} участников"
     }
   }
 }

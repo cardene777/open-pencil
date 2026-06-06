@@ -534,7 +534,10 @@
       "colTeam": "团队",
       "colRole": "角色",
       "colJoined": "加入时间",
-      "namePlaceholder": "—"
+      "namePlaceholder": "—",
+      "exportCsv": "导出 CSV",
+      "exportToastSingular": "已导出 {count} 位成员",
+      "exportToastPlural": "已导出 {count} 位成员"
     }
   }
 }

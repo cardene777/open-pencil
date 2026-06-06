@@ -534,7 +534,10 @@
       "colTeam": "Équipe",
       "colRole": "Rôle",
       "colJoined": "Rejoint",
-      "namePlaceholder": "—"
+      "namePlaceholder": "—",
+      "exportCsv": "Exporter CSV",
+      "exportToastSingular": "{count} membre exporté",
+      "exportToastPlural": "{count} membres exportés"
     }
   }
 }

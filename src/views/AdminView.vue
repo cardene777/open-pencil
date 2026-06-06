@@ -262,6 +262,42 @@ function escapeCsvField(value: string | number): string {
   return text
 }
 
+function exportMembersCsv() {
+  const m = admin.value.membersTab
+  const header = [
+    m.colName,
+    m.colEmail,
+    m.colTeam,
+    m.colRole,
+    m.colJoined
+  ]
+  const rows = filteredMembers.value.map((entry) => [
+    entry.member.user.name || m.namePlaceholder,
+    entry.member.user.email,
+    entry.team.name,
+    entry.member.role,
+    new Date(entry.member.addedAt).toISOString()
+  ])
+
+  const csv = [header, ...rows]
+    .map((row) => row.map(escapeCsvField).join(','))
+    .join('\n')
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `inkly-members-${Date.now()}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  const message = rows.length === 1
+    ? formatTemplate(m.exportToastSingular, { count: rows.length })
+    : formatTemplate(m.exportToastPlural, { count: rows.length })
+  toast.success(message)
+}
+
 function exportActivityCsv() {
   const a = admin.value.activityTab
   const header = [
@@ -1075,6 +1111,16 @@ onMounted(async () => {
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-test-id="admin-members-export"
+              :disabled="filteredMembers.length === 0"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+              @click="exportMembersCsv"
+            >
+              <icon-lucide-download class="size-4" />
+              <span>{{ admin.membersTab.exportCsv }}</span>
+            </button>
             <label class="sr-only" for="admin-members-search-input">{{ admin.membersTab.searchAria }}</label>
             <input
               id="admin-members-search-input"
