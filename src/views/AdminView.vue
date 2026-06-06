@@ -34,6 +34,7 @@ import LoginBanner from '@/components/LoginBanner.vue'
 
 import { useI18n } from '@inkly/vue'
 
+import { triggerCsvDownload, type CsvCell } from '@/app/shell/csv-export'
 import { formatTemplate } from '@/app/shell/i18n-format'
 
 const { admin } = useI18n()
@@ -254,24 +255,21 @@ function openActivity(notificationId: string) {
   router.push(getNotificationTarget(record))
 }
 
-function escapeCsvField(value: string | number): string {
-  const text = String(value)
-  if (text.includes(',') || text.includes('"') || text.includes('\n')) {
-    return `"${text.replace(/"/g, '""')}"`
-  }
-  return text
+function notifyExportSuccess(
+  count: number,
+  singular: string,
+  plural: string
+) {
+  const message = count === 1
+    ? formatTemplate(singular, { count })
+    : formatTemplate(plural, { count })
+  toast.success(message)
 }
 
 function exportMembersCsv() {
   const m = admin.value.membersTab
-  const header = [
-    m.colName,
-    m.colEmail,
-    m.colTeam,
-    m.colRole,
-    m.colJoined
-  ]
-  const rows = filteredMembers.value.map((entry) => [
+  const header: CsvCell[] = [m.colName, m.colEmail, m.colTeam, m.colRole, m.colJoined]
+  const rows: CsvCell[][] = filteredMembers.value.map((entry) => [
     entry.member.user.name || m.namePlaceholder,
     entry.member.user.email,
     entry.team.name,
@@ -279,28 +277,17 @@ function exportMembersCsv() {
     new Date(entry.member.addedAt).toISOString()
   ])
 
-  const csv = [header, ...rows]
-    .map((row) => row.map(escapeCsvField).join(','))
-    .join('\n')
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `inkly-members-${Date.now()}.csv`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-  const message = rows.length === 1
-    ? formatTemplate(m.exportToastSingular, { count: rows.length })
-    : formatTemplate(m.exportToastPlural, { count: rows.length })
-  toast.success(message)
+  const count = triggerCsvDownload({
+    header,
+    rows,
+    filename: `inkly-members-${Date.now()}.csv`
+  })
+  notifyExportSuccess(count, m.exportToastSingular, m.exportToastPlural)
 }
 
 function exportActivityCsv() {
   const a = admin.value.activityTab
-  const header = [
+  const header: CsvCell[] = [
     a.csvHeaderId,
     a.csvHeaderType,
     a.csvHeaderTitle,
@@ -308,7 +295,7 @@ function exportActivityCsv() {
     a.csvHeaderCreatedAt,
     a.csvHeaderReadAt
   ]
-  const rows = activityItems.value.map((record) => [
+  const rows: CsvCell[][] = activityItems.value.map((record) => [
     record.id,
     record.type,
     getNotificationTitle(record) || a.csvUnknown,
@@ -317,53 +304,39 @@ function exportActivityCsv() {
     record.readAt === null ? a.csvUnknown : new Date(record.readAt).toISOString()
   ])
 
-  const csv = [header, ...rows]
-    .map((row) => row.map(escapeCsvField).join(','))
-    .join('\n')
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `inkly-activity-${Date.now()}.csv`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-  const message = rows.length === 1
-    ? formatTemplate(a.exportToastSingular, { count: rows.length })
-    : formatTemplate(a.exportToastPlural, { count: rows.length })
-  toast.success(message)
+  const count = triggerCsvDownload({
+    header,
+    rows,
+    filename: `inkly-activity-${Date.now()}.csv`
+  })
+  notifyExportSuccess(count, a.exportToastSingular, a.exportToastPlural)
 }
 
 function exportBoardsCsv() {
-  const header = ['Id', 'Name', 'Workspace', 'Collaborators', 'Created', 'Updated']
-  const rows = filteredBoards.value.map((board) => [
+  const b = admin.value.boardsTab
+  const header: CsvCell[] = [
+    'Id',
+    b.colName,
+    b.colWorkspace,
+    b.colCollaborators,
+    b.colCreated,
+    b.colUpdated
+  ]
+  const rows: CsvCell[][] = filteredBoards.value.map((board) => [
     board.id,
     board.name,
-    board.team?.name ?? admin.value.boardsTab.workspacePersonal,
+    board.team?.name ?? b.workspacePersonal,
     String(board.collaborators.length),
     new Date(board.createdAt).toISOString(),
     new Date(board.updatedAt).toISOString()
   ])
 
-  const csv = [header, ...rows]
-    .map((row) => row.map(escapeCsvField).join(','))
-    .join('\n')
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `inkly-boards-${Date.now()}.csv`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
-  const message = rows.length === 1
-    ? formatTemplate(admin.value.boardsTab.exportToastSingular, { count: rows.length })
-    : formatTemplate(admin.value.boardsTab.exportToastPlural, { count: rows.length })
-  toast.success(message)
+  const count = triggerCsvDownload({
+    header,
+    rows,
+    filename: `inkly-boards-${Date.now()}.csv`
+  })
+  notifyExportSuccess(count, b.exportToastSingular, b.exportToastPlural)
 }
 
 async function handleDeleteBoard(board: Board) {
