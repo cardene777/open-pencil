@@ -1,0 +1,101 @@
+import { expect, test } from '@playwright/test'
+
+import { cleanState, seedBoards } from '#tests/helpers/api-seed'
+import { mockGoogleLogin } from '#tests/helpers/e2e-auth'
+import { useE2ECoverage } from '#tests/helpers/e2e-coverage'
+
+test.describe('admin view interaction', () => {
+  useE2ECoverage(test, 'admin-interaction')
+
+  test.beforeEach(async ({ page }) => {
+    await cleanState(page)
+  })
+
+  test('renders the admin layout with all three tabs', async ({ page }) => {
+    await page.goto('/admin')
+
+    await expect(page.getByTestId('admin-view')).toBeVisible()
+    await expect(page.getByTestId('admin-tabs')).toBeVisible()
+    await expect(page.getByTestId('admin-tab-overview')).toBeVisible()
+    await expect(page.getByTestId('admin-tab-boards')).toBeVisible()
+    await expect(page.getByTestId('admin-tab-teams')).toBeVisible()
+  })
+
+  test('default tab shows the overview metrics', async ({ page }) => {
+    await page.goto('/admin')
+
+    await expect(page.getByTestId('admin-overview')).toBeVisible()
+    await expect(page.getByTestId('admin-stat-total')).toBeVisible()
+    await expect(page.getByTestId('admin-stat-personal')).toBeVisible()
+    await expect(page.getByTestId('admin-stat-team-boards')).toBeVisible()
+    await expect(page.getByTestId('admin-stat-collaborators')).toBeVisible()
+  })
+
+  test('switching tabs replaces the active content', async ({ page }) => {
+    await page.goto('/admin')
+
+    await page.getByTestId('admin-tab-boards').click()
+    await expect(page.getByTestId('admin-boards')).toBeVisible()
+    await expect(page.getByTestId('admin-overview')).toHaveCount(0)
+
+    await page.getByTestId('admin-tab-teams').click()
+    await expect(page.getByTestId('admin-teams')).toBeVisible()
+    await expect(page.getByTestId('admin-boards')).toHaveCount(0)
+
+    await page.getByTestId('admin-tab-overview').click()
+    await expect(page.getByTestId('admin-overview')).toBeVisible()
+    await expect(page.getByTestId('admin-teams')).toHaveCount(0)
+  })
+
+  test('search filters the boards table by name', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-search@inkly.test', name: 'Admin Search' })
+    await seedBoards(page, 3)
+
+    await page.goto('/admin')
+    await page.getByTestId('admin-tab-boards').click()
+
+    const rows = page.locator('[data-test-id^="admin-board-row-"]')
+    await expect(rows).toHaveCount(3)
+
+    await page.getByTestId('admin-boards-search').fill('Board 2')
+    await expect(rows).toHaveCount(1)
+
+    await page.getByTestId('admin-boards-search').fill('NoMatch')
+    await expect(page.getByTestId('admin-boards-empty')).toBeVisible()
+  })
+
+  test('personal/team filter narrows the boards table', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-filter@inkly.test', name: 'Admin Filter' })
+    await seedBoards(page, 2)
+
+    await page.goto('/admin')
+    await page.getByTestId('admin-tab-boards').click()
+
+    const rows = page.locator('[data-test-id^="admin-board-row-"]')
+    await expect(rows).toHaveCount(2)
+
+    await page.getByTestId('admin-boards-filter').selectOption('team')
+    // seedBoards creates personal boards only by default
+    await expect(page.getByTestId('admin-boards-empty')).toBeVisible()
+
+    await page.getByTestId('admin-boards-filter').selectOption('personal')
+    await expect(rows).toHaveCount(2)
+  })
+
+  test('teams tab shows empty state when no teams exist', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-teams@inkly.test', name: 'Admin Teams' })
+
+    await page.goto('/admin')
+    await page.getByTestId('admin-tab-teams').click()
+
+    await expect(page.getByTestId('admin-teams-empty')).toBeVisible()
+  })
+
+  test('dashboard link navigates back to /dashboard', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-nav@inkly.test', name: 'Admin Nav' })
+    await page.goto('/admin')
+
+    await page.getByTestId('admin-dashboard-link').click()
+    await expect(page).toHaveURL(/\/dashboard/)
+  })
+})
