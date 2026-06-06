@@ -84,6 +84,37 @@ test.describe('dashboard view interaction', () => {
     await expect(page.getByTestId('dashboard-pinned-boards')).toHaveCount(0)
   })
 
+  test('customize panel toggles a section and persists across reload', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'dash-customize@inkly.test', name: 'Dash Customize' })
+    await page.goto('/dashboard')
+
+    await expect(page.getByTestId('dashboard-section-metrics')).toBeVisible()
+
+    await page.getByTestId('dashboard-customize-toggle').click()
+    await expect(page.getByTestId('dashboard-customize-panel')).toBeVisible()
+
+    await page.getByTestId('dashboard-customize-toggle-metrics').click()
+    await expect(page.getByTestId('dashboard-section-metrics')).toHaveCount(0)
+
+    await page.getByTestId('dashboard-customize-done').click()
+    await expect(page.getByTestId('dashboard-customize-panel')).toHaveCount(0)
+
+    await page.reload()
+    await expect(page.getByTestId('dashboard-section-metrics')).toHaveCount(0)
+  })
+
+  test('customize panel reset restores the default layout', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'dash-reset@inkly.test', name: 'Dash Reset' })
+    await page.goto('/dashboard')
+
+    await page.getByTestId('dashboard-customize-toggle').click()
+    await page.getByTestId('dashboard-customize-toggle-metrics').click()
+    await expect(page.getByTestId('dashboard-section-metrics')).toHaveCount(0)
+
+    await page.getByTestId('dashboard-customize-reset').click()
+    await expect(page.getByTestId('dashboard-section-metrics')).toBeVisible()
+  })
+
   test('pinned section is hidden when no pins exist', async ({ page }) => {
     await mockGoogleLogin(page, { email: 'dash-no-pin@inkly.test', name: 'Dashboard No Pin' })
     await seedBoards(page, 2)

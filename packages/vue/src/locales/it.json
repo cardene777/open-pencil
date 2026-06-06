@@ -394,6 +394,21 @@
       "boards": "Bacheche",
       "teams": "Team",
       "account": "Account"
+    },
+    "customize": {
+      "button": "Personalizza",
+      "panelTitle": "Personalizza la dashboard",
+      "panelHint": "Mostra/nascondi e riordina le sezioni. Salvato in questo browser.",
+      "reset": "Ripristina predefinito",
+      "done": "Fatto",
+      "moveUp": "Sposta su",
+      "moveDown": "Sposta giù",
+      "toggleAria": "Attiva/disattiva sezione",
+      "sectionMetrics": "Metriche",
+      "sectionQuickActions": "Azioni rapide",
+      "sectionPinned": "Bacheche fissate",
+      "sectionRecent": "Bacheche recenti",
+      "sectionActivity": "Attività"
     }
   },
   "admin": {

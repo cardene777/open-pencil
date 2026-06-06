@@ -394,6 +394,21 @@
       "boards": "Boards",
       "teams": "Teams",
       "account": "Konto"
+    },
+    "customize": {
+      "button": "Anpassen",
+      "panelTitle": "Dashboard anpassen",
+      "panelHint": "Sektionen ein-/ausblenden und neu anordnen. In diesem Browser gespeichert.",
+      "reset": "Auf Standard zurücksetzen",
+      "done": "Fertig",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "toggleAria": "Sektion umschalten",
+      "sectionMetrics": "Metriken",
+      "sectionQuickActions": "Schnellaktionen",
+      "sectionPinned": "Angepinnte Boards",
+      "sectionRecent": "Letzte Boards",
+      "sectionActivity": "Aktivität"
     }
   },
   "admin": {

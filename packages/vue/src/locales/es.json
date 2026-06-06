@@ -394,6 +394,21 @@
       "boards": "Tableros",
       "teams": "Equipos",
       "account": "Cuenta"
+    },
+    "customize": {
+      "button": "Personalizar",
+      "panelTitle": "Personalizar panel",
+      "panelHint": "Activa secciones y reordena. Se guarda en este navegador.",
+      "reset": "Restablecer valores predeterminados",
+      "done": "Listo",
+      "moveUp": "Subir",
+      "moveDown": "Bajar",
+      "toggleAria": "Alternar sección",
+      "sectionMetrics": "Métricas",
+      "sectionQuickActions": "Acciones rápidas",
+      "sectionPinned": "Tableros fijados",
+      "sectionRecent": "Tableros recientes",
+      "sectionActivity": "Actividad"
     }
   },
   "admin": {

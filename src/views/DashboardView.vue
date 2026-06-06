@@ -9,6 +9,16 @@ import { formatTemplate } from '@/app/shell/i18n-format'
 import { useAuthStore } from '@/app/auth/store'
 import { readPinnedBoardIds, togglePinnedBoard } from '@/app/boards/pinned'
 import { readBoardPreview } from '@/app/boards/preview'
+import {
+  DEFAULT_DASHBOARD_LAYOUT,
+  moveSection,
+  readDashboardLayout,
+  resetDashboardLayout,
+  toggleSection,
+  writeDashboardLayout,
+  type DashboardSectionConfig,
+  type DashboardSectionId
+} from '@/app/shell/dashboard-layout'
 import { useNotificationsStore } from '@/app/notifications/store'
 import {
   formatNotificationTime,
@@ -40,6 +50,46 @@ const loading = ref(false)
 const creating = ref(false)
 const previews = ref<Record<string, string>>({})
 const pinnedIds = ref<Set<string>>(new Set())
+const layout = ref<DashboardSectionConfig[]>(DEFAULT_DASHBOARD_LAYOUT.slice())
+const customizing = ref(false)
+const layoutMap = computed(() => {
+  const map = new Map<DashboardSectionId, DashboardSectionConfig>()
+  for (const section of layout.value) {
+    map.set(section.id, section)
+  }
+  return map
+})
+function isSectionEnabled(id: DashboardSectionId) {
+  return layoutMap.value.get(id)?.enabled ?? true
+}
+function indexOfSection(id: DashboardSectionId) {
+  return layout.value.findIndex((section) => section.id === id)
+}
+function handleToggleSection(id: DashboardSectionId) {
+  const next = toggleSection(layout.value, id)
+  layout.value = next
+  writeDashboardLayout(next)
+}
+function handleMoveSection(id: DashboardSectionId, direction: 'up' | 'down') {
+  const next = moveSection(layout.value, id, direction)
+  if (next === layout.value) return
+  layout.value = next
+  writeDashboardLayout(next)
+}
+function handleResetLayout() {
+  resetDashboardLayout()
+  layout.value = DEFAULT_DASHBOARD_LAYOUT.slice()
+}
+function sectionLabel(id: DashboardSectionId): string {
+  const map: Record<DashboardSectionId, string> = {
+    metrics: dashboard.value.customize.sectionMetrics,
+    quickActions: dashboard.value.customize.sectionQuickActions,
+    pinned: dashboard.value.customize.sectionPinned,
+    recent: dashboard.value.customize.sectionRecent,
+    activity: dashboard.value.customize.sectionActivity
+  }
+  return map[id]
+}
 
 const authDisplayName = computed(() => auth.user?.name?.trim() || auth.user?.email || 'Inkly User')
 const authInitials = computed(() => initials(authDisplayName.value))
@@ -158,6 +208,7 @@ onMounted(async () => {
   await auth.init()
   await notifications.mount()
   pinnedIds.value = new Set(readPinnedBoardIds())
+  layout.value = readDashboardLayout()
   await loadDashboardView()
 })
 </script>
@@ -176,6 +227,21 @@ onMounted(async () => {
         </div>
         <div class="flex items-center gap-3">
           <NotificationBell v-if="showAccountLink" />
+
+          <button
+            type="button"
+            data-test-id="dashboard-customize-toggle"
+            :class="[
+              'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition-colors',
+              customizing
+                ? 'border-accent/40 bg-accent/10 text-accent'
+                : 'border-white/10 bg-canvas/55 text-surface hover:bg-hover'
+            ]"
+            @click="customizing = !customizing"
+          >
+            <icon-lucide-sliders class="size-4" />
+            <span>{{ dashboard.customize.button }}</span>
+          </button>
 
           <RouterLink
             to="/boards"
@@ -225,7 +291,91 @@ onMounted(async () => {
         @login="startGoogleLogin"
       />
 
-      <section class="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <section
+        v-if="customizing"
+        data-test-id="dashboard-customize-panel"
+        class="-order-1 flex flex-col gap-4 rounded-[28px] border border-accent/30 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold text-surface">{{ dashboard.customize.panelTitle }}</h2>
+            <p class="text-sm text-muted">{{ dashboard.customize.panelHint }}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              data-test-id="dashboard-customize-reset"
+              class="cursor-pointer rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-muted transition-colors hover:bg-hover hover:text-surface"
+              @click="handleResetLayout"
+            >
+              {{ dashboard.customize.reset }}
+            </button>
+            <button
+              type="button"
+              data-test-id="dashboard-customize-done"
+              class="cursor-pointer rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
+              @click="customizing = false"
+            >
+              {{ dashboard.customize.done }}
+            </button>
+          </div>
+        </div>
+
+        <ul
+          data-test-id="dashboard-customize-list"
+          class="flex flex-col gap-2"
+        >
+          <li
+            v-for="(section, index) in layout"
+            :key="section.id"
+            :data-test-id="`dashboard-customize-row-${section.id}`"
+            class="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-canvas/55 px-3 py-2"
+          >
+            <div class="flex items-center gap-3">
+              <label class="inline-flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  :data-test-id="`dashboard-customize-toggle-${section.id}`"
+                  :checked="section.enabled"
+                  :aria-label="dashboard.customize.toggleAria"
+                  class="size-4 cursor-pointer accent-accent"
+                  @change="handleToggleSection(section.id)"
+                />
+                <span class="text-sm text-surface">{{ sectionLabel(section.id) }}</span>
+              </label>
+            </div>
+            <div class="flex items-center gap-1">
+              <button
+                type="button"
+                :data-test-id="`dashboard-customize-up-${section.id}`"
+                :aria-label="dashboard.customize.moveUp"
+                :disabled="index === 0"
+                class="cursor-pointer rounded-md p-1.5 text-muted transition-colors hover:bg-hover hover:text-surface disabled:cursor-not-allowed disabled:opacity-40"
+                @click="handleMoveSection(section.id, 'up')"
+              >
+                <icon-lucide-arrow-up class="size-3.5" />
+              </button>
+              <button
+                type="button"
+                :data-test-id="`dashboard-customize-down-${section.id}`"
+                :aria-label="dashboard.customize.moveDown"
+                :disabled="index === layout.length - 1"
+                class="cursor-pointer rounded-md p-1.5 text-muted transition-colors hover:bg-hover hover:text-surface disabled:cursor-not-allowed disabled:opacity-40"
+                @click="handleMoveSection(section.id, 'down')"
+              >
+                <icon-lucide-arrow-down class="size-3.5" />
+              </button>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section
+        v-if="isSectionEnabled('metrics')"
+        data-test-id="dashboard-section-metrics"
+        :style="{ order: indexOfSection('metrics') }"
+        class="grid grid-cols-1 gap-4 md:grid-cols-4"
+      >
         <div
           data-test-id="dashboard-metric-personal-boards"
           class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
@@ -260,7 +410,9 @@ onMounted(async () => {
       </section>
 
       <section
+        v-if="isSectionEnabled('quickActions')"
         data-test-id="dashboard-quick-actions"
+        :style="{ order: indexOfSection('quickActions') }"
         class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex items-center justify-between">
@@ -314,8 +466,9 @@ onMounted(async () => {
       </section>
 
       <section
-        v-if="pinnedBoards.length > 0"
+        v-if="isSectionEnabled('pinned') && pinnedBoards.length > 0"
         data-test-id="dashboard-pinned-boards"
+        :style="{ order: indexOfSection('pinned') }"
         class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex items-center justify-between">
@@ -371,7 +524,9 @@ onMounted(async () => {
       </section>
 
       <section
+        v-if="isSectionEnabled('recent')"
         data-test-id="dashboard-recent-boards"
+        :style="{ order: indexOfSection('recent') }"
         class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex items-center justify-between">
@@ -454,8 +609,9 @@ onMounted(async () => {
       </section>
 
       <section
-        v-if="auth.isAuthenticated"
+        v-if="isSectionEnabled('activity') && auth.isAuthenticated"
         data-test-id="dashboard-activity"
+        :style="{ order: indexOfSection('activity') }"
         class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex items-center justify-between">
