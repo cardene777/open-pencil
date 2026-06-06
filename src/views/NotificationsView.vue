@@ -13,6 +13,7 @@ import {
 } from '@/app/notifications/format'
 import { useNotificationsStore } from '@/app/notifications/store'
 import { toast } from '@/app/shell/ui'
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import LoginBanner from '@/components/LoginBanner.vue'
 
 useHead({ title: 'Notifications' })
@@ -102,6 +103,7 @@ onUnmounted(() => {
           </div>
 
           <div class="flex items-center gap-2">
+            <LocaleSwitcher test-id="notifications-locale-switcher" />
             <RouterLink
               to="/boards"
               class="inline-flex items-center gap-2 rounded-xl border border-border bg-canvas/60 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"

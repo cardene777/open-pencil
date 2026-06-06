@@ -15,6 +15,7 @@ import {
 
 import { useAuthStore } from '@/app/auth/store'
 import { toast, initials } from '@/app/shell/ui'
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import { useDialogUI } from '@/components/ui/dialog'
 
 useHead({ title: 'Account' })
@@ -67,14 +68,17 @@ async function confirmSignOut() {
   >
     <div class="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <section
-        class="rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+        class="flex flex-col gap-3 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl md:flex-row md:items-start md:justify-between"
       >
-        <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">Account</p>
-        <h1 class="mt-2 text-3xl font-semibold text-surface">Profile</h1>
-        <p class="mt-2 max-w-2xl text-sm text-muted">
-          Inkly works without an account. Sign in only if you want to migrate your anonymous boards
-          and keep them under your user profile.
-        </p>
+        <div>
+          <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">Account</p>
+          <h1 class="mt-2 text-3xl font-semibold text-surface">Profile</h1>
+          <p class="mt-2 max-w-2xl text-sm text-muted">
+            Inkly works without an account. Sign in only if you want to migrate your anonymous boards
+            and keep them under your user profile.
+          </p>
+        </div>
+        <LocaleSwitcher test-id="account-locale-switcher" />
       </section>
 
       <section
