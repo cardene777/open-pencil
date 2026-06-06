@@ -6,8 +6,6 @@ import { mockGoogleLogin } from '#tests/helpers/e2e-auth'
 import { waitForVisualReady } from '#tests/helpers/visual'
 
 const dashboardViewDisabledRules = [
-  // TODO(cardene): notification bell button-name fix follow-up
-  'button-name',
   // TODO(cardene): contrast on accent CTA / metric cards follow-up
   'color-contrast'
 ]

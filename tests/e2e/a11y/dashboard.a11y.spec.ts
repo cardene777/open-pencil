@@ -6,10 +6,6 @@ import { mockGoogleLogin } from '#tests/helpers/e2e-auth'
 import { waitForVisualReady } from '#tests/helpers/visual'
 
 const dashboardDisabledRules = [
-  // TODO(cardene): `button-name` on the notification bell is tracked for a follow-up a11y fix PR.
-  'button-name',
-  // TODO(cardene): `select-name` on the board team select is tracked for a follow-up a11y fix PR.
-  'select-name',
   // TODO(cardene): `color-contrast` on dashboard CTA controls is tracked for a follow-up a11y fix PR.
   'color-contrast'
 ]
