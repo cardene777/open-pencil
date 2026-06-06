@@ -606,6 +606,47 @@ export const teamsMessages = i18n('teams', {
   toastLoginFail: 'Failed to start Google login'
 })
 
+export const teamDetailMessages = i18n('teamDetail', {
+  headTitleDefault: 'Team',
+  headTitleWithName: params('{name} Team'),
+  backToTeams: 'Back to teams',
+  headingFallback: 'Team',
+  membersBoardsSummary: params('{members} members · {boards} boards'),
+  inviteButton: 'Invite member',
+  settingsButton: 'Settings',
+  loading: 'Loading team…',
+  membersHeading: 'Members',
+  removeMemberAction: 'Remove',
+  boardsHeading: 'Boards',
+  refresh: 'Refresh',
+  boardUpdatedPrefix: 'Updated',
+  openBoard: 'Open',
+  emptyBoards: 'No boards attached to this team yet.',
+  inviteDialogTitle: 'Invite member',
+  inviteDialogDescription: 'Add an existing Inkly user to this workspace by email.',
+  emailLabel: 'Email',
+  emailPlaceholder: 'member@example.com',
+  emailRequired: 'Email is required',
+  emailInvalid: 'Enter a valid email address',
+  roleLabel: 'Role',
+  roleEditor: 'Editor',
+  roleViewer: 'Viewer',
+  inviteDialogCancel: 'Cancel',
+  inviteDialogSubmit: 'Add member',
+  inviteDialogSubmitPending: 'Adding…',
+  removeDialogTitle: 'Remove member',
+  removeDialogDescription: 'This removes the member from the workspace immediately.',
+  removeDialogLoseAccess: params('{email} will lose access.'),
+  removeDialogLoseAccessFallback: 'This member will lose access.',
+  removeDialogCancel: 'Cancel',
+  removeDialogConfirm: 'Remove member',
+  toastLoadFail: 'Failed to load team',
+  toastMemberAdded: 'Member added',
+  toastAddFail: 'Failed to add member',
+  toastMemberRemoved: 'Member removed',
+  toastRemoveFail: 'Failed to remove member'
+})
+
 export const adminMessages = i18n('admin', {
   title: 'Admin',
   badge: 'Internal',
