@@ -25,7 +25,7 @@ async function loadModelSuggestions() {
       <ProviderSettingsInput
         v-model="ctx.baseURLInput"
         test-id="provider-settings-base-url"
-        placeholder="http://localhost:11434/v1"
+        :placeholder="dialogs.customEndpointBaseURLPlaceholder"
         @change="ctx.save"
       />
     </ProviderSettingsField>
@@ -36,7 +36,7 @@ async function loadModelSuggestions() {
         v-model="ctx.customModelInput"
         test-id="provider-settings-custom-model"
         :options="suggestedModels.map((model) => ({ value: model.id, label: model.name }))"
-        placeholder="e.g. meta-llama/llama-3.3-70b-instruct"
+        :placeholder="dialogs.customEndpointOpenRouterModelPlaceholder"
         @focusin="loadModelSuggestions"
         @update:model-value="ctx.save"
       />
@@ -44,7 +44,7 @@ async function loadModelSuggestions() {
         v-else
         v-model="ctx.customModelInput"
         test-id="provider-settings-custom-model"
-        placeholder="e.g. llama-3.3-70b"
+        :placeholder="dialogs.customEndpointModelPlaceholder"
         @change="ctx.save"
       />
     </ProviderSettingsField>
