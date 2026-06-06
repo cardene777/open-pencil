@@ -30,6 +30,7 @@ import {
   type Board
 } from '@/app/api/client'
 import { getTeam, listTeams, type TeamMember, type TeamSummary } from '@/app/api/teams'
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import LoginBanner from '@/components/LoginBanner.vue'
 
 import { useI18n } from '@inkly/vue'
@@ -544,6 +545,7 @@ onMounted(async () => {
           <h1 class="text-2xl font-semibold text-surface">{{ admin.title }}</h1>
         </div>
         <div class="flex items-center gap-3">
+          <LocaleSwitcher test-id="admin-locale-switcher" />
           <RouterLink
             to="/dashboard"
             data-test-id="admin-dashboard-link"
