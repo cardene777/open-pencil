@@ -346,5 +346,146 @@
     "textHint": "Text und Beschriftungen",
     "boolean": "Boolean",
     "booleanHint": "Wahr oder falsch"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "brand": "Inkly",
+    "metrics": {
+      "personalBoards": "Persönliche Boards",
+      "teamBoards": "Team-Boards",
+      "teams": "Teams",
+      "unread": "Ungelesen"
+    },
+    "quickActions": {
+      "heading": "Schnellaktionen",
+      "subtitle": "Neues Board starten oder zu einem Arbeitsbereich springen",
+      "newBoard": "+ Neues Board",
+      "creating": "Wird erstellt…",
+      "allBoards": "Alle Boards",
+      "allBoardsHint": "Boards durchsuchen und verwalten",
+      "teams": "Teams",
+      "teamsHint": "Team-Arbeitsbereiche erstellen und verwalten",
+      "notifications": "Benachrichtigungen",
+      "notificationsHint": "{count} ungelesen"
+    },
+    "pinned": {
+      "heading": "Angepinnte Boards",
+      "countLabel": "{count} angepinnt"
+    },
+    "recent": {
+      "heading": "Letzte Boards",
+      "subtitle": "Knüpfen Sie an, wo Sie aufgehört haben",
+      "viewAll": "Alle anzeigen →",
+      "loading": "Wird geladen…",
+      "empty": "Noch keine Boards. Erstellen Sie oben Ihr erstes Board."
+    },
+    "activityFeed": {
+      "heading": "Aktivität",
+      "subtitle": "Letzte Benachrichtigungen und Erwähnungen",
+      "viewAll": "Alle anzeigen →",
+      "empty": "Noch keine Aktivität."
+    },
+    "pinAria": {
+      "pin": "Board anpinnen",
+      "unpin": "Anpinnen aufheben",
+      "toggle": "Anpinnen umschalten"
+    },
+    "navLinks": {
+      "boards": "Boards",
+      "teams": "Teams",
+      "account": "Konto"
+    }
+  },
+  "admin": {
+    "title": "Verwaltung",
+    "badge": "Intern",
+    "navLinks": {
+      "dashboard": "Dashboard",
+      "account": "Konto"
+    },
+    "tabs": {
+      "overview": "Übersicht",
+      "boards": "Boards",
+      "teams": "Teams",
+      "activity": "Aktivität",
+      "members": "Mitglieder"
+    },
+    "overview": {
+      "totalBoards": "Boards gesamt",
+      "personal": "Persönlich",
+      "teamBoards": "Team-Boards",
+      "collaborators": "Mitwirkende"
+    },
+    "boardsTab": {
+      "heading": "Alle Boards",
+      "shownCount": "{shown} / {total} angezeigt",
+      "searchPlaceholder": "Nach Name oder ID suchen",
+      "searchAria": "Boards durchsuchen",
+      "filterAria": "Boards nach Arbeitsbereich filtern",
+      "filterAll": "Alle",
+      "filterPersonal": "Persönlich",
+      "filterTeam": "Team",
+      "exportCsv": "CSV exportieren",
+      "exportToastSingular": "{count} Board exportiert",
+      "exportToastPlural": "{count} Boards exportiert",
+      "bulkDelete": "{count} löschen",
+      "bulkDeleting": "Wird gelöscht…",
+      "bulkClear": "Aufheben",
+      "bulkConfirmSingular": "{count} ausgewähltes Board löschen? Dies kann nicht rückgängig gemacht werden.",
+      "bulkConfirmPlural": "{count} ausgewählte Boards löschen? Dies kann nicht rückgängig gemacht werden.",
+      "bulkSuccessSingular": "{count} Board gelöscht",
+      "bulkSuccessPlural": "{count} Boards gelöscht",
+      "bulkFailSingular": "{count} Board konnte nicht gelöscht werden",
+      "bulkFailPlural": "{count} Boards konnten nicht gelöscht werden",
+      "deletePromptSingular": "Board \"{name}\" löschen? Dies kann nicht rückgängig gemacht werden.",
+      "deleteSuccess": "Board gelöscht",
+      "deleteFail": "Board konnte nicht gelöscht werden",
+      "selectAllAria": "Alle sichtbaren Boards auswählen",
+      "selectRowAria": "{name} auswählen",
+      "loading": "Wird geladen…",
+      "empty": "Keine Boards entsprechen dem Filter.",
+      "colName": "Name",
+      "colWorkspace": "Arbeitsbereich",
+      "colCollaborators": "Mitwirkende",
+      "colCreated": "Erstellt",
+      "colUpdated": "Aktualisiert",
+      "colActions": "Aktionen",
+      "delete": "Löschen",
+      "workspacePersonal": "Persönlich"
+    },
+    "teamsTab": {
+      "heading": "Alle Teams",
+      "summary": "{owned} eigene, {joined} beigetreten",
+      "owned": "Eigene",
+      "joined": "Beigetreten",
+      "membersCount": "{count} Mitglieder",
+      "membersCountWithRole": "{count} Mitglieder · {role}",
+      "empty": "Keine Teams gefunden."
+    },
+    "activityTab": {
+      "heading": "Aktivität",
+      "subtitle": "Letzte Benachrichtigungen (Einladungen, Erwähnungen). Neueste 50 Einträge.",
+      "empty": "Keine Aktivität erfasst."
+    },
+    "membersTab": {
+      "heading": "Alle Mitglieder",
+      "summary": "{shown} / {total} angezeigt · Inhaber {owners} · Bearbeiter {editors} · Betrachter {viewers}",
+      "searchPlaceholder": "Nach Name, E-Mail oder Rolle suchen",
+      "searchAria": "Mitglieder durchsuchen",
+      "roleAria": "Mitglieder nach Rolle filtern",
+      "roleAll": "Alle Rollen",
+      "roleOwner": "Inhaber",
+      "roleEditor": "Bearbeiter",
+      "roleViewer": "Betrachter",
+      "loading": "Mitglieder werden geladen…",
+      "loadFail": "Mitglieder konnten nicht geladen werden",
+      "empty": "Keine Mitglieder entsprechen dem Filter.",
+      "colName": "Name",
+      "colEmail": "E-Mail",
+      "colTeam": "Team",
+      "colRole": "Rolle",
+      "colJoined": "Beigetreten",
+      "namePlaceholder": "—"
+    }
   }
 }

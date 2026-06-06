@@ -346,5 +346,146 @@
     "textHint": "コピーとラベル",
     "boolean": "ブール値",
     "booleanHint": "真または偽"
+  },
+  "dashboard": {
+    "title": "ダッシュボード",
+    "brand": "Inkly",
+    "metrics": {
+      "personalBoards": "個人ボード",
+      "teamBoards": "チームボード",
+      "teams": "チーム",
+      "unread": "未読"
+    },
+    "quickActions": {
+      "heading": "クイックアクション",
+      "subtitle": "新規ボードを作成、 またはワークスペースへ移動",
+      "newBoard": "+ 新規ボード",
+      "creating": "作成中…",
+      "allBoards": "ボード一覧",
+      "allBoardsHint": "ボードを閲覧・管理",
+      "teams": "チーム",
+      "teamsHint": "チームワークスペースを作成・管理",
+      "notifications": "通知",
+      "notificationsHint": "未読 {count} 件"
+    },
+    "pinned": {
+      "heading": "ピン留めボード",
+      "countLabel": "{count} 件ピン留め中"
+    },
+    "recent": {
+      "heading": "最近のボード",
+      "subtitle": "前回の続きから",
+      "viewAll": "すべて表示 →",
+      "loading": "読み込み中…",
+      "empty": "ボードがまだありません。 上のボタンから最初のボードを作成してください。"
+    },
+    "activityFeed": {
+      "heading": "アクティビティ",
+      "subtitle": "最近の通知とメンション",
+      "viewAll": "すべて表示 →",
+      "empty": "アクティビティはまだありません。"
+    },
+    "pinAria": {
+      "pin": "ボードをピン留め",
+      "unpin": "ピン留めを解除",
+      "toggle": "ピン留めを切替"
+    },
+    "navLinks": {
+      "boards": "ボード",
+      "teams": "チーム",
+      "account": "アカウント"
+    }
+  },
+  "admin": {
+    "title": "管理",
+    "badge": "社内",
+    "navLinks": {
+      "dashboard": "ダッシュボード",
+      "account": "アカウント"
+    },
+    "tabs": {
+      "overview": "概要",
+      "boards": "ボード",
+      "teams": "チーム",
+      "activity": "アクティビティ",
+      "members": "メンバー"
+    },
+    "overview": {
+      "totalBoards": "ボード合計",
+      "personal": "個人",
+      "teamBoards": "チームボード",
+      "collaborators": "コラボレーター"
+    },
+    "boardsTab": {
+      "heading": "ボード一覧",
+      "shownCount": "{shown} / {total} 件表示",
+      "searchPlaceholder": "名前または id で検索",
+      "searchAria": "ボードを検索",
+      "filterAria": "ワークスペースで絞り込み",
+      "filterAll": "すべて",
+      "filterPersonal": "個人",
+      "filterTeam": "チーム",
+      "exportCsv": "CSV エクスポート",
+      "exportToastSingular": "{count} 件のボードをエクスポートしました",
+      "exportToastPlural": "{count} 件のボードをエクスポートしました",
+      "bulkDelete": "{count} 件削除",
+      "bulkDeleting": "削除中…",
+      "bulkClear": "選択解除",
+      "bulkConfirmSingular": "選択中の {count} 件のボードを削除しますか? この操作は取り消せません。",
+      "bulkConfirmPlural": "選択中の {count} 件のボードを削除しますか? この操作は取り消せません。",
+      "bulkSuccessSingular": "{count} 件のボードを削除しました",
+      "bulkSuccessPlural": "{count} 件のボードを削除しました",
+      "bulkFailSingular": "{count} 件のボード削除に失敗しました",
+      "bulkFailPlural": "{count} 件のボード削除に失敗しました",
+      "deletePromptSingular": "ボード \"{name}\" を削除しますか? この操作は取り消せません。",
+      "deleteSuccess": "ボードを削除しました",
+      "deleteFail": "ボードの削除に失敗しました",
+      "selectAllAria": "表示中のボードをすべて選択",
+      "selectRowAria": "{name} を選択",
+      "loading": "読み込み中…",
+      "empty": "条件に一致するボードがありません。",
+      "colName": "名前",
+      "colWorkspace": "ワークスペース",
+      "colCollaborators": "コラボレーター",
+      "colCreated": "作成日",
+      "colUpdated": "更新日",
+      "colActions": "アクション",
+      "delete": "削除",
+      "workspacePersonal": "個人"
+    },
+    "teamsTab": {
+      "heading": "チーム一覧",
+      "summary": "オーナー {owned} 件、 参加 {joined} 件",
+      "owned": "オーナー",
+      "joined": "参加中",
+      "membersCount": "{count} 人",
+      "membersCountWithRole": "{count} 人 · {role}",
+      "empty": "チームが見つかりません。"
+    },
+    "activityTab": {
+      "heading": "アクティビティ",
+      "subtitle": "最近の通知 (招待・メンション)。 最新 50 件まで表示します。",
+      "empty": "アクティビティはまだ記録されていません。"
+    },
+    "membersTab": {
+      "heading": "メンバー一覧",
+      "summary": "{shown} / {total} 件表示 · オーナー {owners} · エディター {editors} · ビューワー {viewers}",
+      "searchPlaceholder": "名前・メール・ロールで検索",
+      "searchAria": "メンバーを検索",
+      "roleAria": "ロールで絞り込み",
+      "roleAll": "すべてのロール",
+      "roleOwner": "オーナー",
+      "roleEditor": "エディター",
+      "roleViewer": "ビューワー",
+      "loading": "メンバーを読み込み中…",
+      "loadFail": "メンバーの読み込みに失敗しました",
+      "empty": "条件に一致するメンバーがいません。",
+      "colName": "名前",
+      "colEmail": "メール",
+      "colTeam": "チーム",
+      "colRole": "ロール",
+      "colJoined": "参加日",
+      "namePlaceholder": "—"
+    }
   }
 }

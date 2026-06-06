@@ -10,7 +10,9 @@ import {
   panelMessages,
   variableTypeMessages,
   pageMessages,
-  dialogMessages
+  dialogMessages,
+  dashboardMessages,
+  adminMessages
 } from '#vue/i18n/messages'
 
 /**
@@ -40,6 +42,8 @@ export function useI18n() {
     variableTypes: useStore(variableTypeMessages),
     pages: useStore(pageMessages),
     dialogs: useStore(dialogMessages),
+    dashboard: useStore(dashboardMessages),
+    admin: useStore(adminMessages),
     locale: useStore(locale) as Ref<Locale>,
     availableLocales: AVAILABLE_LOCALES,
     localeLabels: LOCALE_LABELS,

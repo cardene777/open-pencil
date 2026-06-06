@@ -346,5 +346,146 @@
     "textHint": "Texte et libellés",
     "boolean": "Booléen",
     "booleanHint": "Vrai ou faux"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "brand": "Inkly",
+    "metrics": {
+      "personalBoards": "Tableaux personnels",
+      "teamBoards": "Tableaux d'équipe",
+      "teams": "Équipes",
+      "unread": "Non lus"
+    },
+    "quickActions": {
+      "heading": "Actions rapides",
+      "subtitle": "Créez un nouveau tableau ou accédez à un espace de travail",
+      "newBoard": "+ Nouveau tableau",
+      "creating": "Création…",
+      "allBoards": "Tous les tableaux",
+      "allBoardsHint": "Parcourez et gérez vos tableaux",
+      "teams": "Équipes",
+      "teamsHint": "Créez et gérez des espaces d'équipe",
+      "notifications": "Notifications",
+      "notificationsHint": "{count} non lus"
+    },
+    "pinned": {
+      "heading": "Tableaux épinglés",
+      "countLabel": "{count} épinglés"
+    },
+    "recent": {
+      "heading": "Tableaux récents",
+      "subtitle": "Reprenez là où vous vous êtes arrêté",
+      "viewAll": "Tout afficher →",
+      "loading": "Chargement…",
+      "empty": "Aucun tableau pour le moment. Créez votre premier tableau ci-dessus."
+    },
+    "activityFeed": {
+      "heading": "Activité",
+      "subtitle": "Notifications et mentions récentes",
+      "viewAll": "Tout afficher →",
+      "empty": "Aucune activité pour le moment."
+    },
+    "pinAria": {
+      "pin": "Épingler le tableau",
+      "unpin": "Désépingler",
+      "toggle": "Basculer l'épinglage"
+    },
+    "navLinks": {
+      "boards": "Tableaux",
+      "teams": "Équipes",
+      "account": "Compte"
+    }
+  },
+  "admin": {
+    "title": "Administration",
+    "badge": "Interne",
+    "navLinks": {
+      "dashboard": "Tableau de bord",
+      "account": "Compte"
+    },
+    "tabs": {
+      "overview": "Vue d'ensemble",
+      "boards": "Tableaux",
+      "teams": "Équipes",
+      "activity": "Activité",
+      "members": "Membres"
+    },
+    "overview": {
+      "totalBoards": "Total des tableaux",
+      "personal": "Personnel",
+      "teamBoards": "Tableaux d'équipe",
+      "collaborators": "Collaborateurs"
+    },
+    "boardsTab": {
+      "heading": "Tous les tableaux",
+      "shownCount": "{shown} / {total} affichés",
+      "searchPlaceholder": "Rechercher par nom ou ID",
+      "searchAria": "Rechercher des tableaux",
+      "filterAria": "Filtrer les tableaux par espace de travail",
+      "filterAll": "Tous",
+      "filterPersonal": "Personnel",
+      "filterTeam": "Équipe",
+      "exportCsv": "Exporter CSV",
+      "exportToastSingular": "{count} tableau exporté",
+      "exportToastPlural": "{count} tableaux exportés",
+      "bulkDelete": "Supprimer {count}",
+      "bulkDeleting": "Suppression…",
+      "bulkClear": "Effacer",
+      "bulkConfirmSingular": "Supprimer {count} tableau sélectionné ? Cette action est irréversible.",
+      "bulkConfirmPlural": "Supprimer {count} tableaux sélectionnés ? Cette action est irréversible.",
+      "bulkSuccessSingular": "{count} tableau supprimé",
+      "bulkSuccessPlural": "{count} tableaux supprimés",
+      "bulkFailSingular": "Échec de la suppression de {count} tableau",
+      "bulkFailPlural": "Échec de la suppression de {count} tableaux",
+      "deletePromptSingular": "Supprimer le tableau \"{name}\" ? Cette action est irréversible.",
+      "deleteSuccess": "Tableau supprimé",
+      "deleteFail": "Échec de la suppression du tableau",
+      "selectAllAria": "Sélectionner tous les tableaux visibles",
+      "selectRowAria": "Sélectionner {name}",
+      "loading": "Chargement…",
+      "empty": "Aucun tableau ne correspond au filtre.",
+      "colName": "Nom",
+      "colWorkspace": "Espace de travail",
+      "colCollaborators": "Collaborateurs",
+      "colCreated": "Créé",
+      "colUpdated": "Mis à jour",
+      "colActions": "Actions",
+      "delete": "Supprimer",
+      "workspacePersonal": "Personnel"
+    },
+    "teamsTab": {
+      "heading": "Toutes les équipes",
+      "summary": "{owned} possédées, {joined} rejointes",
+      "owned": "Possédées",
+      "joined": "Rejointes",
+      "membersCount": "{count} membres",
+      "membersCountWithRole": "{count} membres · {role}",
+      "empty": "Aucune équipe trouvée."
+    },
+    "activityTab": {
+      "heading": "Activité",
+      "subtitle": "Notifications récentes (invitations, mentions). 50 derniers enregistrements.",
+      "empty": "Aucune activité enregistrée."
+    },
+    "membersTab": {
+      "heading": "Tous les membres",
+      "summary": "{shown} / {total} affichés · propriétaires {owners} · éditeurs {editors} · lecteurs {viewers}",
+      "searchPlaceholder": "Rechercher par nom, email ou rôle",
+      "searchAria": "Rechercher des membres",
+      "roleAria": "Filtrer les membres par rôle",
+      "roleAll": "Tous les rôles",
+      "roleOwner": "Propriétaire",
+      "roleEditor": "Éditeur",
+      "roleViewer": "Lecteur",
+      "loading": "Chargement des membres…",
+      "loadFail": "Échec du chargement des membres",
+      "empty": "Aucun membre ne correspond au filtre.",
+      "colName": "Nom",
+      "colEmail": "Email",
+      "colTeam": "Équipe",
+      "colRole": "Rôle",
+      "colJoined": "Rejoint",
+      "namePlaceholder": "—"
+    }
   }
 }

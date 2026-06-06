@@ -346,5 +346,146 @@
     "textHint": "文案和标签",
     "boolean": "布尔值",
     "booleanHint": "真或假"
+  },
+  "dashboard": {
+    "title": "仪表板",
+    "brand": "Inkly",
+    "metrics": {
+      "personalBoards": "个人看板",
+      "teamBoards": "团队看板",
+      "teams": "团队",
+      "unread": "未读"
+    },
+    "quickActions": {
+      "heading": "快捷操作",
+      "subtitle": "创建新看板或跳转到工作区",
+      "newBoard": "+ 新建看板",
+      "creating": "创建中…",
+      "allBoards": "所有看板",
+      "allBoardsHint": "浏览并管理你的看板",
+      "teams": "团队",
+      "teamsHint": "创建并管理团队工作区",
+      "notifications": "通知",
+      "notificationsHint": "{count} 条未读"
+    },
+    "pinned": {
+      "heading": "已固定看板",
+      "countLabel": "{count} 个已固定"
+    },
+    "recent": {
+      "heading": "最近的看板",
+      "subtitle": "从上次离开的位置继续",
+      "viewAll": "查看全部 →",
+      "loading": "加载中…",
+      "empty": "暂无看板。请在上方创建第一个看板。"
+    },
+    "activityFeed": {
+      "heading": "动态",
+      "subtitle": "最近的通知和提及",
+      "viewAll": "查看全部 →",
+      "empty": "暂无动态。"
+    },
+    "pinAria": {
+      "pin": "固定看板",
+      "unpin": "取消固定",
+      "toggle": "切换固定"
+    },
+    "navLinks": {
+      "boards": "看板",
+      "teams": "团队",
+      "account": "账户"
+    }
+  },
+  "admin": {
+    "title": "管理",
+    "badge": "内部",
+    "navLinks": {
+      "dashboard": "仪表板",
+      "account": "账户"
+    },
+    "tabs": {
+      "overview": "概览",
+      "boards": "看板",
+      "teams": "团队",
+      "activity": "动态",
+      "members": "成员"
+    },
+    "overview": {
+      "totalBoards": "看板总数",
+      "personal": "个人",
+      "teamBoards": "团队看板",
+      "collaborators": "协作者"
+    },
+    "boardsTab": {
+      "heading": "所有看板",
+      "shownCount": "显示 {shown} / {total}",
+      "searchPlaceholder": "按名称或 ID 搜索",
+      "searchAria": "搜索看板",
+      "filterAria": "按工作区筛选看板",
+      "filterAll": "全部",
+      "filterPersonal": "个人",
+      "filterTeam": "团队",
+      "exportCsv": "导出 CSV",
+      "exportToastSingular": "已导出 {count} 个看板",
+      "exportToastPlural": "已导出 {count} 个看板",
+      "bulkDelete": "删除 {count} 个",
+      "bulkDeleting": "删除中…",
+      "bulkClear": "清除",
+      "bulkConfirmSingular": "确定删除已选中的 {count} 个看板?此操作无法撤销。",
+      "bulkConfirmPlural": "确定删除已选中的 {count} 个看板?此操作无法撤销。",
+      "bulkSuccessSingular": "已删除 {count} 个看板",
+      "bulkSuccessPlural": "已删除 {count} 个看板",
+      "bulkFailSingular": "删除 {count} 个看板失败",
+      "bulkFailPlural": "删除 {count} 个看板失败",
+      "deletePromptSingular": "删除看板 \"{name}\"?此操作无法撤销。",
+      "deleteSuccess": "看板已删除",
+      "deleteFail": "删除看板失败",
+      "selectAllAria": "选择所有可见看板",
+      "selectRowAria": "选择 {name}",
+      "loading": "加载中…",
+      "empty": "没有看板匹配当前筛选。",
+      "colName": "名称",
+      "colWorkspace": "工作区",
+      "colCollaborators": "协作者",
+      "colCreated": "创建时间",
+      "colUpdated": "更新时间",
+      "colActions": "操作",
+      "delete": "删除",
+      "workspacePersonal": "个人"
+    },
+    "teamsTab": {
+      "heading": "所有团队",
+      "summary": "拥有 {owned} 个,加入 {joined} 个",
+      "owned": "拥有",
+      "joined": "已加入",
+      "membersCount": "{count} 位成员",
+      "membersCountWithRole": "{count} 位成员 · {role}",
+      "empty": "未找到团队。"
+    },
+    "activityTab": {
+      "heading": "动态",
+      "subtitle": "最近的通知 (邀请、提及)。最新 50 条记录。",
+      "empty": "暂无动态记录。"
+    },
+    "membersTab": {
+      "heading": "所有成员",
+      "summary": "显示 {shown} / {total} · 拥有者 {owners} · 编辑者 {editors} · 查看者 {viewers}",
+      "searchPlaceholder": "按名称、邮箱或角色搜索",
+      "searchAria": "搜索成员",
+      "roleAria": "按角色筛选成员",
+      "roleAll": "所有角色",
+      "roleOwner": "拥有者",
+      "roleEditor": "编辑者",
+      "roleViewer": "查看者",
+      "loading": "正在加载成员…",
+      "loadFail": "加载成员失败",
+      "empty": "没有成员匹配当前筛选。",
+      "colName": "名称",
+      "colEmail": "邮箱",
+      "colTeam": "团队",
+      "colRole": "角色",
+      "colJoined": "加入时间",
+      "namePlaceholder": "—"
+    }
   }
 }

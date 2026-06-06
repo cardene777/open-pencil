@@ -346,5 +346,146 @@
     "textHint": "Testi ed etichette",
     "boolean": "Booleano",
     "booleanHint": "Vero o falso"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "brand": "Inkly",
+    "metrics": {
+      "personalBoards": "Bacheche personali",
+      "teamBoards": "Bacheche del team",
+      "teams": "Team",
+      "unread": "Non letti"
+    },
+    "quickActions": {
+      "heading": "Azioni rapide",
+      "subtitle": "Crea una nuova bacheca o vai a un workspace",
+      "newBoard": "+ Nuova bacheca",
+      "creating": "Creazione…",
+      "allBoards": "Tutte le bacheche",
+      "allBoardsHint": "Sfoglia e gestisci le tue bacheche",
+      "teams": "Team",
+      "teamsHint": "Crea e gestisci workspace di team",
+      "notifications": "Notifiche",
+      "notificationsHint": "{count} non letti"
+    },
+    "pinned": {
+      "heading": "Bacheche fissate",
+      "countLabel": "{count} fissate"
+    },
+    "recent": {
+      "heading": "Bacheche recenti",
+      "subtitle": "Riprendi da dove hai lasciato",
+      "viewAll": "Mostra tutto →",
+      "loading": "Caricamento…",
+      "empty": "Nessuna bacheca ancora. Crea la tua prima bacheca sopra."
+    },
+    "activityFeed": {
+      "heading": "Attività",
+      "subtitle": "Notifiche e menzioni recenti",
+      "viewAll": "Mostra tutto →",
+      "empty": "Ancora nessuna attività."
+    },
+    "pinAria": {
+      "pin": "Fissa bacheca",
+      "unpin": "Rimuovi fissaggio",
+      "toggle": "Alterna fissaggio"
+    },
+    "navLinks": {
+      "boards": "Bacheche",
+      "teams": "Team",
+      "account": "Account"
+    }
+  },
+  "admin": {
+    "title": "Amministrazione",
+    "badge": "Interno",
+    "navLinks": {
+      "dashboard": "Dashboard",
+      "account": "Account"
+    },
+    "tabs": {
+      "overview": "Panoramica",
+      "boards": "Bacheche",
+      "teams": "Team",
+      "activity": "Attività",
+      "members": "Membri"
+    },
+    "overview": {
+      "totalBoards": "Totale bacheche",
+      "personal": "Personale",
+      "teamBoards": "Bacheche del team",
+      "collaborators": "Collaboratori"
+    },
+    "boardsTab": {
+      "heading": "Tutte le bacheche",
+      "shownCount": "{shown} / {total} mostrate",
+      "searchPlaceholder": "Cerca per nome o ID",
+      "searchAria": "Cerca bacheche",
+      "filterAria": "Filtra bacheche per workspace",
+      "filterAll": "Tutte",
+      "filterPersonal": "Personale",
+      "filterTeam": "Team",
+      "exportCsv": "Esporta CSV",
+      "exportToastSingular": "{count} bacheca esportata",
+      "exportToastPlural": "{count} bacheche esportate",
+      "bulkDelete": "Elimina {count}",
+      "bulkDeleting": "Eliminazione…",
+      "bulkClear": "Pulisci",
+      "bulkConfirmSingular": "Eliminare {count} bacheca selezionata? Questa azione non può essere annullata.",
+      "bulkConfirmPlural": "Eliminare {count} bacheche selezionate? Questa azione non può essere annullata.",
+      "bulkSuccessSingular": "{count} bacheca eliminata",
+      "bulkSuccessPlural": "{count} bacheche eliminate",
+      "bulkFailSingular": "Impossibile eliminare {count} bacheca",
+      "bulkFailPlural": "Impossibile eliminare {count} bacheche",
+      "deletePromptSingular": "Eliminare la bacheca \"{name}\"? Questa azione non può essere annullata.",
+      "deleteSuccess": "Bacheca eliminata",
+      "deleteFail": "Impossibile eliminare la bacheca",
+      "selectAllAria": "Seleziona tutte le bacheche visibili",
+      "selectRowAria": "Seleziona {name}",
+      "loading": "Caricamento…",
+      "empty": "Nessuna bacheca corrisponde al filtro.",
+      "colName": "Nome",
+      "colWorkspace": "Workspace",
+      "colCollaborators": "Collaboratori",
+      "colCreated": "Creato",
+      "colUpdated": "Aggiornato",
+      "colActions": "Azioni",
+      "delete": "Elimina",
+      "workspacePersonal": "Personale"
+    },
+    "teamsTab": {
+      "heading": "Tutti i team",
+      "summary": "{owned} di proprietà, {joined} a cui sei unito",
+      "owned": "Di proprietà",
+      "joined": "Uniti",
+      "membersCount": "{count} membri",
+      "membersCountWithRole": "{count} membri · {role}",
+      "empty": "Nessun team trovato."
+    },
+    "activityTab": {
+      "heading": "Attività",
+      "subtitle": "Notifiche recenti (inviti, menzioni). Ultimi 50 record.",
+      "empty": "Nessuna attività registrata."
+    },
+    "membersTab": {
+      "heading": "Tutti i membri",
+      "summary": "{shown} / {total} mostrati · proprietari {owners} · editor {editors} · visualizzatori {viewers}",
+      "searchPlaceholder": "Cerca per nome, email o ruolo",
+      "searchAria": "Cerca membri",
+      "roleAria": "Filtra membri per ruolo",
+      "roleAll": "Tutti i ruoli",
+      "roleOwner": "Proprietario",
+      "roleEditor": "Editor",
+      "roleViewer": "Visualizzatore",
+      "loading": "Caricamento membri…",
+      "loadFail": "Impossibile caricare i membri",
+      "empty": "Nessun membro corrisponde al filtro.",
+      "colName": "Nome",
+      "colEmail": "Email",
+      "colTeam": "Team",
+      "colRole": "Ruolo",
+      "colJoined": "Unione",
+      "namePlaceholder": "—"
+    }
   }
 }

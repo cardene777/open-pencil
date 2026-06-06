@@ -3,6 +3,9 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 
+import { useI18n } from '@inkly/vue'
+
+import { formatTemplate } from '@/app/shell/i18n-format'
 import { useAuthStore } from '@/app/auth/store'
 import { readPinnedBoardIds, togglePinnedBoard } from '@/app/boards/pinned'
 import { readBoardPreview } from '@/app/boards/preview'
@@ -24,7 +27,9 @@ import { listTeams, type TeamSummary } from '@/app/api/teams'
 import LoginBanner from '@/components/LoginBanner.vue'
 import NotificationBell from '@/components/NotificationBell.vue'
 
-useHead({ title: 'Dashboard' })
+const { dashboard } = useI18n()
+
+useHead({ title: () => dashboard.value.title })
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -165,9 +170,9 @@ onMounted(async () => {
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <header class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">Inkly</p>
+          <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">{{ dashboard.brand }}</p>
           <span class="text-muted">|</span>
-          <h1 class="text-2xl font-semibold text-surface">Dashboard</h1>
+          <h1 class="text-2xl font-semibold text-surface">{{ dashboard.title }}</h1>
         </div>
         <div class="flex items-center gap-3">
           <NotificationBell v-if="showAccountLink" />
@@ -178,7 +183,7 @@ onMounted(async () => {
             class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-layout-grid class="size-4" />
-            <span>Boards</span>
+            <span>{{ dashboard.navLinks.boards }}</span>
           </RouterLink>
 
           <RouterLink
@@ -187,7 +192,7 @@ onMounted(async () => {
             class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-users class="size-4" />
-            <span>Teams</span>
+            <span>{{ dashboard.navLinks.teams }}</span>
           </RouterLink>
 
           <RouterLink
@@ -210,7 +215,7 @@ onMounted(async () => {
             >
               {{ authInitials }}
             </span>
-            <span>アカウント</span>
+            <span>{{ dashboard.navLinks.account }}</span>
           </RouterLink>
         </div>
       </header>
@@ -225,7 +230,7 @@ onMounted(async () => {
           data-test-id="dashboard-metric-personal-boards"
           class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
         >
-          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">Personal boards</p>
+          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ dashboard.metrics.personalBoards }}</p>
           <p class="text-2xl font-semibold text-surface">{{ personalBoardCount }}</p>
         </div>
 
@@ -233,7 +238,7 @@ onMounted(async () => {
           data-test-id="dashboard-metric-team-boards"
           class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
         >
-          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">Team boards</p>
+          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ dashboard.metrics.teamBoards }}</p>
           <p class="text-2xl font-semibold text-surface">{{ teamBoardCount }}</p>
         </div>
 
@@ -241,7 +246,7 @@ onMounted(async () => {
           data-test-id="dashboard-metric-teams"
           class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
         >
-          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">Teams</p>
+          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ dashboard.metrics.teams }}</p>
           <p class="text-2xl font-semibold text-surface">{{ totalTeams }}</p>
         </div>
 
@@ -249,7 +254,7 @@ onMounted(async () => {
           data-test-id="dashboard-metric-unread"
           class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
         >
-          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">Unread</p>
+          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ dashboard.metrics.unread }}</p>
           <p class="text-2xl font-semibold text-surface">{{ totalUnread }}</p>
         </div>
       </section>
@@ -260,8 +265,8 @@ onMounted(async () => {
       >
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-lg font-semibold text-surface">Quick actions</h2>
-            <p class="text-sm text-muted">Start a new board or jump to a workspace</p>
+            <h2 class="text-lg font-semibold text-surface">{{ dashboard.quickActions.heading }}</h2>
+            <p class="text-sm text-muted">{{ dashboard.quickActions.subtitle }}</p>
           </div>
           <button
             type="button"
@@ -270,8 +275,8 @@ onMounted(async () => {
             :disabled="creating"
             @click="createQuickBoard"
           >
-            <span v-if="creating">Creating…</span>
-            <span v-else>+ New board</span>
+            <span v-if="creating">{{ dashboard.quickActions.creating }}</span>
+            <span v-else>{{ dashboard.quickActions.newBoard }}</span>
           </button>
         </div>
 
@@ -282,8 +287,8 @@ onMounted(async () => {
             class="flex flex-col gap-1 rounded-xl border border-white/8 bg-canvas/55 p-4 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-layout-grid class="size-5 text-accent" />
-            <span class="font-medium">All boards</span>
-            <span class="text-xs text-muted">Browse and manage your boards</span>
+            <span class="font-medium">{{ dashboard.quickActions.allBoards }}</span>
+            <span class="text-xs text-muted">{{ dashboard.quickActions.allBoardsHint }}</span>
           </RouterLink>
 
           <RouterLink
@@ -292,8 +297,8 @@ onMounted(async () => {
             class="flex flex-col gap-1 rounded-xl border border-white/8 bg-canvas/55 p-4 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-users class="size-5 text-accent" />
-            <span class="font-medium">Teams</span>
-            <span class="text-xs text-muted">Create and manage team workspaces</span>
+            <span class="font-medium">{{ dashboard.quickActions.teams }}</span>
+            <span class="text-xs text-muted">{{ dashboard.quickActions.teamsHint }}</span>
           </RouterLink>
 
           <RouterLink
@@ -302,8 +307,8 @@ onMounted(async () => {
             class="flex flex-col gap-1 rounded-xl border border-white/8 bg-canvas/55 p-4 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-bell class="size-5 text-accent" />
-            <span class="font-medium">Notifications</span>
-            <span class="text-xs text-muted">{{ totalUnread }} unread</span>
+            <span class="font-medium">{{ dashboard.quickActions.notifications }}</span>
+            <span class="text-xs text-muted">{{ formatTemplate(dashboard.quickActions.notificationsHint, { count: totalUnread }) }}</span>
           </RouterLink>
         </div>
       </section>
@@ -315,8 +320,8 @@ onMounted(async () => {
       >
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-lg font-semibold text-surface">Pinned boards</h2>
-            <p class="text-sm text-muted">{{ pinnedBoards.length }} pinned</p>
+            <h2 class="text-lg font-semibold text-surface">{{ dashboard.pinned.heading }}</h2>
+            <p class="text-sm text-muted">{{ formatTemplate(dashboard.pinned.countLabel, { count: pinnedBoards.length }) }}</p>
           </div>
         </div>
 
@@ -334,7 +339,7 @@ onMounted(async () => {
             <button
               type="button"
               :data-test-id="`dashboard-pin-toggle-${board.id}`"
-              aria-label="Toggle pin"
+              :aria-label="dashboard.pinAria.toggle"
               class="absolute right-2 top-2 z-10 rounded-full bg-canvas/80 p-1 text-accent transition-colors hover:bg-canvas"
               @click="(event) => handleTogglePin(board.id, event)"
             >
@@ -371,15 +376,15 @@ onMounted(async () => {
       >
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-lg font-semibold text-surface">Recent boards</h2>
-            <p class="text-sm text-muted">Pick up where you left off</p>
+            <h2 class="text-lg font-semibold text-surface">{{ dashboard.recent.heading }}</h2>
+            <p class="text-sm text-muted">{{ dashboard.recent.subtitle }}</p>
           </div>
           <RouterLink
             to="/boards"
             data-test-id="dashboard-view-all-boards"
             class="text-sm text-accent hover:underline"
           >
-            View all →
+            {{ dashboard.recent.viewAll }}
           </RouterLink>
         </div>
 
@@ -388,14 +393,14 @@ onMounted(async () => {
           data-test-id="dashboard-recent-loading"
           class="text-sm text-muted"
         >
-          Loading…
+          {{ dashboard.recent.loading }}
         </p>
         <p
           v-else-if="recentBoards.length === 0"
           data-test-id="dashboard-recent-empty"
           class="text-sm text-muted"
         >
-          No boards yet. Create your first board above.
+          {{ dashboard.recent.empty }}
         </p>
         <ul
           v-else
@@ -412,7 +417,7 @@ onMounted(async () => {
             <button
               type="button"
               :data-test-id="`dashboard-recent-pin-${board.id}`"
-              :aria-label="isPinned(board.id) ? 'Unpin board' : 'Pin board'"
+              :aria-label="isPinned(board.id) ? dashboard.pinAria.unpin : dashboard.pinAria.pin"
               :class="[
                 'absolute right-2 top-2 z-10 rounded-full p-1 transition-colors',
                 isPinned(board.id)
@@ -455,15 +460,15 @@ onMounted(async () => {
       >
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-lg font-semibold text-surface">Activity</h2>
-            <p class="text-sm text-muted">Recent notifications and mentions</p>
+            <h2 class="text-lg font-semibold text-surface">{{ dashboard.activityFeed.heading }}</h2>
+            <p class="text-sm text-muted">{{ dashboard.activityFeed.subtitle }}</p>
           </div>
           <RouterLink
             to="/notifications"
             data-test-id="dashboard-view-all-activity"
             class="text-sm text-accent hover:underline"
           >
-            View all →
+            {{ dashboard.activityFeed.viewAll }}
           </RouterLink>
         </div>
 
@@ -472,7 +477,7 @@ onMounted(async () => {
           data-test-id="dashboard-activity-empty"
           class="text-sm text-muted"
         >
-          No activity yet.
+          {{ dashboard.activityFeed.empty }}
         </p>
         <ul
           v-else

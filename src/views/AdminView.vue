@@ -21,7 +21,13 @@ import {
 import { getTeam, listTeams, type TeamMember, type TeamSummary } from '@/app/api/teams'
 import LoginBanner from '@/components/LoginBanner.vue'
 
-useHead({ title: 'Admin' })
+import { useI18n } from '@inkly/vue'
+
+import { formatTemplate } from '@/app/shell/i18n-format'
+
+const { admin } = useI18n()
+
+useHead({ title: () => admin.value.title })
 
 type TabKey = 'overview' | 'boards' | 'teams' | 'activity' | 'members'
 type BoardSortKey = 'updated' | 'created' | 'name' | 'collaborators'
@@ -150,7 +156,7 @@ async function loadMembers() {
     }
     members.value = collected
   } catch (error) {
-    membersError.value = error instanceof Error ? error.message : 'Failed to load members'
+    membersError.value = error instanceof Error ? error.message : admin.value.membersTab.loadFail
   } finally {
     membersLoading.value = false
   }
@@ -212,7 +218,7 @@ function exportBoardsCsv() {
   const rows = filteredBoards.value.map((board) => [
     board.id,
     board.name,
-    board.team?.name ?? 'Personal',
+    board.team?.name ?? admin.value.boardsTab.workspacePersonal,
     String(board.collaborators.length),
     new Date(board.createdAt).toISOString(),
     new Date(board.updatedAt).toISOString()
@@ -231,12 +237,15 @@ function exportBoardsCsv() {
   link.click()
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
-  toast.success(`Exported ${rows.length} board${rows.length === 1 ? '' : 's'}`)
+  const message = rows.length === 1
+    ? formatTemplate(admin.value.boardsTab.exportToastSingular, { count: rows.length })
+    : formatTemplate(admin.value.boardsTab.exportToastPlural, { count: rows.length })
+  toast.success(message)
 }
 
 async function handleDeleteBoard(board: Board) {
   if (deletingBoardId.value) return
-  const confirmed = window.confirm(`Delete board "${board.name}"? This cannot be undone.`)
+  const confirmed = window.confirm(formatTemplate(admin.value.boardsTab.deletePromptSingular, { name: board.name }))
   if (!confirmed) return
 
   deletingBoardId.value = board.id
@@ -245,9 +254,9 @@ async function handleDeleteBoard(board: Board) {
     boards.value = boards.value.filter((b) => b.id !== board.id)
     selectedBoardIds.value.delete(board.id)
     selectedBoardIds.value = new Set(selectedBoardIds.value)
-    toast.success('Board deleted')
+    toast.success(admin.value.boardsTab.deleteSuccess)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to delete board'
+    const message = error instanceof Error ? error.message : admin.value.boardsTab.deleteFail
     toast.error(message)
   } finally {
     deletingBoardId.value = null
@@ -288,7 +297,9 @@ async function handleBulkDelete() {
   if (selectedBoardIds.value.size === 0) return
   const count = selectedBoardIds.value.size
   const confirmed = window.confirm(
-    `Delete ${count} selected board${count === 1 ? '' : 's'}? This cannot be undone.`
+    count === 1
+      ? formatTemplate(admin.value.boardsTab.bulkConfirmSingular, { count })
+      : formatTemplate(admin.value.boardsTab.bulkConfirmPlural, { count })
   )
   if (!confirmed) return
 
@@ -313,10 +324,18 @@ async function handleBulkDelete() {
   bulkDeleting.value = false
 
   if (succeeded.size > 0) {
-    toast.success(`Deleted ${succeeded.size} board${succeeded.size === 1 ? '' : 's'}`)
+    toast.success(
+      succeeded.size === 1
+        ? formatTemplate(admin.value.boardsTab.bulkSuccessSingular, { count: succeeded.size })
+        : formatTemplate(admin.value.boardsTab.bulkSuccessPlural, { count: succeeded.size })
+    )
   }
   if (failed > 0) {
-    toast.error(`Failed to delete ${failed} board${failed === 1 ? '' : 's'}`)
+    toast.error(
+      failed === 1
+        ? formatTemplate(admin.value.boardsTab.bulkFailSingular, { count: failed })
+        : formatTemplate(admin.value.boardsTab.bulkFailPlural, { count: failed })
+    )
   }
 }
 
@@ -356,9 +375,9 @@ onMounted(async () => {
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <header class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-[#ef6262]">Internal</p>
+          <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-[#ef6262]">{{ admin.badge }}</p>
           <span class="text-muted">|</span>
-          <h1 class="text-2xl font-semibold text-surface">Admin</h1>
+          <h1 class="text-2xl font-semibold text-surface">{{ admin.title }}</h1>
         </div>
         <div class="flex items-center gap-3">
           <RouterLink
@@ -367,7 +386,7 @@ onMounted(async () => {
             class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-layout-dashboard class="size-4" />
-            <span>Dashboard</span>
+            <span>{{ admin.navLinks.dashboard }}</span>
           </RouterLink>
 
           <RouterLink
@@ -390,7 +409,7 @@ onMounted(async () => {
             >
               {{ authInitials }}
             </span>
-            <span>アカウント</span>
+            <span>{{ admin.navLinks.account }}</span>
           </RouterLink>
         </div>
       </header>
@@ -415,7 +434,7 @@ onMounted(async () => {
           ]"
           @click="activateTab('overview')"
         >
-          Overview
+          {{ admin.tabs.overview }}
         </button>
         <button
           type="button"
@@ -428,7 +447,7 @@ onMounted(async () => {
           ]"
           @click="activateTab('boards')"
         >
-          Boards
+          {{ admin.tabs.boards }}
         </button>
         <button
           type="button"
@@ -441,7 +460,7 @@ onMounted(async () => {
           ]"
           @click="activateTab('teams')"
         >
-          Teams
+          {{ admin.tabs.teams }}
         </button>
         <button
           type="button"
@@ -454,7 +473,7 @@ onMounted(async () => {
           ]"
           @click="activateTab('activity')"
         >
-          Activity
+          {{ admin.tabs.activity }}
         </button>
         <button
           type="button"
@@ -467,7 +486,7 @@ onMounted(async () => {
           ]"
           @click="activateTab('members')"
         >
-          Members
+          {{ admin.tabs.members }}
         </button>
       </section>
 
@@ -480,28 +499,28 @@ onMounted(async () => {
           data-test-id="admin-stat-total"
           class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
         >
-          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">Total boards</p>
+          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.overview.totalBoards }}</p>
           <p class="text-2xl font-semibold text-surface">{{ totalBoards }}</p>
         </div>
         <div
           data-test-id="admin-stat-personal"
           class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
         >
-          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">Personal</p>
+          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.overview.personal }}</p>
           <p class="text-2xl font-semibold text-surface">{{ personalBoards }}</p>
         </div>
         <div
           data-test-id="admin-stat-team-boards"
           class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
         >
-          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">Team boards</p>
+          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.overview.teamBoards }}</p>
           <p class="text-2xl font-semibold text-surface">{{ teamBoards }}</p>
         </div>
         <div
           data-test-id="admin-stat-collaborators"
           class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
         >
-          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">Collaborators</p>
+          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.overview.collaborators }}</p>
           <p class="text-2xl font-semibold text-surface">{{ totalCollaborators }}</p>
         </div>
       </section>
@@ -513,8 +532,8 @@ onMounted(async () => {
       >
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 class="text-lg font-semibold text-surface">All boards</h2>
-            <p class="text-sm text-muted">{{ filteredBoards.length }} / {{ totalBoards }} shown</p>
+            <h2 class="text-lg font-semibold text-surface">{{ admin.boardsTab.heading }}</h2>
+            <p class="text-sm text-muted">{{ formatTemplate(admin.boardsTab.shownCount, { shown: filteredBoards.length, total: totalBoards }) }}</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <button
@@ -527,8 +546,8 @@ onMounted(async () => {
             >
               <icon-lucide-trash class="size-4" />
               <span>
-                <span v-if="bulkDeleting">Deleting…</span>
-                <span v-else>Delete {{ selectedBoardIds.size }}</span>
+                <span v-if="bulkDeleting">{{ admin.boardsTab.bulkDeleting }}</span>
+                <span v-else>{{ formatTemplate(admin.boardsTab.bulkDelete, { count: selectedBoardIds.size }) }}</span>
               </span>
             </button>
             <button
@@ -538,7 +557,7 @@ onMounted(async () => {
               class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="clearBoardSelection"
             >
-              Clear
+              {{ admin.boardsTab.bulkClear }}
             </button>
             <button
               type="button"
@@ -548,28 +567,28 @@ onMounted(async () => {
               @click="exportBoardsCsv"
             >
               <icon-lucide-download class="size-4" />
-              <span>Export CSV</span>
+              <span>{{ admin.boardsTab.exportCsv }}</span>
             </button>
-            <label class="sr-only" for="admin-boards-search-input">Search boards</label>
+            <label class="sr-only" for="admin-boards-search-input">{{ admin.boardsTab.searchAria }}</label>
             <input
               id="admin-boards-search-input"
               v-model="searchQuery"
               type="text"
               data-test-id="admin-boards-search"
-              placeholder="Search by name or id"
+              :placeholder="admin.boardsTab.searchPlaceholder"
               class="rounded-lg border border-border bg-input px-3 py-2 text-sm text-surface outline-none focus:border-accent w-64"
             />
-            <label class="sr-only" for="admin-boards-filter-select">Filter boards by workspace</label>
+            <label class="sr-only" for="admin-boards-filter-select">{{ admin.boardsTab.filterAria }}</label>
             <select
               id="admin-boards-filter-select"
               v-model="teamFilter"
               data-test-id="admin-boards-filter"
-              aria-label="Filter boards by workspace"
+              :aria-label="admin.boardsTab.filterAria"
               class="rounded-lg border border-border bg-input px-2 py-2 text-sm text-surface outline-none focus:border-accent"
             >
-              <option value="all">All</option>
-              <option value="personal">Personal</option>
-              <option value="team">Team</option>
+              <option value="all">{{ admin.boardsTab.filterAll }}</option>
+              <option value="personal">{{ admin.boardsTab.filterPersonal }}</option>
+              <option value="team">{{ admin.boardsTab.filterTeam }}</option>
             </select>
           </div>
         </div>
@@ -579,14 +598,14 @@ onMounted(async () => {
           data-test-id="admin-boards-loading"
           class="text-sm text-muted"
         >
-          Loading…
+          {{ admin.boardsTab.loading }}
         </p>
         <p
           v-else-if="filteredBoards.length === 0"
           data-test-id="admin-boards-empty"
           class="text-sm text-muted"
         >
-          No boards match the filter.
+          {{ admin.boardsTab.empty }}
         </p>
         <div
           v-else
@@ -597,13 +616,13 @@ onMounted(async () => {
             <thead class="bg-canvas/40 text-[11px] uppercase tracking-[0.2em] text-muted">
               <tr>
                 <th scope="col" class="w-10 px-3 py-2">
-                  <label class="sr-only" for="admin-boards-select-all">Select all visible boards</label>
+                  <label class="sr-only" for="admin-boards-select-all">{{ admin.boardsTab.selectAllAria }}</label>
                   <input
                     id="admin-boards-select-all"
                     type="checkbox"
                     data-test-id="admin-boards-select-all"
                     :checked="allFilteredSelected"
-                    aria-label="Select all visible boards"
+                    :aria-label="admin.boardsTab.selectAllAria"
                     class="size-4 cursor-pointer accent-[#ef6262]"
                     @change="toggleSelectAllFiltered"
                   />
@@ -615,11 +634,11 @@ onMounted(async () => {
                     class="inline-flex items-center gap-1 hover:text-surface"
                     @click="toggleSort('name')"
                   >
-                    Name
+                    {{ admin.boardsTab.colName }}
                     <span v-if="boardSort === 'name'" aria-hidden="true">{{ boardSortDirection === 'asc' ? '↑' : '↓' }}</span>
                   </button>
                 </th>
-                <th scope="col" class="px-3 py-2">Workspace</th>
+                <th scope="col" class="px-3 py-2">{{ admin.boardsTab.colWorkspace }}</th>
                 <th scope="col" class="px-3 py-2">
                   <button
                     type="button"
@@ -627,7 +646,7 @@ onMounted(async () => {
                     class="inline-flex items-center gap-1 hover:text-surface"
                     @click="toggleSort('collaborators')"
                   >
-                    Collaborators
+                    {{ admin.boardsTab.colCollaborators }}
                     <span v-if="boardSort === 'collaborators'" aria-hidden="true">{{ boardSortDirection === 'asc' ? '↑' : '↓' }}</span>
                   </button>
                 </th>
@@ -638,7 +657,7 @@ onMounted(async () => {
                     class="inline-flex items-center gap-1 hover:text-surface"
                     @click="toggleSort('created')"
                   >
-                    Created
+                    {{ admin.boardsTab.colCreated }}
                     <span v-if="boardSort === 'created'" aria-hidden="true">{{ boardSortDirection === 'asc' ? '↑' : '↓' }}</span>
                   </button>
                 </th>
@@ -649,11 +668,11 @@ onMounted(async () => {
                     class="inline-flex items-center gap-1 hover:text-surface"
                     @click="toggleSort('updated')"
                   >
-                    Updated
+                    {{ admin.boardsTab.colUpdated }}
                     <span v-if="boardSort === 'updated'" aria-hidden="true">{{ boardSortDirection === 'asc' ? '↑' : '↓' }}</span>
                   </button>
                 </th>
-                <th scope="col" class="px-3 py-2 text-right">Actions</th>
+                <th scope="col" class="px-3 py-2 text-right">{{ admin.boardsTab.colActions }}</th>
               </tr>
             </thead>
             <tbody>
@@ -671,7 +690,7 @@ onMounted(async () => {
                     type="checkbox"
                     :data-test-id="`admin-board-select-${board.id}`"
                     :checked="selectedBoardIds.has(board.id)"
-                    :aria-label="`Select ${board.name}`"
+                    :aria-label="formatTemplate(admin.boardsTab.selectRowAria, { name: board.name })"
                     class="size-4 cursor-pointer accent-[#ef6262]"
                     @change="toggleBoardSelection(board.id)"
                   />
@@ -688,7 +707,7 @@ onMounted(async () => {
                 </td>
                 <td class="px-3 py-2 text-muted">
                   <span v-if="board.team">{{ board.team.name }}</span>
-                  <span v-else>Personal</span>
+                  <span v-else>{{ admin.boardsTab.workspacePersonal }}</span>
                 </td>
                 <td class="px-3 py-2 text-muted">{{ board.collaborators.length }}</td>
                 <td class="px-3 py-2 text-muted">{{ formatDate(board.createdAt) }}</td>
@@ -701,8 +720,8 @@ onMounted(async () => {
                     :disabled="deletingBoardId === board.id"
                     @click="handleDeleteBoard(board)"
                   >
-                    <span v-if="deletingBoardId === board.id">Deleting…</span>
-                    <span v-else>Delete</span>
+                    <span v-if="deletingBoardId === board.id">{{ admin.boardsTab.bulkDeleting }}</span>
+                    <span v-else>{{ admin.boardsTab.delete }}</span>
                   </button>
                 </td>
               </tr>
@@ -717,8 +736,8 @@ onMounted(async () => {
         class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div>
-          <h2 class="text-lg font-semibold text-surface">All teams</h2>
-          <p class="text-sm text-muted">{{ ownedTeams.length }} owned, {{ memberTeams.length }} joined</p>
+          <h2 class="text-lg font-semibold text-surface">{{ admin.teamsTab.heading }}</h2>
+          <p class="text-sm text-muted">{{ formatTemplate(admin.teamsTab.summary, { owned: ownedTeams.length, joined: memberTeams.length }) }}</p>
         </div>
 
         <div
@@ -726,7 +745,7 @@ onMounted(async () => {
           data-test-id="admin-teams-owned"
           class="flex flex-col gap-2"
         >
-          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-muted">Owned</p>
+          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.teamsTab.owned }}</p>
           <ul class="grid grid-cols-1 gap-2 md:grid-cols-2">
             <li
               v-for="team in ownedTeams"
@@ -736,7 +755,7 @@ onMounted(async () => {
               @click="openTeam(team)"
             >
               <p class="font-medium text-surface">{{ team.name }}</p>
-              <p class="text-xs text-muted">{{ team.memberCount }} members</p>
+              <p class="text-xs text-muted">{{ formatTemplate(admin.teamsTab.membersCount, { count: team.memberCount }) }}</p>
             </li>
           </ul>
         </div>
@@ -746,7 +765,7 @@ onMounted(async () => {
           data-test-id="admin-teams-joined"
           class="flex flex-col gap-2"
         >
-          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-muted">Joined</p>
+          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.teamsTab.joined }}</p>
           <ul class="grid grid-cols-1 gap-2 md:grid-cols-2">
             <li
               v-for="team in memberTeams"
@@ -756,7 +775,7 @@ onMounted(async () => {
               @click="openTeam(team)"
             >
               <p class="font-medium text-surface">{{ team.name }}</p>
-              <p class="text-xs text-muted">{{ team.memberCount }} members · {{ team.role }}</p>
+              <p class="text-xs text-muted">{{ formatTemplate(admin.teamsTab.membersCountWithRole, { count: team.memberCount, role: team.role }) }}</p>
             </li>
           </ul>
         </div>
@@ -766,7 +785,7 @@ onMounted(async () => {
           data-test-id="admin-teams-empty"
           class="text-sm text-muted"
         >
-          No teams found.
+          {{ admin.teamsTab.empty }}
         </p>
       </section>
 
@@ -776,9 +795,9 @@ onMounted(async () => {
         class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div>
-          <h2 class="text-lg font-semibold text-surface">Activity</h2>
+          <h2 class="text-lg font-semibold text-surface">{{ admin.activityTab.heading }}</h2>
           <p class="text-sm text-muted">
-            Recent notifications (invitations, mentions). Latest 50 records.
+            {{ admin.activityTab.subtitle }}
           </p>
         </div>
 
@@ -787,7 +806,7 @@ onMounted(async () => {
           data-test-id="admin-activity-empty"
           class="text-sm text-muted"
         >
-          No activity recorded.
+          {{ admin.activityTab.empty }}
         </p>
         <ul
           v-else
@@ -832,33 +851,33 @@ onMounted(async () => {
       >
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 class="text-lg font-semibold text-surface">All members</h2>
+            <h2 class="text-lg font-semibold text-surface">{{ admin.membersTab.heading }}</h2>
             <p class="text-sm text-muted">
-              {{ filteredMembers.length }} / {{ members.length }} shown · owners {{ memberRoleCounts.owner }} · editors {{ memberRoleCounts.editor }} · viewers {{ memberRoleCounts.viewer }}
+              {{ formatTemplate(admin.membersTab.summary, { shown: filteredMembers.length, total: members.length, owners: memberRoleCounts.owner, editors: memberRoleCounts.editor, viewers: memberRoleCounts.viewer }) }}
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <label class="sr-only" for="admin-members-search-input">Search members</label>
+            <label class="sr-only" for="admin-members-search-input">{{ admin.membersTab.searchAria }}</label>
             <input
               id="admin-members-search-input"
               v-model="memberSearch"
               type="text"
               data-test-id="admin-members-search"
-              placeholder="Search by name, email or role"
+              :placeholder="admin.membersTab.searchPlaceholder"
               class="rounded-lg border border-border bg-input px-3 py-2 text-sm text-surface outline-none focus:border-accent w-64"
             />
-            <label class="sr-only" for="admin-members-role-select">Filter members by role</label>
+            <label class="sr-only" for="admin-members-role-select">{{ admin.membersTab.roleAria }}</label>
             <select
               id="admin-members-role-select"
               v-model="memberRoleFilter"
               data-test-id="admin-members-role"
-              aria-label="Filter members by role"
+              :aria-label="admin.membersTab.roleAria"
               class="rounded-lg border border-border bg-input px-2 py-2 text-sm text-surface outline-none focus:border-accent"
             >
-              <option value="all">All roles</option>
-              <option value="owner">Owner</option>
-              <option value="editor">Editor</option>
-              <option value="viewer">Viewer</option>
+              <option value="all">{{ admin.membersTab.roleAll }}</option>
+              <option value="owner">{{ admin.membersTab.roleOwner }}</option>
+              <option value="editor">{{ admin.membersTab.roleEditor }}</option>
+              <option value="viewer">{{ admin.membersTab.roleViewer }}</option>
             </select>
           </div>
         </div>
@@ -868,7 +887,7 @@ onMounted(async () => {
           data-test-id="admin-members-loading"
           class="text-sm text-muted"
         >
-          Loading members…
+          {{ admin.membersTab.loading }}
         </p>
         <p
           v-else-if="membersError"
@@ -882,7 +901,7 @@ onMounted(async () => {
           data-test-id="admin-members-empty"
           class="text-sm text-muted"
         >
-          No members match the filter.
+          {{ admin.membersTab.empty }}
         </p>
         <div
           v-else
@@ -892,11 +911,11 @@ onMounted(async () => {
           <table class="w-full min-w-[640px] text-left text-sm">
             <thead class="bg-canvas/40 text-[11px] uppercase tracking-[0.2em] text-muted">
               <tr>
-                <th scope="col" class="px-3 py-2">Name</th>
-                <th scope="col" class="px-3 py-2">Email</th>
-                <th scope="col" class="px-3 py-2">Team</th>
-                <th scope="col" class="px-3 py-2">Role</th>
-                <th scope="col" class="px-3 py-2">Joined</th>
+                <th scope="col" class="px-3 py-2">{{ admin.membersTab.colName }}</th>
+                <th scope="col" class="px-3 py-2">{{ admin.membersTab.colEmail }}</th>
+                <th scope="col" class="px-3 py-2">{{ admin.membersTab.colTeam }}</th>
+                <th scope="col" class="px-3 py-2">{{ admin.membersTab.colRole }}</th>
+                <th scope="col" class="px-3 py-2">{{ admin.membersTab.colJoined }}</th>
               </tr>
             </thead>
             <tbody>
@@ -906,7 +925,7 @@ onMounted(async () => {
                 :data-test-id="`admin-member-row-${entry.team.id}-${entry.member.userId}`"
                 class="border-t border-white/5 hover:bg-hover/60"
               >
-                <td class="px-3 py-2 text-surface">{{ entry.member.user.name || '—' }}</td>
+                <td class="px-3 py-2 text-surface">{{ entry.member.user.name || admin.membersTab.namePlaceholder }}</td>
                 <td class="px-3 py-2 text-muted">{{ entry.member.user.email }}</td>
                 <td class="px-3 py-2 text-muted">
                   <RouterLink
