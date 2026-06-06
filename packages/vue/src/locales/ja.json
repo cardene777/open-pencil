@@ -283,6 +283,7 @@
     "join": "参加",
     "roomLink": "ルームリンク",
     "joinCollaboration": "コラボに参加",
+    "joinRoomIntro": "誰かがこの file を共有しました。 名前を入力して参加してください。",
     "orJoinRoom": "または既存のルームに参加",
     "pasteRoomLinkOrId": "ルームリンクまたは ID を貼り付け",
     "connected": "接続済み",

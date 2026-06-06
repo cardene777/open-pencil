@@ -8,7 +8,7 @@ const collab = useCollabPanelContext()
 <template>
   <div class="mb-1 text-xs font-medium text-surface">{{ collab.dialogs.joinCollaboration }}</div>
   <div class="mb-3 text-[11px] text-muted">
-    Someone shared this file with you. Enter your name to join.
+    {{ collab.dialogs.joinRoomIntro }}
   </div>
 
   <div class="mb-3">
@@ -28,7 +28,7 @@ const collab = useCollabPanelContext()
     :disabled="!collab.nameDraft.trim()"
     @click="collab.join"
   >
-    <icon-lucide-users class="size-3.5" />
-    Join room
+    <icon-lucide-users class="size-3.5" :aria-hidden="true" />
+    {{ collab.dialogs.joinRoom }}
   </button>
 </template>
