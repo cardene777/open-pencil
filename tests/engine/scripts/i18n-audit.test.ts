@@ -96,4 +96,32 @@ describe('i18n audit-views', () => {
     expect(output).toContain('## Next i18n migration priorities')
     expect(output).toContain('Sample.vue —')
   })
+
+  test('ignores bound attribute expressions like :aria-label / :placeholder / :title', () => {
+    const { output } = runAuditOnSample(`
+<template>
+  <button :aria-label="formatTemplate(dashboard.customize.dragHandleAria, { section: id })">drag</button>
+  <span :aria-label="isPinned(board.id) ? dashboard.pinAria.unpin : dashboard.pinAria.pin">pin</span>
+  <input :placeholder="boardsT.searchPlaceholder" />
+  <abbr :title="boardsT.tooltipText">hover</abbr>
+</template>
+`)
+    expect(output).not.toContain('formatTemplate(')
+    expect(output).not.toContain('isPinned(')
+    expect(output).not.toContain('boardsT.searchPlaceholder')
+    expect(output).not.toContain('boardsT.tooltipText')
+  })
+
+  test('keeps detecting static placeholder / aria-label / title literals when no binding prefix is present', () => {
+    const { output } = runAuditOnSample(`
+<template>
+  <input placeholder="Search boards" />
+  <button aria-label="Toggle pin">pin</button>
+  <abbr title="Hover hint">x</abbr>
+</template>
+`)
+    expect(output).toContain('Search boards')
+    expect(output).toContain('Toggle pin')
+    expect(output).toContain('Hover hint')
+  })
 })
