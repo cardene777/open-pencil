@@ -9,7 +9,7 @@ import Tip from '@/components/ui/Tip.vue'
 import { useButtonUI } from '@/components/ui/button'
 import { usePopoverUI } from '@/components/ui/popover'
 
-const { dialogs } = useI18n()
+const { dialogs, fontSettings: fontSettingsT } = useI18n()
 const cls = usePopoverUI({ content: 'isolate z-[51] w-80 p-3' })
 const trigger = useButtonUI({
   tone: 'ghost',
@@ -56,7 +56,7 @@ onMounted(() => {
   <PopoverRoot @update:open="$event && refreshSummary()">
     <Tip :label="dialogs.fontSettings">
       <PopoverTrigger data-test-id="font-settings-trigger" :class="trigger.base">
-        <icon-lucide-settings class="size-3.5" />
+        <icon-lucide-settings class="size-3.5" :aria-hidden="true" />
       </PopoverTrigger>
     </Tip>
 
@@ -74,15 +74,15 @@ onMounted(() => {
             <div
               class="flex size-8 shrink-0 items-center justify-center rounded bg-input text-muted"
             >
-              <icon-lucide-type class="size-4" />
+              <icon-lucide-type class="size-4" :aria-hidden="true" />
             </div>
             <div>
               <h3 class="text-[11px] font-semibold text-surface">{{ dialogs.fontSettings }}</h3>
               <p class="mt-0.5 text-[10px] leading-relaxed text-muted">
                 {{
                   showDownloadedFonts
-                    ? 'Access system fonts, Google Fonts, fallback packs, and cached downloads.'
-                    : 'Allow browser access to local fonts and manage Google Fonts.'
+                    ? fontSettingsT.descriptionTauri
+                    : fontSettingsT.descriptionBrowser
                 }}
               </p>
             </div>
@@ -90,19 +90,19 @@ onMounted(() => {
 
           <div class="grid gap-1.5 rounded border border-border bg-input/40 p-2 text-[10px]">
             <div class="flex justify-between gap-3 text-muted">
-              <span>Local fonts</span>
+              <span>{{ fontSettingsT.localFontsLabel }}</span>
               <span class="text-surface">{{ accessStateLabel }}</span>
             </div>
             <div class="flex justify-between gap-3 text-muted">
-              <span>Google Fonts</span>
-              <span class="text-surface">{{ googleFontsEnabled ? 'Enabled' : 'Disabled' }}</span>
+              <span>{{ fontSettingsT.googleFontsLabel }}</span>
+              <span class="text-surface">{{ googleFontsEnabled ? fontSettingsT.enabled : fontSettingsT.disabled }}</span>
             </div>
             <div v-if="showDownloadedFonts" class="flex justify-between gap-3 text-muted">
-              <span>Downloaded cache</span>
-              <span class="text-surface">{{ cacheCount }} fonts · {{ cacheSize }}</span>
+              <span>{{ fontSettingsT.cacheLabel }}</span>
+              <span class="text-surface">{{ fontSettingsT.cacheValue({ count: cacheCount, size: cacheSize }) }}</span>
             </div>
             <div v-if="showDownloadedFonts" class="flex justify-between gap-3 text-muted">
-              <span>Last updated</span>
+              <span>{{ fontSettingsT.lastUpdatedLabel }}</span>
               <span class="text-surface">{{ cacheUpdatedLabel }}</span>
             </div>
           </div>
@@ -110,12 +110,12 @@ onMounted(() => {
           <div class="space-y-1.5">
             <div class="grid grid-cols-[1fr_auto] gap-2 rounded border border-border p-2">
               <div>
-                <p class="text-[10px] font-medium text-surface">System font access</p>
+                <p class="text-[10px] font-medium text-surface">{{ fontSettingsT.systemAccessHeading }}</p>
                 <p class="mt-0.5 text-[10px] leading-relaxed text-muted">
                   {{
                     accessState === 'granted'
-                      ? 'System fonts are available.'
-                      : 'Allow browser font access when system fonts are missing.'
+                      ? fontSettingsT.systemAccessGranted
+                      : fontSettingsT.systemAccessPrompt
                   }}
                 </p>
               </div>
@@ -126,15 +126,15 @@ onMounted(() => {
                 :disabled="busyAction !== null || !canRequestLocalFonts"
                 @click="requestAccess"
               >
-                {{ busyAction === 'access' ? 'Requesting…' : 'Allow' }}
+                {{ busyAction === 'access' ? fontSettingsT.requesting : fontSettingsT.allow }}
               </button>
             </div>
 
             <div class="grid grid-cols-[1fr_auto] gap-2 rounded border border-border p-2">
               <div>
-                <p class="text-[10px] font-medium text-surface">Google Fonts</p>
+                <p class="text-[10px] font-medium text-surface">{{ fontSettingsT.googleFontsHeading }}</p>
                 <p class="mt-0.5 text-[10px] leading-relaxed text-muted">
-                  Show fonts from Google in the font picker.
+                  {{ fontSettingsT.googleFontsDescription }}
                 </p>
               </div>
               <button
@@ -144,7 +144,7 @@ onMounted(() => {
                 :disabled="busyAction !== null"
                 @click="setGoogleFontsEnabled(!googleFontsEnabled)"
               >
-                {{ googleFontsEnabled ? 'Disable' : 'Enable' }}
+                {{ googleFontsEnabled ? fontSettingsT.disable : fontSettingsT.enable }}
               </button>
             </div>
 
@@ -153,9 +153,9 @@ onMounted(() => {
               class="grid grid-cols-[1fr_auto] gap-2 rounded border border-border p-2"
             >
               <div>
-                <p class="text-[10px] font-medium text-surface">Fallback packs</p>
+                <p class="text-[10px] font-medium text-surface">{{ fontSettingsT.fallbackHeading }}</p>
                 <p class="mt-0.5 text-[10px] leading-relaxed text-muted">
-                  Download CJK and Arabic fallbacks before opening files that need them.
+                  {{ fontSettingsT.fallbackDescription }}
                 </p>
               </div>
               <button
@@ -165,7 +165,7 @@ onMounted(() => {
                 :disabled="busyAction !== null"
                 @click="downloadFallbacks"
               >
-                {{ busyAction === 'download' ? 'Downloading…' : 'Download' }}
+                {{ busyAction === 'download' ? fontSettingsT.downloading : fontSettingsT.download }}
               </button>
             </div>
           </div>
@@ -178,7 +178,7 @@ onMounted(() => {
               :disabled="busyAction !== null"
               @click="refreshSummary"
             >
-              Refresh
+              {{ fontSettingsT.refresh }}
             </button>
             <button
               type="button"
@@ -187,7 +187,7 @@ onMounted(() => {
               :disabled="busyAction !== null || cacheCount === 0"
               @click="clearCache"
             >
-              Clear cache
+              {{ fontSettingsT.clearCache }}
             </button>
           </div>
 
