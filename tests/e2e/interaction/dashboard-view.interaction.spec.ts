@@ -103,6 +103,26 @@ test.describe('dashboard view interaction', () => {
     await expect(page.getByTestId('dashboard-section-metrics')).toHaveCount(0)
   })
 
+  test('customize panel exposes accessible drag handles and aria-live announce', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'dash-a11y@inkly.test', name: 'Dash A11y' })
+    await page.goto('/dashboard')
+
+    await page.getByTestId('dashboard-customize-toggle').click()
+    await expect(page.getByTestId('dashboard-customize-handle-metrics')).toHaveAttribute(
+      'aria-label',
+      /metrics|メトリック|metriken|métricas|indicateurs|metriche|metryki|метрики|指标/i
+    )
+    await expect(page.getByTestId('dashboard-customize-row-metrics')).toHaveAttribute(
+      'aria-grabbed',
+      'false'
+    )
+    await expect(page.getByTestId('dashboard-customize-announce')).toBeAttached()
+    await expect(page.getByTestId('dashboard-customize-announce')).toHaveAttribute(
+      'aria-live',
+      'polite'
+    )
+  })
+
   test('drag and drop reorders sections in the customize panel', async ({ page }) => {
     await mockGoogleLogin(page, { email: 'dash-dnd@inkly.test', name: 'Dash DnD' })
     await page.goto('/dashboard')

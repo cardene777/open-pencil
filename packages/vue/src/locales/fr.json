@@ -408,7 +408,12 @@
       "sectionQuickActions": "Actions rapides",
       "sectionPinned": "Tableaux épinglés",
       "sectionRecent": "Tableaux récents",
-      "sectionActivity": "Activité"
+      "sectionActivity": "Activité",
+      "dragHandleAria": "Glisser pour réorganiser {section}",
+      "dragRowAria": "Section {section}, déplaçable",
+      "dragStartAnnounce": "{section} attrapé. Déposez-le sur une autre section pour réorganiser.",
+      "dragDropAnnounce": "{section} déplacé avant {target}.",
+      "dragCancelAnnounce": "Réorganisation de {section} annulée."
     }
   },
   "admin": {
