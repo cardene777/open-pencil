@@ -638,6 +638,15 @@ export const loginBannerMessages = i18n('loginBanner', {
   loginPending: 'Starting…'
 })
 
+export const mobilePresenceMessages = i18n('mobilePresence', {
+  onlineCount: params('Online: {count}'),
+  inThisRoom: 'In this room',
+  youFallback: 'You',
+  youSuffix: 'you',
+  following: 'following',
+  disconnect: 'Disconnect'
+})
+
 export const safariBannerMessages = i18n('safariBanner', {
   messagePrefix:
     "Your browser doesn't support the local file API. Files will be downloaded instead of saved in place. ",

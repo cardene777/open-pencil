@@ -574,6 +574,14 @@
     "loginButton": "Войти через Google",
     "loginPending": "Запуск…"
   },
+  "mobilePresence": {
+    "onlineCount": "Онлайн: {count}",
+    "inThisRoom": "В этой комнате",
+    "youFallback": "Вы",
+    "youSuffix": "вы",
+    "following": "вы следите",
+    "disconnect": "Отключить"
+  },
   "safariBanner": {
     "messagePrefix": "Ваш браузер не поддерживает локальный файловый API. Файлы будут загружаться, а не сохраняться на месте. ",
     "useChrome": "Используйте Chrome",

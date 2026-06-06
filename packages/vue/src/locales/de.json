@@ -574,6 +574,14 @@
     "loginButton": "Mit Google anmelden",
     "loginPending": "Wird gestartet…"
   },
+  "mobilePresence": {
+    "onlineCount": "Online: {count}",
+    "inThisRoom": "In diesem Raum",
+    "youFallback": "Du",
+    "youSuffix": "du",
+    "following": "folgt",
+    "disconnect": "Trennen"
+  },
   "safariBanner": {
     "messagePrefix": "Dein Browser unterstützt die lokale Datei-API nicht. Dateien werden heruntergeladen statt direkt gespeichert. ",
     "useChrome": "Chrome verwenden",
