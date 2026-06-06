@@ -413,7 +413,12 @@
       "dragRowAria": "{section} セクション、ドラッグ可能",
       "dragStartAnnounce": "{section} を掴みました。 別のセクション上にドロップして並び替えてください。",
       "dragDropAnnounce": "{section} を {target} の前に移動しました。",
-      "dragCancelAnnounce": "{section} の並び替えをキャンセルしました。"
+      "dragCancelAnnounce": "{section} の並び替えをキャンセルしました。",
+      "keyboardHint": "Space で掴み、矢印キーで移動、Enter でドロップ、Escape でキャンセル。",
+      "keyboardPickupAnnounce": "{section} を掴みました。矢印キーで移動、Enter でドロップ、Escape でキャンセル。",
+      "keyboardMoveAnnounce": "{section} を {total} 件中 {position} 番目に移動しました。",
+      "keyboardDropAnnounce": "{section} をドロップしました。",
+      "keyboardCancelAnnounce": "{section} のキーボード並び替えをキャンセルしました。"
     }
   },
   "admin": {

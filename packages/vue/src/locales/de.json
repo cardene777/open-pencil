@@ -413,7 +413,12 @@
       "dragRowAria": "Sektion {section}, verschiebbar",
       "dragStartAnnounce": "{section} aufgenommen. Auf eine andere Sektion ablegen, um neu anzuordnen.",
       "dragDropAnnounce": "{section} vor {target} verschoben.",
-      "dragCancelAnnounce": "Neuanordnung von {section} abgebrochen."
+      "dragCancelAnnounce": "Neuanordnung von {section} abgebrochen.",
+      "keyboardHint": "Leertaste zum Aufnehmen. Pfeiltasten zum Verschieben, Enter zum Ablegen, Esc zum Abbrechen.",
+      "keyboardPickupAnnounce": "{section} aufgenommen. Pfeiltasten verschieben, Enter legt ab, Esc bricht ab.",
+      "keyboardMoveAnnounce": "{section} auf Position {position} von {total} verschoben.",
+      "keyboardDropAnnounce": "{section} abgelegt.",
+      "keyboardCancelAnnounce": "Tastatur-Neuanordnung von {section} abgebrochen."
     }
   },
   "admin": {

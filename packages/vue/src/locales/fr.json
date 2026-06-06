@@ -413,7 +413,12 @@
       "dragRowAria": "Section {section}, déplaçable",
       "dragStartAnnounce": "{section} attrapé. Déposez-le sur une autre section pour réorganiser.",
       "dragDropAnnounce": "{section} déplacé avant {target}.",
-      "dragCancelAnnounce": "Réorganisation de {section} annulée."
+      "dragCancelAnnounce": "Réorganisation de {section} annulée.",
+      "keyboardHint": "Espace pour saisir. Flèches pour déplacer, Entrée pour déposer, Échap pour annuler.",
+      "keyboardPickupAnnounce": "{section} saisi. Les flèches déplacent, Entrée dépose, Échap annule.",
+      "keyboardMoveAnnounce": "{section} déplacé en position {position} sur {total}.",
+      "keyboardDropAnnounce": "{section} déposé.",
+      "keyboardCancelAnnounce": "Réorganisation au clavier de {section} annulée."
     }
   },
   "admin": {

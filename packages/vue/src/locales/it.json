@@ -413,7 +413,12 @@
       "dragRowAria": "Sezione {section}, trascinabile",
       "dragStartAnnounce": "{section} afferrato. Rilascialo su un'altra sezione per riordinare.",
       "dragDropAnnounce": "{section} spostato prima di {target}.",
-      "dragCancelAnnounce": "Riordino di {section} annullato."
+      "dragCancelAnnounce": "Riordino di {section} annullato.",
+      "keyboardHint": "Spazio per afferrare. Frecce per spostare, Invio per rilasciare, Esc per annullare.",
+      "keyboardPickupAnnounce": "{section} afferrato. Le frecce spostano, Invio rilascia, Esc annulla.",
+      "keyboardMoveAnnounce": "{section} spostato in posizione {position} di {total}.",
+      "keyboardDropAnnounce": "{section} rilasciato.",
+      "keyboardCancelAnnounce": "Riordino da tastiera di {section} annullato."
     }
   },
   "admin": {

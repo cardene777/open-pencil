@@ -413,7 +413,12 @@
       "dragRowAria": "Sección {section}, arrastrable",
       "dragStartAnnounce": "{section} agarrado. Suéltalo en otra sección para reordenar.",
       "dragDropAnnounce": "{section} movido antes de {target}.",
-      "dragCancelAnnounce": "Reordenación de {section} cancelada."
+      "dragCancelAnnounce": "Reordenación de {section} cancelada.",
+      "keyboardHint": "Espacio para tomar. Flechas para mover, Enter para soltar, Esc para cancelar.",
+      "keyboardPickupAnnounce": "{section} tomado. Las flechas mueven, Enter suelta, Esc cancela.",
+      "keyboardMoveAnnounce": "{section} movido a la posición {position} de {total}.",
+      "keyboardDropAnnounce": "{section} soltado.",
+      "keyboardCancelAnnounce": "Reordenación por teclado de {section} cancelada."
     }
   },
   "admin": {
