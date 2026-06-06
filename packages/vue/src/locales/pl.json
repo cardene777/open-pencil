@@ -582,6 +582,14 @@
     "following": "obserwujesz",
     "disconnect": "Rozłącz"
   },
+  "mentionInput": {
+    "heading": "Wzmianka",
+    "matchingQuery": "Wyszukiwanie \"{query}\"",
+    "prompt": "Wpisz imię lub e-mail",
+    "loading": "Ładowanie osób…",
+    "empty": "Brak pasujących współpracowników.",
+    "avatarAlt": "Awatar {name}"
+  },
   "safariBanner": {
     "messagePrefix": "Twoja przeglądarka nie obsługuje lokalnego API plików. Pliki będą pobierane zamiast zapisywane w miejscu. ",
     "useChrome": "Użyj Chrome",

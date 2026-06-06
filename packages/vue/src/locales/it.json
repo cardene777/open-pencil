@@ -582,6 +582,14 @@
     "following": "seguendo",
     "disconnect": "Disconnetti"
   },
+  "mentionInput": {
+    "heading": "Menzione",
+    "matchingQuery": "Ricerca di \"{query}\"",
+    "prompt": "Digita un nome o un'e-mail",
+    "loading": "Caricamento persone…",
+    "empty": "Nessun collaboratore corrispondente.",
+    "avatarAlt": "Avatar di {name}"
+  },
   "safariBanner": {
     "messagePrefix": "Il tuo browser non supporta l'API file locale. I file verranno scaricati invece di essere salvati sul posto. ",
     "useChrome": "Usa Chrome",

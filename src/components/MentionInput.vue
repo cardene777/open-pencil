@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from '@inkly/vue'
+
 import { initials } from '@/app/shell/ui'
 
 type MentionOption = {
@@ -19,6 +21,8 @@ const emit = defineEmits<{
   hover: [index: number]
   select: [id: string]
 }>()
+
+const { mentionInput: mentionInputT } = useI18n()
 </script>
 
 <template>
@@ -27,43 +31,43 @@ const emit = defineEmits<{
     class="w-80 rounded-2xl border border-white/10 bg-panel/96 p-2 shadow-2xl backdrop-blur-xl"
   >
     <div class="px-2 py-1">
-      <p class="text-[10px] font-medium uppercase tracking-[0.18em] text-accent">Mention</p>
+      <p class="text-[10px] font-medium uppercase tracking-[0.18em] text-accent">{{ mentionInputT.heading }}</p>
       <p class="mt-1 text-xs text-muted">
-        <span v-if="query.length > 0">Matching “{{ query }}”</span>
-        <span v-else>Type a name or email</span>
+        <span v-if="props.query.length > 0">{{ mentionInputT.matchingQuery({ query: props.query }) }}</span>
+        <span v-else>{{ mentionInputT.prompt }}</span>
       </p>
     </div>
 
     <div
-      v-if="loading"
+      v-if="props.loading"
       data-test-id="mention-loading"
       class="px-2 py-3 text-xs text-muted"
     >
-      Loading people…
+      {{ mentionInputT.loading }}
     </div>
 
     <div
-      v-else-if="candidates.length === 0"
+      v-else-if="props.candidates.length === 0"
       data-test-id="mention-empty"
       class="px-2 py-3 text-xs text-muted"
     >
-      No matching collaborators.
+      {{ mentionInputT.empty }}
     </div>
 
     <ul v-else class="mt-1 space-y-1">
-      <li v-for="(candidate, index) in candidates" :key="candidate.id">
+      <li v-for="(candidate, index) in props.candidates" :key="candidate.id">
         <button
           type="button"
           data-test-id="mention-option"
           class="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-hover"
-          :class="index === activeIndex ? 'bg-hover text-surface' : 'text-muted'"
+          :class="index === props.activeIndex ? 'bg-hover text-surface' : 'text-muted'"
           @mouseenter="emit('hover', index)"
           @click="emit('select', candidate.id)"
         >
           <img
             v-if="candidate.image"
             :src="candidate.image"
-            :alt="`${candidate.name} avatar`"
+            :alt="mentionInputT.avatarAlt({ name: candidate.name || candidate.email })"
             class="size-8 rounded-full object-cover"
           />
           <span

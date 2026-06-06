@@ -582,6 +582,14 @@
     "following": "folgt",
     "disconnect": "Trennen"
   },
+  "mentionInput": {
+    "heading": "Erwähnung",
+    "matchingQuery": "Suche nach „{query}\"",
+    "prompt": "Namen oder E-Mail eingeben",
+    "loading": "Personen werden geladen…",
+    "empty": "Keine passenden Mitarbeitenden.",
+    "avatarAlt": "Avatar von {name}"
+  },
   "safariBanner": {
     "messagePrefix": "Dein Browser unterstützt die lokale Datei-API nicht. Dateien werden heruntergeladen statt direkt gespeichert. ",
     "useChrome": "Chrome verwenden",

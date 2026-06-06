@@ -582,6 +582,14 @@
     "following": "正在关注",
     "disconnect": "断开连接"
   },
+  "mentionInput": {
+    "heading": "提及",
+    "matchingQuery": "搜索 \"{query}\"",
+    "prompt": "输入姓名或电子邮件",
+    "loading": "正在加载人员…",
+    "empty": "未找到匹配的协作者。",
+    "avatarAlt": "{name} 的头像"
+  },
   "safariBanner": {
     "messagePrefix": "你的浏览器不支持本地文件 API。 文件将被下载而非就地保存。 ",
     "useChrome": "使用 Chrome",
