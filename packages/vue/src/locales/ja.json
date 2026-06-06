@@ -447,6 +447,30 @@
       "keyboardCancelAnnounce": "{section} のキーボード並び替えをキャンセルしました。"
     }
   },
+  "account": {
+    "headTitle": "アカウント",
+    "eyebrow": "アカウント",
+    "heading": "プロフィール",
+    "subtitle": "Inkly はアカウントなしでも利用できます。 匿名ボードをユーザープロフィールに紐付けたい場合のみサインインしてください。",
+    "loading": "アカウント読み込み中…",
+    "signInHeading": "Google で続行",
+    "signInDescription": "この環境で Google OAuth が未設定の場合、 ボタンは利用不可と表示し匿名モードは引き続き動作します。",
+    "signInButton": "Google でログイン",
+    "signInPending": "開始中…",
+    "defaultDisplayName": "Inkly ユーザー",
+    "avatarAlt": "{name} のアバター",
+    "migrating": "ボードを移行中…",
+    "logoutButton": "ログアウト",
+    "logoutPending": "サインアウト中…",
+    "logoutDialogTitle": "ログアウト",
+    "logoutDialogDescription": "このデバイスでは匿名モードに戻ります。",
+    "logoutDialogHint": "ボードはそのまま利用できます。 アカウント通知とチームを復元するには再度サインインしてください。",
+    "logoutDialogCancel": "キャンセル",
+    "logoutDialogConfirm": "ログアウト",
+    "toastSignedOut": "サインアウトしました",
+    "toastLoginFail": "Google ログインの開始に失敗しました",
+    "toastLogoutFail": "サインアウトに失敗しました"
+  },
   "admin": {
     "title": "管理",
     "badge": "社内",

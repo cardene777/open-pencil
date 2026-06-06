@@ -447,6 +447,30 @@
       "keyboardCancelAnnounce": "已取消 {section} 的键盘重新排序。"
     }
   },
+  "account": {
+    "headTitle": "账户",
+    "eyebrow": "账户",
+    "heading": "个人资料",
+    "subtitle": "Inkly 无需账户即可使用。 仅当你希望迁移匿名画板并保留在你的用户档案下时才需要登录。",
+    "loading": "正在加载账户…",
+    "signInHeading": "使用 Google 继续",
+    "signInDescription": "如果此环境未配置 Google OAuth, 按钮将提示不可用, 匿名模式将继续工作。",
+    "signInButton": "使用 Google 登录",
+    "signInPending": "正在启动…",
+    "defaultDisplayName": "Inkly 用户",
+    "avatarAlt": "{name} 的头像",
+    "migrating": "正在迁移你的画板…",
+    "logoutButton": "退出登录",
+    "logoutPending": "正在退出…",
+    "logoutDialogTitle": "退出登录",
+    "logoutDialogDescription": "你将在此设备上返回匿名模式。",
+    "logoutDialogHint": "你的画板仍然可用。 再次登录以恢复账户通知和团队。",
+    "logoutDialogCancel": "取消",
+    "logoutDialogConfirm": "退出登录",
+    "toastSignedOut": "已退出登录",
+    "toastLoginFail": "无法启动 Google 登录",
+    "toastLogoutFail": "退出登录失败"
+  },
   "admin": {
     "title": "管理",
     "badge": "内部",

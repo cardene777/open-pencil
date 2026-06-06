@@ -447,6 +447,30 @@
       "keyboardCancelAnnounce": "Reordenación por teclado de {section} cancelada."
     }
   },
+  "account": {
+    "headTitle": "Cuenta",
+    "eyebrow": "Cuenta",
+    "heading": "Perfil",
+    "subtitle": "Inkly funciona sin cuenta. Inicia sesión solo si deseas migrar tus tableros anónimos y mantenerlos bajo tu perfil de usuario.",
+    "loading": "Cargando cuenta…",
+    "signInHeading": "Continuar con Google",
+    "signInDescription": "Si Google OAuth no está configurado en este entorno, el botón indicará que no está disponible y el modo anónimo seguirá funcionando.",
+    "signInButton": "Iniciar sesión con Google",
+    "signInPending": "Iniciando…",
+    "defaultDisplayName": "Usuario de Inkly",
+    "avatarAlt": "Avatar de {name}",
+    "migrating": "Migrando tus tableros…",
+    "logoutButton": "Cerrar sesión",
+    "logoutPending": "Cerrando sesión…",
+    "logoutDialogTitle": "Cerrar sesión",
+    "logoutDialogDescription": "Volverás al modo anónimo en este dispositivo.",
+    "logoutDialogHint": "Tus tableros seguirán disponibles. Inicia sesión de nuevo para restaurar las notificaciones de cuenta y los equipos.",
+    "logoutDialogCancel": "Cancelar",
+    "logoutDialogConfirm": "Cerrar sesión",
+    "toastSignedOut": "Sesión cerrada",
+    "toastLoginFail": "No se pudo iniciar el inicio de sesión con Google",
+    "toastLogoutFail": "No se pudo cerrar la sesión"
+  },
   "admin": {
     "title": "Administración",
     "badge": "Interno",
