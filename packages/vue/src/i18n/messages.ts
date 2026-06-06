@@ -377,6 +377,7 @@ export const dialogMessages = i18n('dialogs', {
   join: 'Join',
   roomLink: 'Room link',
   joinCollaboration: 'Join collaboration',
+  joinRoomIntro: 'Someone shared this file with you. Enter your name to join.',
   orJoinRoom: 'or join a room',
   pasteRoomLinkOrId: 'Paste room link or ID',
   connected: 'Connected',

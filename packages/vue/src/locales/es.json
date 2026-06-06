@@ -283,6 +283,7 @@
     "join": "Unirse",
     "roomLink": "Enlace de la sala",
     "joinCollaboration": "Unirse a la colaboración",
+    "joinRoomIntro": "Alguien ha compartido este archivo contigo. Introduce tu nombre para unirte.",
     "orJoinRoom": "o unirse a una sala",
     "pasteRoomLinkOrId": "Pega el enlace o ID de la sala",
     "connected": "Conectado",

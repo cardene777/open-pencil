@@ -283,6 +283,7 @@
     "join": "Beitreten",
     "roomLink": "Raumlink",
     "joinCollaboration": "Zur Zusammenarbeit beitreten",
+    "joinRoomIntro": "Jemand hat diese Datei mit dir geteilt. Gib deinen Namen ein, um beizutreten.",
     "orJoinRoom": "oder einem Raum beitreten",
     "pasteRoomLinkOrId": "Raumlink oder ID einfügen",
     "connected": "Verbunden",

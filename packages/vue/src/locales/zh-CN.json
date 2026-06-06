@@ -283,6 +283,7 @@
     "join": "加入",
     "roomLink": "房间链接",
     "joinCollaboration": "加入协作",
+    "joinRoomIntro": "有人与你共享了此文件。 输入你的名字以加入。",
     "orJoinRoom": "或加入一个房间",
     "pasteRoomLinkOrId": "粘贴房间链接或 ID",
     "connected": "已连接",
