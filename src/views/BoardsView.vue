@@ -189,6 +189,15 @@ onMounted(async () => {
           <NotificationBell v-if="showAccountLink" />
 
           <RouterLink
+            to="/dashboard"
+            data-test-id="boards-dashboard-link"
+            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
+          >
+            <icon-lucide-layout-dashboard class="size-4" />
+            <span>Dashboard</span>
+          </RouterLink>
+
+          <RouterLink
             to="/teams"
             data-test-id="boards-teams-link"
             class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
