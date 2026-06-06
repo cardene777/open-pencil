@@ -40,6 +40,12 @@ function looksLikeEnglish(text: string): boolean {
   if (!/[A-Za-z]/.test(trimmed)) return false
   // Ignore dot-path expressions or JS identifiers
   if (/^[A-Za-z_$][\w$.]*$/.test(trimmed) && !trimmed.includes(' ')) return false
+  // Ignore JS expressions (function calls, conditional expressions, store accessors)
+  // typically present in attribute bindings like `:aria-label="formatTemplate(...)"`.
+  // These look like `name(args)`, contain `?` / `:` for ternary, or chain dot-paths
+  // with parentheses — not user-facing text.
+  if (/^[A-Za-z_$][\w$.]*\(/.test(trimmed)) return false
+  if (/[A-Za-z_$][\w$.]*\s*\?\s*[A-Za-z_$][\w$.]*\s*:/.test(trimmed)) return false
   return true
 }
 
@@ -63,18 +69,18 @@ function auditFile(path: string): FileReport {
     if (looksLikeEnglish(text)) candidates.push(text)
   }
 
-  // placeholder="..."
-  for (const match of template.matchAll(/placeholder="([^"]+)"/g)) {
+  // placeholder="..." (skip `:placeholder` bindings)
+  for (const match of template.matchAll(/(?<![:])placeholder="([^"]+)"/g)) {
     if (looksLikeEnglish(match[1])) candidates.push(match[1])
   }
 
-  // aria-label="..." (static)
-  for (const match of template.matchAll(/aria-label="([^"]+)"/g)) {
+  // aria-label="..." (static, skip `:aria-label` bindings)
+  for (const match of template.matchAll(/(?<![:])aria-label="([^"]+)"/g)) {
     if (looksLikeEnglish(match[1])) candidates.push(match[1])
   }
 
-  // title="..."
-  for (const match of template.matchAll(/(?:^|\s)title="([^"]+)"/g)) {
+  // title="..." (skip `:title` bindings)
+  for (const match of template.matchAll(/(?:^|\s)(?<![:])title="([^"]+)"/g)) {
     if (looksLikeEnglish(match[1])) candidates.push(match[1])
   }
 
