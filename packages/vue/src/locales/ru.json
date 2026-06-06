@@ -250,7 +250,15 @@
     "searchFonts": "Поиск шрифтов...",
     "previousCategory": "Предыдущая категория",
     "nextCategory": "Следующая категория",
-    "moreTools": "Больше инструментов"
+    "moreTools": "Больше инструментов",
+    "layoutDirectionHorizontal": "Горизонтальный макет",
+    "layoutDirectionVertical": "Вертикальный макет",
+    "layoutDirectionGrid": "Сеточный макет",
+    "layoutWrap": "Перенос элементов",
+    "toggleIndividualPadding": "Переключить индивидуальные отступы",
+    "alignmentGridCell": "Задать выравнивание",
+    "addTrack": "Добавить дорожку",
+    "removeTrack": "Удалить дорожку"
   },
   "pages": {
     "newPage": "Новая страница",

@@ -250,7 +250,15 @@
     "searchFonts": "Rechercher des polices...",
     "previousCategory": "Catégorie précédente",
     "nextCategory": "Catégorie suivante",
-    "moreTools": "Plus d'outils"
+    "moreTools": "Plus d'outils",
+    "layoutDirectionHorizontal": "Disposition horizontale",
+    "layoutDirectionVertical": "Disposition verticale",
+    "layoutDirectionGrid": "Disposition en grille",
+    "layoutWrap": "Envelopper les éléments",
+    "toggleIndividualPadding": "Basculer le rembourrage individuel",
+    "alignmentGridCell": "Définir l'alignement",
+    "addTrack": "Ajouter une piste",
+    "removeTrack": "Supprimer la piste"
   },
   "pages": {
     "newPage": "Nouvelle page",

@@ -250,7 +250,15 @@
     "searchFonts": "Schriftarten suchen...",
     "previousCategory": "Vorherige Kategorie",
     "nextCategory": "Nächste Kategorie",
-    "moreTools": "Weitere Werkzeuge"
+    "moreTools": "Weitere Werkzeuge",
+    "layoutDirectionHorizontal": "Horizontales Layout",
+    "layoutDirectionVertical": "Vertikales Layout",
+    "layoutDirectionGrid": "Rasterlayout",
+    "layoutWrap": "Elemente umbrechen",
+    "toggleIndividualPadding": "Individuellen Innenabstand umschalten",
+    "alignmentGridCell": "Ausrichtung festlegen",
+    "addTrack": "Spur hinzufügen",
+    "removeTrack": "Spur entfernen"
   },
   "pages": {
     "newPage": "Neue Seite",

@@ -250,7 +250,15 @@
     "searchFonts": "Szukaj fontów...",
     "previousCategory": "Poprzednia kategoria",
     "nextCategory": "Następna kategoria",
-    "moreTools": "Więcej narzędzi"
+    "moreTools": "Więcej narzędzi",
+    "layoutDirectionHorizontal": "Układ poziomy",
+    "layoutDirectionVertical": "Układ pionowy",
+    "layoutDirectionGrid": "Układ siatki",
+    "layoutWrap": "Zawijaj elementy",
+    "toggleIndividualPadding": "Przełącz indywidualny margines wewnętrzny",
+    "alignmentGridCell": "Ustaw wyrównanie",
+    "addTrack": "Dodaj tor",
+    "removeTrack": "Usuń tor"
   },
   "pages": {
     "newPage": "Nowa strona",
