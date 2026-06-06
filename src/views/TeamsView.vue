@@ -14,6 +14,7 @@ import {
 import { useAuthStore } from '@/app/auth/store'
 import { createTeam, listTeams, type TeamSummary } from '@/app/api/teams'
 import TeamCard from '@/components/TeamCard.vue'
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import LoginBanner from '@/components/LoginBanner.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import { useDialogUI } from '@/components/ui/dialog'
@@ -130,14 +131,17 @@ onMounted(async () => {
             </p>
           </div>
 
-          <button
-            type="button"
-            data-test-id="team-create-button"
-            class="cursor-pointer rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
-            @click="openCreateDialog"
-          >
-            New team
-          </button>
+          <div class="flex items-center gap-3">
+            <LocaleSwitcher test-id="teams-locale-switcher" />
+            <button
+              type="button"
+              data-test-id="team-create-button"
+              class="cursor-pointer rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90"
+              @click="openCreateDialog"
+            >
+              New team
+            </button>
+          </div>
         </div>
 
         <LoginBanner
