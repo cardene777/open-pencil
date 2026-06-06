@@ -18,13 +18,18 @@ import {
   listBoards,
   type Board
 } from '@/app/api/client'
-import { listTeams, type TeamSummary } from '@/app/api/teams'
+import { getTeam, listTeams, type TeamMember, type TeamSummary } from '@/app/api/teams'
 import LoginBanner from '@/components/LoginBanner.vue'
 
 useHead({ title: 'Admin' })
 
-type TabKey = 'overview' | 'boards' | 'teams' | 'activity'
+type TabKey = 'overview' | 'boards' | 'teams' | 'activity' | 'members'
 type BoardSortKey = 'updated' | 'created' | 'name' | 'collaborators'
+
+interface MemberWithTeam {
+  member: TeamMember
+  team: TeamSummary
+}
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -38,6 +43,11 @@ const teamFilter = ref<'all' | 'personal' | 'team'>('all')
 const boardSort = ref<BoardSortKey>('updated')
 const boardSortDirection = ref<'asc' | 'desc'>('desc')
 const deletingBoardId = ref<string | null>(null)
+const memberSearch = ref('')
+const memberRoleFilter = ref<'all' | 'owner' | 'editor' | 'viewer'>('all')
+const members = ref<MemberWithTeam[]>([])
+const membersLoading = ref(false)
+const membersError = ref<string | null>(null)
 
 const authDisplayName = computed(() => auth.user?.name?.trim() || auth.user?.email || 'Inkly User')
 const authInitials = computed(() => initials(authDisplayName.value))
@@ -92,6 +102,64 @@ function toggleSort(key: BoardSortKey) {
 }
 
 const activityItems = computed(() => notifications.items.slice(0, 50))
+
+const filteredMembers = computed(() => {
+  const query = memberSearch.value.trim().toLowerCase()
+  return members.value.filter(({ member }) => {
+    if (memberRoleFilter.value !== 'all' && member.role !== memberRoleFilter.value) return false
+    if (!query) return true
+    const haystack = [
+      member.user.name,
+      member.user.email,
+      member.role
+    ].join(' ').toLowerCase()
+    return haystack.includes(query)
+  })
+})
+
+const memberRoleCounts = computed(() => {
+  const counts = { owner: 0, editor: 0, viewer: 0 }
+  for (const entry of members.value) {
+    counts[entry.member.role]++
+  }
+  return counts
+})
+
+async function loadMembers() {
+  if (membersLoading.value) return
+  membersLoading.value = true
+  membersError.value = null
+  try {
+    const teamList = teams.value.length > 0 ? teams.value : await listTeams().catch(() => [])
+    if (teams.value.length === 0) teams.value = teamList
+
+    const detailResults = await Promise.allSettled(
+      teamList.map((team) => getTeam(team.id))
+    )
+
+    const collected: MemberWithTeam[] = []
+    for (let i = 0; i < detailResults.length; i++) {
+      const result = detailResults[i]
+      if (result.status !== 'fulfilled') continue
+      const team = teamList[i]
+      for (const member of result.value.members) {
+        collected.push({ member, team })
+      }
+    }
+    members.value = collected
+  } catch (error) {
+    membersError.value = error instanceof Error ? error.message : 'Failed to load members'
+  } finally {
+    membersLoading.value = false
+  }
+}
+
+async function activateTab(next: TabKey) {
+  tab.value = next
+  if (next === 'members' && auth.isAuthenticated && members.value.length === 0 && !membersLoading.value) {
+    await loadMembers()
+  }
+}
 
 const ownedTeams = computed(() => teams.value.filter((team) => team.role === 'owner'))
 const memberTeams = computed(() => teams.value.filter((team) => team.role !== 'owner'))
@@ -275,7 +343,7 @@ onMounted(async () => {
               ? 'bg-[#ef6262]/85 text-white shadow'
               : 'text-muted hover:text-surface'
           ]"
-          @click="tab = 'overview'"
+          @click="activateTab('overview')"
         >
           Overview
         </button>
@@ -288,7 +356,7 @@ onMounted(async () => {
               ? 'bg-[#ef6262]/85 text-white shadow'
               : 'text-muted hover:text-surface'
           ]"
-          @click="tab = 'boards'"
+          @click="activateTab('boards')"
         >
           Boards
         </button>
@@ -301,7 +369,7 @@ onMounted(async () => {
               ? 'bg-[#ef6262]/85 text-white shadow'
               : 'text-muted hover:text-surface'
           ]"
-          @click="tab = 'teams'"
+          @click="activateTab('teams')"
         >
           Teams
         </button>
@@ -314,9 +382,22 @@ onMounted(async () => {
               ? 'bg-[#ef6262]/85 text-white shadow'
               : 'text-muted hover:text-surface'
           ]"
-          @click="tab = 'activity'"
+          @click="activateTab('activity')"
         >
           Activity
+        </button>
+        <button
+          type="button"
+          data-test-id="admin-tab-members"
+          :class="[
+            'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+            tab === 'members'
+              ? 'bg-[#ef6262]/85 text-white shadow'
+              : 'text-muted hover:text-surface'
+          ]"
+          @click="activateTab('members')"
+        >
+          Members
         </button>
       </section>
 
@@ -624,6 +705,119 @@ onMounted(async () => {
             </div>
           </li>
         </ul>
+      </section>
+
+      <section
+        v-else-if="tab === 'members'"
+        data-test-id="admin-members"
+        class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+      >
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-surface">All members</h2>
+            <p class="text-sm text-muted">
+              {{ filteredMembers.length }} / {{ members.length }} shown · owners {{ memberRoleCounts.owner }} · editors {{ memberRoleCounts.editor }} · viewers {{ memberRoleCounts.viewer }}
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="sr-only" for="admin-members-search-input">Search members</label>
+            <input
+              id="admin-members-search-input"
+              v-model="memberSearch"
+              type="text"
+              data-test-id="admin-members-search"
+              placeholder="Search by name, email or role"
+              class="rounded-lg border border-border bg-input px-3 py-2 text-sm text-surface outline-none focus:border-accent w-64"
+            />
+            <label class="sr-only" for="admin-members-role-select">Filter members by role</label>
+            <select
+              id="admin-members-role-select"
+              v-model="memberRoleFilter"
+              data-test-id="admin-members-role"
+              aria-label="Filter members by role"
+              class="rounded-lg border border-border bg-input px-2 py-2 text-sm text-surface outline-none focus:border-accent"
+            >
+              <option value="all">All roles</option>
+              <option value="owner">Owner</option>
+              <option value="editor">Editor</option>
+              <option value="viewer">Viewer</option>
+            </select>
+          </div>
+        </div>
+
+        <p
+          v-if="membersLoading"
+          data-test-id="admin-members-loading"
+          class="text-sm text-muted"
+        >
+          Loading members…
+        </p>
+        <p
+          v-else-if="membersError"
+          data-test-id="admin-members-error"
+          class="text-sm text-red-300"
+        >
+          {{ membersError }}
+        </p>
+        <p
+          v-else-if="filteredMembers.length === 0"
+          data-test-id="admin-members-empty"
+          class="text-sm text-muted"
+        >
+          No members match the filter.
+        </p>
+        <div
+          v-else
+          data-test-id="admin-members-table-wrap"
+          class="overflow-x-auto rounded-xl border border-white/8"
+        >
+          <table class="w-full min-w-[640px] text-left text-sm">
+            <thead class="bg-canvas/40 text-[11px] uppercase tracking-[0.2em] text-muted">
+              <tr>
+                <th scope="col" class="px-3 py-2">Name</th>
+                <th scope="col" class="px-3 py-2">Email</th>
+                <th scope="col" class="px-3 py-2">Team</th>
+                <th scope="col" class="px-3 py-2">Role</th>
+                <th scope="col" class="px-3 py-2">Joined</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="entry in filteredMembers"
+                :key="`${entry.team.id}-${entry.member.userId}`"
+                :data-test-id="`admin-member-row-${entry.team.id}-${entry.member.userId}`"
+                class="border-t border-white/5 hover:bg-hover/60"
+              >
+                <td class="px-3 py-2 text-surface">{{ entry.member.user.name || '—' }}</td>
+                <td class="px-3 py-2 text-muted">{{ entry.member.user.email }}</td>
+                <td class="px-3 py-2 text-muted">
+                  <RouterLink
+                    :to="`/team/${entry.team.id}`"
+                    :data-test-id="`admin-member-team-link-${entry.team.id}-${entry.member.userId}`"
+                    class="hover:underline"
+                  >
+                    {{ entry.team.name }}
+                  </RouterLink>
+                </td>
+                <td class="px-3 py-2">
+                  <span
+                    :class="[
+                      'rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.18em]',
+                      entry.member.role === 'owner'
+                        ? 'border-amber-400/30 bg-amber-400/10 text-amber-200'
+                        : entry.member.role === 'editor'
+                          ? 'border-accent/30 bg-accent/10 text-accent'
+                          : 'border-white/10 bg-canvas/55 text-muted'
+                    ]"
+                  >
+                    {{ entry.member.role }}
+                  </span>
+                </td>
+                <td class="px-3 py-2 text-muted">{{ formatDate(entry.member.addedAt) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   </main>

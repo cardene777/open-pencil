@@ -65,6 +65,23 @@ test.describe('admin view accessibility', () => {
     expectNoCriticalViolations(results)
   })
 
+  test('members tab empty state has no critical accessibility violations', async ({ page }) => {
+    await mockGoogleLogin(page, {
+      email: 'admin-a11y-members@inkly.test',
+      name: 'Admin A11y Members'
+    })
+
+    await page.goto('/admin')
+    await page.getByTestId('admin-tab-members').click()
+    await expect(page.getByTestId('admin-members-empty')).toBeVisible()
+    await waitForVisualReady(page)
+
+    const results = await runA11yScan(page, {
+      disableRules: adminDisabledRules
+    })
+    expectNoCriticalViolations(results)
+  })
+
   test('activity tab empty state has no critical accessibility violations', async ({ page }) => {
     await mockGoogleLogin(page, {
       email: 'admin-a11y-activity@inkly.test',
