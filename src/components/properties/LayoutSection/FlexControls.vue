@@ -202,6 +202,7 @@ function isAlignmentActive(primary: LayoutAlign, counter: string) {
     </template>
     <button
       class="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded border border-border bg-transparent text-muted hover:bg-hover hover:text-surface"
+      :aria-label="panels.toggleIndividualPadding"
       @click="ctx.toggleIndividualPadding"
     >
       <icon-lucide-minus
@@ -227,6 +228,7 @@ function isAlignmentActive(primary: LayoutAlign, counter: string) {
             ? 'border-accent bg-accent/10 text-accent'
             : 'border-border text-muted hover:bg-hover hover:text-surface'
         "
+        :aria-label="panels.alignmentGridCell"
         @click="ctx.setAlignment(ctx.gapAuto ? 'SPACE_BETWEEN' : cell.primary, cell.counter)"
       >
         <span class="size-1.5 rounded-full bg-current" />

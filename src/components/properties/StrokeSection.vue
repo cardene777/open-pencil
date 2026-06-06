@@ -95,6 +95,7 @@ function setGap(stroke: Stroke | undefined, patch: StrokePatch, value: number) {
           <button
             data-test-id="stroke-section-add"
             :class="useIconButtonUI().base"
+            :aria-label="panels.addStroke"
             @click="actions.add(strokeCtx.defaultStroke)"
           >
             +
@@ -187,6 +188,7 @@ function setGap(stroke: Stroke | undefined, patch: StrokePatch, value: number) {
               useIconButtonUI({ size: 'md', ui: { base: 'size-[26px] shrink-0' } }).base,
               { '!border-accent !text-accent': expandedSides }
             ]"
+            :aria-label="panels.strokeSides"
             @click="onToggleSides(activeNode!)"
           >
             <svg class="size-3.5" viewBox="0 0 14 14" fill="currentColor">

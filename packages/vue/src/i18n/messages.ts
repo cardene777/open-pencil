@@ -293,7 +293,15 @@ export const panelMessages = i18n('panels', {
   searchFonts: 'Search fonts...',
   previousCategory: 'Previous category',
   nextCategory: 'Next category',
-  moreTools: 'More tools'
+  moreTools: 'More tools',
+  layoutDirectionHorizontal: 'Horizontal layout',
+  layoutDirectionVertical: 'Vertical layout',
+  layoutDirectionGrid: 'Grid layout',
+  layoutWrap: 'Wrap items',
+  toggleIndividualPadding: 'Toggle individual padding',
+  alignmentGridCell: 'Set alignment',
+  addTrack: 'Add track',
+  removeTrack: 'Remove track'
 })
 
 export const variableTypeMessages = i18n('variableTypes', {

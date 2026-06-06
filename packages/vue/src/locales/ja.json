@@ -250,7 +250,15 @@
     "searchFonts": "フォントを検索...",
     "previousCategory": "前のカテゴリ",
     "nextCategory": "次のカテゴリ",
-    "moreTools": "ツールを切り替え"
+    "moreTools": "ツールを切り替え",
+    "layoutDirectionHorizontal": "横方向レイアウト",
+    "layoutDirectionVertical": "縦方向レイアウト",
+    "layoutDirectionGrid": "グリッドレイアウト",
+    "layoutWrap": "折り返し",
+    "toggleIndividualPadding": "個別パディングを切替",
+    "alignmentGridCell": "整列を設定",
+    "addTrack": "トラックを追加",
+    "removeTrack": "トラックを削除"
   },
   "pages": {
     "newPage": "新規ページ",

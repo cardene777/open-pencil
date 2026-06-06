@@ -250,7 +250,15 @@
     "searchFonts": "搜索字体...",
     "previousCategory": "上一类别",
     "nextCategory": "下一类别",
-    "moreTools": "更多工具"
+    "moreTools": "更多工具",
+    "layoutDirectionHorizontal": "水平布局",
+    "layoutDirectionVertical": "垂直布局",
+    "layoutDirectionGrid": "网格布局",
+    "layoutWrap": "换行元素",
+    "toggleIndividualPadding": "切换独立内边距",
+    "alignmentGridCell": "设置对齐方式",
+    "addTrack": "添加轨道",
+    "removeTrack": "删除轨道"
   },
   "pages": {
     "newPage": "新建页面",

@@ -250,7 +250,15 @@
     "searchFonts": "Buscar fuentes...",
     "previousCategory": "Categoría anterior",
     "nextCategory": "Categoría siguiente",
-    "moreTools": "Más herramientas"
+    "moreTools": "Más herramientas",
+    "layoutDirectionHorizontal": "Diseño horizontal",
+    "layoutDirectionVertical": "Diseño vertical",
+    "layoutDirectionGrid": "Diseño en cuadrícula",
+    "layoutWrap": "Ajustar elementos",
+    "toggleIndividualPadding": "Alternar relleno individual",
+    "alignmentGridCell": "Definir alineación",
+    "addTrack": "Añadir pista",
+    "removeTrack": "Eliminar pista"
   },
   "pages": {
     "newPage": "Nueva página",

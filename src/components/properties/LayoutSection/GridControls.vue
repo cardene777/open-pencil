@@ -27,6 +27,7 @@ function defaultTrackValue(sizing: GridTrackSizing): number {
         </label>
         <button
           class="cursor-pointer rounded border-none bg-transparent px-1 text-xs leading-none text-muted hover:bg-hover hover:text-surface"
+          :aria-label="panels.addTrack"
           @click="ctx.addTrack(trackProp)"
         >
           +
@@ -57,6 +58,7 @@ function defaultTrackValue(sizing: GridTrackSizing): number {
           <button
             v-if="ctx.node[trackProp].length > 1"
             class="cursor-pointer rounded border-none bg-transparent px-0.5 text-xs text-muted hover:text-surface"
+            :aria-label="panels.removeTrack"
             @click="ctx.removeTrack(trackProp, i)"
           >
             ×

@@ -250,7 +250,15 @@
     "searchFonts": "Cerca font...",
     "previousCategory": "Categoria precedente",
     "nextCategory": "Categoria successiva",
-    "moreTools": "Altri strumenti"
+    "moreTools": "Altri strumenti",
+    "layoutDirectionHorizontal": "Layout orizzontale",
+    "layoutDirectionVertical": "Layout verticale",
+    "layoutDirectionGrid": "Layout a griglia",
+    "layoutWrap": "Manda a capo elementi",
+    "toggleIndividualPadding": "Attiva imbottitura individuale",
+    "alignmentGridCell": "Imposta allineamento",
+    "addTrack": "Aggiungi traccia",
+    "removeTrack": "Rimuovi traccia"
   },
   "pages": {
     "newPage": "Nuova pagina",

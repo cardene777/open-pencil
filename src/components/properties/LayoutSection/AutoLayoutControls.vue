@@ -22,6 +22,7 @@ const layoutModes: { mode: LayoutMode; test: string }[] = [
       <button
         class="cursor-pointer rounded border-none bg-transparent px-1 text-base leading-none text-muted hover:bg-hover hover:text-surface"
         data-test-id="layout-add-auto"
+        :aria-label="panels.addAutoLayout"
         @click="ctx.editor.setLayoutMode(ctx.node.id, 'VERTICAL')"
       >
         +
@@ -31,6 +32,7 @@ const layoutModes: { mode: LayoutMode; test: string }[] = [
       <button
         class="cursor-pointer rounded border-none bg-transparent px-1 text-base leading-none text-muted hover:bg-hover hover:text-surface"
         data-test-id="layout-remove-auto"
+        :aria-label="panels.removeAutoLayout"
         @click="ctx.editor.setLayoutMode(ctx.node.id, 'NONE')"
       >
         −
@@ -49,6 +51,13 @@ const layoutModes: { mode: LayoutMode; test: string }[] = [
           ? 'border-accent bg-accent/10 text-accent'
           : 'border-border text-muted hover:bg-hover hover:text-surface'
       "
+      :aria-label="
+        dir.mode === 'HORIZONTAL'
+          ? panels.layoutDirectionHorizontal
+          : dir.mode === 'VERTICAL'
+            ? panels.layoutDirectionVertical
+            : panels.layoutDirectionGrid
+      "
       @click="ctx.editor.setLayoutMode(ctx.node.id, dir.mode)"
     >
       <icon-lucide-arrow-right v-if="dir.mode === 'HORIZONTAL'" class="size-3.5" />
@@ -64,6 +73,7 @@ const layoutModes: { mode: LayoutMode; test: string }[] = [
           ? 'border-accent bg-accent/10 text-accent'
           : 'border-border text-muted hover:bg-hover hover:text-surface'
       "
+      :aria-label="panels.layoutWrap"
       @click="ctx.updateProp('layoutWrap', ctx.node.layoutWrap === 'WRAP' ? 'NO_WRAP' : 'WRAP')"
     >
       <icon-lucide-wrap-text class="size-3.5" />

@@ -31,6 +31,7 @@ const { panels } = useI18n()
         <button
           data-test-id="variables-section-open"
           class="flex size-5 cursor-pointer items-center justify-center rounded border-none bg-transparent text-muted hover:bg-hover hover:text-surface"
+          :aria-label="panels.openVariables"
           @click="emit('openDialog')"
         >
           <icon-lucide-settings-2 class="size-3.5" />

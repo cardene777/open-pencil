@@ -19,6 +19,7 @@ const emit = defineEmits<{
     <button
       v-test-id="testId"
       class="shrink-0 cursor-pointer border-none bg-transparent p-0 text-violet-400 hover:text-surface"
+      :aria-label="label"
       @click="emit('detach')"
     >
       <icon-lucide-diamond-minus class="size-3.5" />
