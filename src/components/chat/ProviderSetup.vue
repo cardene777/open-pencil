@@ -85,7 +85,7 @@ function save() {
       <p class="text-center text-[10px] leading-relaxed text-muted">
         Uses your existing {{ acpAgent?.name }} subscription.
         <template v-if="acpAgent?.installCommand">
-          Install it with
+          {{ dialogs.acpInstallPrefix }}
           <code class="rounded bg-input px-1 py-0.5 font-mono text-[9px]">{{
             acpAgent.installCommand
           }}</code>

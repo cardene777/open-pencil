@@ -10,7 +10,7 @@ import {
   AlertDialogTitle
 } from 'reka-ui'
 import { computed } from 'vue'
-import { acpPermissionOptionTestId, vTestId } from '@inkly/vue'
+import { acpPermissionOptionTestId, useI18n, vTestId } from '@inkly/vue'
 
 import {
   currentPermission,
@@ -19,6 +19,7 @@ import {
 } from '@/app/ai/acp/permission'
 import { useDialogUI } from '@/components/ui/dialog'
 
+const { dialogs } = useI18n()
 const open = computed(() => currentPermission.value !== null)
 const cls = useDialogUI({
   overlay: 'z-50',
@@ -69,7 +70,7 @@ function handleDismiss() {
         @escape-key-down="handleDismiss"
       >
         <AlertDialogTitle class="text-sm font-semibold text-surface">
-          Permission Request
+          {{ dialogs.permissionRequest }}
         </AlertDialogTitle>
 
         <AlertDialogDescription class="mt-2 text-xs text-muted">
