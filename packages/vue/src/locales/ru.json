@@ -555,6 +555,25 @@
     "settings": "Настройки",
     "delete": "Удалить"
   },
+  "teamCard": {
+    "membersCount": "{count} участников",
+    "boardsCount": "{count} досок",
+    "separator": " · ",
+    "updatedPrefix": "Обновлено",
+    "roleOwner": "Владелец",
+    "roleEditor": "Редактор",
+    "roleViewer": "Наблюдатель",
+    "open": "Открыть",
+    "settings": "Настройки"
+  },
+  "loginBanner": {
+    "eyebrow": "Опциональная учётная запись",
+    "heading": "Войдите через Google, чтобы сохранить свои доски",
+    "description": "Анонимный режим по-прежнему доступен. Если вы войдёте, Inkly автоматически перенесёт ваши текущие анонимные доски в учётную запись.",
+    "migrating": "Перенос анонимных досок…",
+    "loginButton": "Войти через Google",
+    "loginPending": "Запуск…"
+  },
   "teams": {
     "headTitle": "Команды",
     "eyebrow": "Рабочее пространство",

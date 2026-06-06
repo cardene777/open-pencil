@@ -616,6 +616,28 @@ export const boardCardMessages = i18n('boardCard', {
   delete: 'Delete'
 })
 
+export const teamCardMessages = i18n('teamCard', {
+  membersCount: params('{count} members'),
+  boardsCount: params('{count} boards'),
+  separator: ' · ',
+  updatedPrefix: 'Updated',
+  roleOwner: 'Owner',
+  roleEditor: 'Editor',
+  roleViewer: 'Viewer',
+  open: 'Open',
+  settings: 'Settings'
+})
+
+export const loginBannerMessages = i18n('loginBanner', {
+  eyebrow: 'Optional account',
+  heading: 'Log in with Google to keep your boards',
+  description:
+    'Anonymous mode stays available. If you log in, Inkly migrates your current anonymous boards to your account automatically.',
+  migrating: 'Migrating your anonymous boards…',
+  loginButton: 'Google でログイン',
+  loginPending: 'Starting…'
+})
+
 export const teamsMessages = i18n('teams', {
   headTitle: 'Teams',
   eyebrow: 'Workspace',

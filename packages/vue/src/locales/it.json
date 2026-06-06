@@ -555,6 +555,25 @@
     "settings": "Impostazioni",
     "delete": "Elimina"
   },
+  "teamCard": {
+    "membersCount": "{count} membri",
+    "boardsCount": "{count} board",
+    "separator": " · ",
+    "updatedPrefix": "Aggiornata",
+    "roleOwner": "Proprietario",
+    "roleEditor": "Editor",
+    "roleViewer": "Visualizzatore",
+    "open": "Apri",
+    "settings": "Impostazioni"
+  },
+  "loginBanner": {
+    "eyebrow": "Account opzionale",
+    "heading": "Accedi con Google per conservare le tue board",
+    "description": "La modalità anonima resta disponibile. Se accedi, Inkly migra automaticamente le tue board anonime attuali sul tuo account.",
+    "migrating": "Migrazione delle tue board anonime…",
+    "loginButton": "Accedi con Google",
+    "loginPending": "Avvio…"
+  },
   "teams": {
     "headTitle": "Team",
     "eyebrow": "Workspace",

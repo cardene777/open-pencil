@@ -555,6 +555,25 @@
     "settings": "设置",
     "delete": "删除"
   },
+  "teamCard": {
+    "membersCount": "{count} 名成员",
+    "boardsCount": "{count} 个看板",
+    "separator": " · ",
+    "updatedPrefix": "更新于",
+    "roleOwner": "所有者",
+    "roleEditor": "编辑者",
+    "roleViewer": "查看者",
+    "open": "打开",
+    "settings": "设置"
+  },
+  "loginBanner": {
+    "eyebrow": "可选账户",
+    "heading": "使用 Google 登录以保留你的看板",
+    "description": "匿名模式仍然可用。 如果你登录, Inkly 会自动将当前的匿名看板迁移到你的账户。",
+    "migrating": "正在迁移匿名看板…",
+    "loginButton": "使用 Google 登录",
+    "loginPending": "正在启动…"
+  },
   "teams": {
     "headTitle": "团队",
     "eyebrow": "工作区",

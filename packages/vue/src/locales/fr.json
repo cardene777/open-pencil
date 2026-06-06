@@ -555,6 +555,25 @@
     "settings": "Paramètres",
     "delete": "Supprimer"
   },
+  "teamCard": {
+    "membersCount": "{count} membres",
+    "boardsCount": "{count} tableaux",
+    "separator": " · ",
+    "updatedPrefix": "Mis à jour",
+    "roleOwner": "Propriétaire",
+    "roleEditor": "Éditeur",
+    "roleViewer": "Lecteur",
+    "open": "Ouvrir",
+    "settings": "Paramètres"
+  },
+  "loginBanner": {
+    "eyebrow": "Compte optionnel",
+    "heading": "Connectez-vous avec Google pour conserver vos tableaux",
+    "description": "Le mode anonyme reste disponible. Si vous vous connectez, Inkly migre automatiquement vos tableaux anonymes actuels vers votre compte.",
+    "migrating": "Migration de vos tableaux anonymes…",
+    "loginButton": "Se connecter avec Google",
+    "loginPending": "Démarrage…"
+  },
   "teams": {
     "headTitle": "Équipes",
     "eyebrow": "Espace de travail",

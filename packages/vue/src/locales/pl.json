@@ -555,6 +555,25 @@
     "settings": "Ustawienia",
     "delete": "Usuń"
   },
+  "teamCard": {
+    "membersCount": "{count} członków",
+    "boardsCount": "{count} tablic",
+    "separator": " · ",
+    "updatedPrefix": "Zaktualizowano",
+    "roleOwner": "Właściciel",
+    "roleEditor": "Edytor",
+    "roleViewer": "Widz",
+    "open": "Otwórz",
+    "settings": "Ustawienia"
+  },
+  "loginBanner": {
+    "eyebrow": "Konto opcjonalne",
+    "heading": "Zaloguj się przez Google, aby zachować swoje tablice",
+    "description": "Tryb anonimowy pozostaje dostępny. Po zalogowaniu Inkly automatycznie przeniesie Twoje obecne anonimowe tablice na konto.",
+    "migrating": "Migracja anonimowych tablic…",
+    "loginButton": "Zaloguj się przez Google",
+    "loginPending": "Uruchamianie…"
+  },
   "teams": {
     "headTitle": "Zespoły",
     "eyebrow": "Obszar roboczy",

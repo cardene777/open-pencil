@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useI18n } from '@inkly/vue'
+
 const { loading = false, migrating = false } = defineProps<{
   loading?: boolean
   migrating?: boolean
@@ -7,6 +9,8 @@ const { loading = false, migrating = false } = defineProps<{
 const emit = defineEmits<{
   login: []
 }>()
+
+const { loginBanner: loginBannerT } = useI18n()
 </script>
 
 <template>
@@ -16,14 +20,13 @@ const emit = defineEmits<{
   >
     <div class="space-y-2">
       <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">
-        Optional account
+        {{ loginBannerT.eyebrow }}
       </p>
-      <h2 class="text-xl font-semibold text-surface">Log in with Google to keep your boards</h2>
+      <h2 class="text-xl font-semibold text-surface">{{ loginBannerT.heading }}</h2>
       <p class="max-w-2xl text-sm text-muted">
-        Anonymous mode stays available. If you log in, Inkly migrates your current anonymous boards
-        to your account automatically.
+        {{ loginBannerT.description }}
       </p>
-      <p v-if="migrating" class="text-xs text-accent">Migrating your anonymous boards…</p>
+      <p v-if="migrating" class="text-xs text-accent">{{ loginBannerT.migrating }}</p>
     </div>
 
     <button
@@ -33,8 +36,8 @@ const emit = defineEmits<{
       :disabled="loading"
       @click="emit('login')"
     >
-      <icon-lucide-log-in class="size-4" />
-      {{ loading ? 'Starting…' : 'Google でログイン' }}
+      <icon-lucide-log-in class="size-4" :aria-hidden="true" />
+      {{ loading ? loginBannerT.loginPending : loginBannerT.loginButton }}
     </button>
   </section>
 </template>

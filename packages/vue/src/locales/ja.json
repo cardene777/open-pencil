@@ -555,6 +555,25 @@
     "settings": "設定",
     "delete": "削除"
   },
+  "teamCard": {
+    "membersCount": "メンバー {count} 名",
+    "boardsCount": "ボード {count} 件",
+    "separator": " · ",
+    "updatedPrefix": "更新",
+    "roleOwner": "オーナー",
+    "roleEditor": "編集者",
+    "roleViewer": "閲覧者",
+    "open": "開く",
+    "settings": "設定"
+  },
+  "loginBanner": {
+    "eyebrow": "任意のアカウント",
+    "heading": "Google でログインしてボードを保存",
+    "description": "匿名モードはそのまま利用できます。 ログインすると Inkly は現在の匿名ボードを自動でアカウントに移行します。",
+    "migrating": "匿名ボードを移行中…",
+    "loginButton": "Google でログイン",
+    "loginPending": "開始中…"
+  },
   "teams": {
     "headTitle": "チーム",
     "eyebrow": "ワークスペース",
