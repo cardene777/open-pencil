@@ -30,6 +30,7 @@ const {
   toolIcons,
   toolLabels,
   toolShortcuts,
+  flyoutLabel,
   ui,
   mobile = false
 } = defineProps<{
@@ -38,6 +39,7 @@ const {
   toolIcons: ToolIconMap
   toolLabels: ToolLabels
   toolShortcuts: Record<Tool, string>
+  flyoutLabel: string
   ui?: ToolbarUi
   mobile?: boolean
 }>()
@@ -67,6 +69,7 @@ function activeKeyForTool() {
       <ToolButton
         :test-id="toolbarToolTestId(activeKeyForTool(), mobile)"
         :icon="toolIcons[activeKeyForTool()]"
+        :label="toolLabels[activeKeyForTool()]"
         :active="isActiveTool(activeKeyForTool())"
         :mobile="mobile"
         @click="emit('select', activeKeyForTool())"
@@ -77,6 +80,7 @@ function activeKeyForTool() {
       <DropdownMenuTrigger as-child>
         <button
           v-test-id="toolbarFlyoutTestId(tool.key, mobile)"
+          :aria-label="flyoutLabel"
           class="flex h-8 w-3 cursor-pointer items-center justify-center border-none transition-colors"
           :class="[
             mobile ? 'rounded-[6px] select-none' : 'rounded-lg',

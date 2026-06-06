@@ -247,7 +247,10 @@
     "expandEffectSettings": "Expandir ajustes del efecto",
     "collapseEffectSettings": "Contraer ajustes del efecto",
     "toggleExportPreview": "Alternar vista previa de exportación",
-    "searchFonts": "Buscar fuentes..."
+    "searchFonts": "Buscar fuentes...",
+    "previousCategory": "Categoría anterior",
+    "nextCategory": "Categoría siguiente",
+    "moreTools": "Más herramientas"
   },
   "pages": {
     "newPage": "Nueva página",

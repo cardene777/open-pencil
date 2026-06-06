@@ -247,7 +247,10 @@
     "exportScale": "Échelle d’export",
     "exportFormat": "Format d’export",
     "gap": "Espacement",
-    "searchFonts": "Rechercher des polices..."
+    "searchFonts": "Rechercher des polices...",
+    "previousCategory": "Catégorie précédente",
+    "nextCategory": "Catégorie suivante",
+    "moreTools": "Plus d'outils"
   },
   "pages": {
     "newPage": "Nouvelle page",

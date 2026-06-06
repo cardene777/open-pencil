@@ -247,7 +247,10 @@
     "exportScale": "Scala esportazione",
     "exportFormat": "Formato esportazione",
     "gap": "Spazio",
-    "searchFonts": "Cerca font..."
+    "searchFonts": "Cerca font...",
+    "previousCategory": "Categoria precedente",
+    "nextCategory": "Categoria successiva",
+    "moreTools": "Altri strumenti"
   },
   "pages": {
     "newPage": "Nuova pagina",
