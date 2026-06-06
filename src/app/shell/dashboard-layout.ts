@@ -92,3 +92,25 @@ export function toggleSection(
     section.id === id ? { ...section, enabled: !section.enabled } : section
   )
 }
+
+/**
+ * Re-insert the section identified by `fromId` directly before `toId`. When
+ * `toId` is the same section or either id is unknown, returns the original
+ * layout unchanged (referential equality preserved so callers can early out).
+ */
+export function reorderSection(
+  layout: DashboardSectionConfig[],
+  fromId: DashboardSectionId,
+  toId: DashboardSectionId
+): DashboardSectionConfig[] {
+  if (fromId === toId) return layout
+  const fromIndex = layout.findIndex((section) => section.id === fromId)
+  const toIndex = layout.findIndex((section) => section.id === toId)
+  if (fromIndex === -1 || toIndex === -1) return layout
+
+  const next = layout.slice()
+  const [moved] = next.splice(fromIndex, 1)
+  const insertAt = next.findIndex((section) => section.id === toId)
+  next.splice(insertAt, 0, moved)
+  return next
+}

@@ -13,6 +13,7 @@ import {
   DEFAULT_DASHBOARD_LAYOUT,
   moveSection,
   readDashboardLayout,
+  reorderSection,
   resetDashboardLayout,
   toggleSection,
   writeDashboardLayout,
@@ -79,6 +80,38 @@ function handleMoveSection(id: DashboardSectionId, direction: 'up' | 'down') {
 function handleResetLayout() {
   resetDashboardLayout()
   layout.value = DEFAULT_DASHBOARD_LAYOUT.slice()
+}
+
+const draggingSectionId = ref<DashboardSectionId | null>(null)
+
+function handleDragStart(id: DashboardSectionId, event: DragEvent) {
+  draggingSectionId.value = id
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', id)
+  }
+}
+
+function handleDragOver(event: DragEvent) {
+  if (!draggingSectionId.value) return
+  event.preventDefault()
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function handleDrop(targetId: DashboardSectionId) {
+  const fromId = draggingSectionId.value
+  draggingSectionId.value = null
+  if (!fromId || fromId === targetId) return
+  const next = reorderSection(layout.value, fromId, targetId)
+  if (next === layout.value) return
+  layout.value = next
+  writeDashboardLayout(next)
+}
+
+function handleDragEnd() {
+  draggingSectionId.value = null
 }
 function sectionLabel(id: DashboardSectionId): string {
   const map: Record<DashboardSectionId, string> = {
@@ -329,9 +362,25 @@ onMounted(async () => {
             v-for="(section, index) in layout"
             :key="section.id"
             :data-test-id="`dashboard-customize-row-${section.id}`"
-            class="flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-canvas/55 px-3 py-2"
+            :draggable="true"
+            :class="[
+              'flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-canvas/55 px-3 py-2 transition-opacity',
+              draggingSectionId === section.id ? 'opacity-40' : '',
+              draggingSectionId && draggingSectionId !== section.id ? 'cursor-copy' : 'cursor-grab'
+            ]"
+            @dragstart="(event) => handleDragStart(section.id, event)"
+            @dragover="handleDragOver"
+            @drop="handleDrop(section.id)"
+            @dragend="handleDragEnd"
           >
             <div class="flex items-center gap-3">
+              <span
+                :data-test-id="`dashboard-customize-handle-${section.id}`"
+                aria-hidden="true"
+                class="text-muted"
+              >
+                <icon-lucide-grip-vertical class="size-4" />
+              </span>
               <label class="inline-flex items-center gap-2">
                 <input
                   type="checkbox"
