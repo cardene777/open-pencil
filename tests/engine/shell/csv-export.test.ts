@@ -45,6 +45,7 @@ describe('buildCsv', () => {
 describe('triggerCsvDownload', () => {
   let originalWindow: typeof globalThis.window | undefined
   let originalDocument: typeof globalThis.document | undefined
+  let originalUrl: typeof globalThis.URL
   let clickMock: ReturnType<typeof mock>
   let appendMock: ReturnType<typeof mock>
   let removeMock: ReturnType<typeof mock>
@@ -55,6 +56,7 @@ describe('triggerCsvDownload', () => {
   beforeEach(() => {
     originalWindow = (globalThis as { window?: typeof globalThis.window }).window
     originalDocument = (globalThis as { document?: typeof globalThis.document }).document
+    originalUrl = globalThis.URL
 
     clickMock = mock(() => {})
     appendMock = mock(() => {})
@@ -104,7 +106,7 @@ describe('triggerCsvDownload', () => {
     } else {
       delete (globalThis as { document?: unknown }).document
     }
-    delete (globalThis as { URL?: unknown }).URL
+    globalThis.URL = originalUrl
   })
 
   test('triggers a download and returns row count', () => {
