@@ -584,6 +584,9 @@ export const adminMessages = i18n('admin', {
     colTeam: 'Team',
     colRole: 'Role',
     colJoined: 'Joined',
-    namePlaceholder: '—'
+    namePlaceholder: '—',
+    exportCsv: 'Export CSV',
+    exportToastSingular: 'Exported {count} member',
+    exportToastPlural: 'Exported {count} members'
   }
 })

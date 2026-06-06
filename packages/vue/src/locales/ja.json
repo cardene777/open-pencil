@@ -534,7 +534,10 @@
       "colTeam": "チーム",
       "colRole": "ロール",
       "colJoined": "参加日",
-      "namePlaceholder": "—"
+      "namePlaceholder": "—",
+      "exportCsv": "CSV エクスポート",
+      "exportToastSingular": "{count} 件のメンバーをエクスポートしました",
+      "exportToastPlural": "{count} 件のメンバーをエクスポートしました"
     }
   }
 }

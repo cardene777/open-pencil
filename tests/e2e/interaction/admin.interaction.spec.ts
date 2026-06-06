@@ -214,6 +214,13 @@ test.describe('admin view interaction', () => {
     await expect(page.getByTestId('admin-boards-empty')).toBeVisible()
   })
 
+  test('members tab export CSV is disabled when empty', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-members-export-empty@inkly.test', name: 'Admin Members Export Empty' })
+    await page.goto('/admin')
+    await page.getByTestId('admin-tab-members').click()
+    await expect(page.getByTestId('admin-members-export')).toBeDisabled()
+  })
+
   test('members tab shows empty state when user has no teams', async ({ page }) => {
     await mockGoogleLogin(page, { email: 'admin-members-empty@inkly.test', name: 'Admin Members Empty' })
     await page.goto('/admin')
