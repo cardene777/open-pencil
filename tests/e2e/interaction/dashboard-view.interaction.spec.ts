@@ -140,6 +140,38 @@ test.describe('dashboard view interaction', () => {
     )
   })
 
+  test('keyboard Space + ArrowDown reorders a section and Escape cancels', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'dash-kbd@inkly.test', name: 'Dash Kbd' })
+    await page.goto('/dashboard')
+
+    await page.getByTestId('dashboard-customize-toggle').click()
+    await expect(page.getByTestId('dashboard-customize-keyboard-hint')).toBeVisible()
+
+    const rows = page.locator('[data-test-id^="dashboard-customize-row-"]')
+    await expect(rows.first()).toHaveAttribute('data-test-id', 'dashboard-customize-row-metrics')
+
+    const metricsRow = page.getByTestId('dashboard-customize-row-metrics')
+    await metricsRow.focus()
+    await metricsRow.press(' ')
+    await expect(metricsRow).toHaveAttribute('aria-grabbed', 'true')
+
+    await metricsRow.press('ArrowDown')
+    await expect(rows.first()).toHaveAttribute(
+      'data-test-id',
+      'dashboard-customize-row-quickActions'
+    )
+
+    await metricsRow.press('Enter')
+    await expect(metricsRow).toHaveAttribute('aria-grabbed', 'false')
+
+    // Escape after a pickup cancels without changing layout
+    await metricsRow.focus()
+    await metricsRow.press(' ')
+    await expect(metricsRow).toHaveAttribute('aria-grabbed', 'true')
+    await metricsRow.press('Escape')
+    await expect(metricsRow).toHaveAttribute('aria-grabbed', 'false')
+  })
+
   test('drag and drop reorders sections in the customize panel', async ({ page }) => {
     await mockGoogleLogin(page, { email: 'dash-dnd@inkly.test', name: 'Dash DnD' })
     await page.goto('/dashboard')

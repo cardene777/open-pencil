@@ -462,7 +462,12 @@ export const dashboardMessages = i18n('dashboard', {
     dragRowAria: '{section} section, draggable',
     dragStartAnnounce: 'Grabbed {section}. Drop it on another section to reorder.',
     dragDropAnnounce: 'Moved {section} before {target}.',
-    dragCancelAnnounce: 'Cancelled reorder of {section}.'
+    dragCancelAnnounce: 'Cancelled reorder of {section}.',
+    keyboardHint: 'Press Space to pick up. Use arrow keys to move, Enter to drop, Escape to cancel.',
+    keyboardPickupAnnounce: 'Picked up {section}. Arrow keys move, Enter drops, Escape cancels.',
+    keyboardMoveAnnounce: 'Moved {section} to position {position} of {total}.',
+    keyboardDropAnnounce: 'Dropped {section}.',
+    keyboardCancelAnnounce: 'Cancelled keyboard reorder of {section}.'
   }
 })
 

@@ -85,6 +85,7 @@ function handleResetLayout() {
 
 const draggingSectionId = ref<DashboardSectionId | null>(null)
 const dragAnnouncement = ref('')
+const keyboardGrabbedId = ref<DashboardSectionId | null>(null)
 
 function handleDragStart(id: DashboardSectionId, event: DragEvent) {
   draggingSectionId.value = id
@@ -137,6 +138,77 @@ function handleDragEnd() {
     })
   }
   draggingSectionId.value = null
+}
+
+function announceKeyboardPickup(id: DashboardSectionId) {
+  dragAnnouncement.value = formatTemplate(dashboard.value.customize.keyboardPickupAnnounce, {
+    section: sectionLabel(id)
+  })
+}
+
+function announceKeyboardMove(id: DashboardSectionId) {
+  const index = indexOfSection(id)
+  if (index === -1) return
+  dragAnnouncement.value = formatTemplate(dashboard.value.customize.keyboardMoveAnnounce, {
+    section: sectionLabel(id),
+    position: index + 1,
+    total: layout.value.length
+  })
+}
+
+function announceKeyboardDrop(id: DashboardSectionId) {
+  dragAnnouncement.value = formatTemplate(dashboard.value.customize.keyboardDropAnnounce, {
+    section: sectionLabel(id)
+  })
+}
+
+function announceKeyboardCancel(id: DashboardSectionId) {
+  dragAnnouncement.value = formatTemplate(dashboard.value.customize.keyboardCancelAnnounce, {
+    section: sectionLabel(id)
+  })
+}
+
+function handleRowKeydown(id: DashboardSectionId, event: KeyboardEvent) {
+  if (event.key === ' ' || event.key === 'Spacebar') {
+    event.preventDefault()
+    if (keyboardGrabbedId.value === id) {
+      keyboardGrabbedId.value = null
+      announceKeyboardDrop(id)
+      return
+    }
+    keyboardGrabbedId.value = id
+    announceKeyboardPickup(id)
+    return
+  }
+
+  if (event.key === 'Enter') {
+    if (keyboardGrabbedId.value === id) {
+      event.preventDefault()
+      keyboardGrabbedId.value = null
+      announceKeyboardDrop(id)
+    }
+    return
+  }
+
+  if (event.key === 'Escape') {
+    if (keyboardGrabbedId.value === id) {
+      event.preventDefault()
+      announceKeyboardCancel(id)
+      keyboardGrabbedId.value = null
+    }
+    return
+  }
+
+  if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+  if (keyboardGrabbedId.value !== id) return
+
+  event.preventDefault()
+  const direction = event.key === 'ArrowUp' ? 'up' : 'down'
+  const next = moveSection(layout.value, id, direction)
+  if (next === layout.value) return
+  layout.value = next
+  writeDashboardLayout(next)
+  announceKeyboardMove(id)
 }
 function sectionLabel(id: DashboardSectionId): string {
   const map: Record<DashboardSectionId, string> = {
@@ -359,6 +431,12 @@ onMounted(async () => {
           <div>
             <h2 class="text-lg font-semibold text-surface">{{ dashboard.customize.panelTitle }}</h2>
             <p class="text-sm text-muted">{{ dashboard.customize.panelHint }}</p>
+            <p
+              data-test-id="dashboard-customize-keyboard-hint"
+              class="text-xs text-muted"
+            >
+              {{ dashboard.customize.keyboardHint }}
+            </p>
           </div>
           <div class="flex items-center gap-2">
             <button
@@ -399,18 +477,21 @@ onMounted(async () => {
             :key="section.id"
             :data-test-id="`dashboard-customize-row-${section.id}`"
             :draggable="true"
+            :tabindex="0"
             :aria-label="formatTemplate(dashboard.customize.dragRowAria, { section: sectionLabel(section.id) })"
-            :aria-grabbed="draggingSectionId === section.id ? 'true' : 'false'"
+            :aria-grabbed="draggingSectionId === section.id || keyboardGrabbedId === section.id ? 'true' : 'false'"
+            :aria-roledescription="dashboard.customize.dragRowAria.split(' ')[0]"
             role="listitem"
             :class="[
-              'flex items-center justify-between gap-3 rounded-xl border border-white/8 bg-canvas/55 px-3 py-2 transition-opacity',
-              draggingSectionId === section.id ? 'opacity-40' : '',
+              'flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-accent',
+              draggingSectionId === section.id || keyboardGrabbedId === section.id ? 'opacity-60 border-accent bg-canvas/75' : 'border-white/8 bg-canvas/55',
               draggingSectionId && draggingSectionId !== section.id ? 'cursor-copy' : 'cursor-grab'
             ]"
             @dragstart="(event) => handleDragStart(section.id, event)"
             @dragover="handleDragOver"
             @drop="handleDrop(section.id)"
             @dragend="handleDragEnd"
+            @keydown="(event) => handleRowKeydown(section.id, event)"
           >
             <div class="flex items-center gap-3">
               <span

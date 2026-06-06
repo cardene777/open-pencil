@@ -413,7 +413,12 @@
       "dragRowAria": "Sekcja {section}, przeciągalna",
       "dragStartAnnounce": "{section} pochwycono. Upuść na innej sekcji, aby zmienić kolejność.",
       "dragDropAnnounce": "Przeniesiono {section} przed {target}.",
-      "dragCancelAnnounce": "Zmianę kolejności {section} anulowano."
+      "dragCancelAnnounce": "Zmianę kolejności {section} anulowano.",
+      "keyboardHint": "Spacja chwyta. Strzałki przesuwają, Enter upuszcza, Esc anuluje.",
+      "keyboardPickupAnnounce": "Pochwycono {section}. Strzałki przesuwają, Enter upuszcza, Esc anuluje.",
+      "keyboardMoveAnnounce": "Przeniesiono {section} na pozycję {position} z {total}.",
+      "keyboardDropAnnounce": "Upuszczono {section}.",
+      "keyboardCancelAnnounce": "Anulowano klawiaturową zmianę kolejności {section}."
     }
   },
   "admin": {

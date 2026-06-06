@@ -413,7 +413,12 @@
       "dragRowAria": "Секция {section}, можно перетащить",
       "dragStartAnnounce": "{section} захвачен. Отпустите на другой секции для изменения порядка.",
       "dragDropAnnounce": "{section} перемещён перед {target}.",
-      "dragCancelAnnounce": "Изменение порядка {section} отменено."
+      "dragCancelAnnounce": "Изменение порядка {section} отменено.",
+      "keyboardHint": "Пробел чтобы захватить. Стрелки перемещают, Enter отпускает, Esc отменяет.",
+      "keyboardPickupAnnounce": "Захвачен {section}. Стрелки перемещают, Enter отпускает, Esc отменяет.",
+      "keyboardMoveAnnounce": "{section} перемещён на позицию {position} из {total}.",
+      "keyboardDropAnnounce": "{section} отпущен.",
+      "keyboardCancelAnnounce": "Клавиатурное изменение порядка {section} отменено."
     }
   },
   "admin": {

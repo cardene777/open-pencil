@@ -413,7 +413,12 @@
       "dragRowAria": "{section} 区块,可拖拽",
       "dragStartAnnounce": "已抓取 {section}。拖放到其他区块以重新排序。",
       "dragDropAnnounce": "已将 {section} 移动到 {target} 之前。",
-      "dragCancelAnnounce": "已取消 {section} 的重新排序。"
+      "dragCancelAnnounce": "已取消 {section} 的重新排序。",
+      "keyboardHint": "空格抓取,方向键移动,回车放下,Esc 取消。",
+      "keyboardPickupAnnounce": "已抓取 {section}。方向键移动,回车放下,Esc 取消。",
+      "keyboardMoveAnnounce": "已将 {section} 移动到 {total} 个中的第 {position} 位。",
+      "keyboardDropAnnounce": "已放下 {section}。",
+      "keyboardCancelAnnounce": "已取消 {section} 的键盘重新排序。"
     }
   },
   "admin": {
