@@ -4,6 +4,13 @@ import { useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 
 import { useAuthStore } from '@/app/auth/store'
+import { useNotificationsStore } from '@/app/notifications/store'
+import {
+  formatNotificationTime,
+  getNotificationBody,
+  getNotificationTarget,
+  getNotificationTitle
+} from '@/app/notifications/format'
 import { initials, toast } from '@/app/shell/ui'
 import {
   createBoardEditorLocation,
@@ -16,16 +23,20 @@ import LoginBanner from '@/components/LoginBanner.vue'
 
 useHead({ title: 'Admin' })
 
-type TabKey = 'overview' | 'boards' | 'teams'
+type TabKey = 'overview' | 'boards' | 'teams' | 'activity'
+type BoardSortKey = 'updated' | 'created' | 'name' | 'collaborators'
 
 const router = useRouter()
 const auth = useAuthStore()
+const notifications = useNotificationsStore()
 const boards = ref<Board[]>([])
 const teams = ref<TeamSummary[]>([])
 const loading = ref(false)
 const tab = ref<TabKey>('overview')
 const searchQuery = ref('')
 const teamFilter = ref<'all' | 'personal' | 'team'>('all')
+const boardSort = ref<BoardSortKey>('updated')
+const boardSortDirection = ref<'asc' | 'desc'>('desc')
 const deletingBoardId = ref<string | null>(null)
 
 const authDisplayName = computed(() => auth.user?.name?.trim() || auth.user?.email || 'Inkly User')
@@ -34,13 +45,53 @@ const showLoginBanner = computed(() => auth.initialized && !auth.isAuthenticated
 
 const filteredBoards = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
-  return boards.value.filter((board) => {
+  const filtered = boards.value.filter((board) => {
     if (teamFilter.value === 'personal' && board.teamId !== null) return false
     if (teamFilter.value === 'team' && board.teamId === null) return false
     if (!query) return true
     return board.name.toLowerCase().includes(query) || board.id.includes(query)
   })
+
+  const sorted = [...filtered]
+  sorted.sort((a, b) => {
+    let aValue: number | string
+    let bValue: number | string
+    switch (boardSort.value) {
+      case 'name':
+        aValue = a.name.toLowerCase()
+        bValue = b.name.toLowerCase()
+        break
+      case 'created':
+        aValue = a.createdAt
+        bValue = b.createdAt
+        break
+      case 'collaborators':
+        aValue = a.collaborators.length
+        bValue = b.collaborators.length
+        break
+      case 'updated':
+      default:
+        aValue = a.updatedAt
+        bValue = b.updatedAt
+    }
+
+    if (aValue < bValue) return boardSortDirection.value === 'asc' ? -1 : 1
+    if (aValue > bValue) return boardSortDirection.value === 'asc' ? 1 : -1
+    return 0
+  })
+  return sorted
 })
+
+function toggleSort(key: BoardSortKey) {
+  if (boardSort.value === key) {
+    boardSortDirection.value = boardSortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    boardSort.value = key
+    boardSortDirection.value = key === 'name' ? 'asc' : 'desc'
+  }
+}
+
+const activityItems = computed(() => notifications.items.slice(0, 50))
 
 const ownedTeams = computed(() => teams.value.filter((team) => team.role === 'owner'))
 const memberTeams = computed(() => teams.value.filter((team) => team.role !== 'owner'))
@@ -70,6 +121,12 @@ async function loadAdminView() {
   } finally {
     loading.value = false
   }
+}
+
+function openActivity(notificationId: string) {
+  const record = notifications.items.find((item) => item.id === notificationId)
+  if (!record) return
+  router.push(getNotificationTarget(record))
 }
 
 async function handleDeleteBoard(board: Board) {
@@ -113,6 +170,7 @@ function formatDate(timestamp: number) {
 
 onMounted(async () => {
   await auth.init()
+  await notifications.mount()
   await loadAdminView()
 })
 </script>
@@ -212,6 +270,19 @@ onMounted(async () => {
         >
           Teams
         </button>
+        <button
+          type="button"
+          data-test-id="admin-tab-activity"
+          :class="[
+            'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
+            tab === 'activity'
+              ? 'bg-[#ef6262]/85 text-white shadow'
+              : 'text-muted hover:text-surface'
+          ]"
+          @click="tab = 'activity'"
+        >
+          Activity
+        </button>
       </section>
 
       <section
@@ -306,10 +377,51 @@ onMounted(async () => {
           <table class="w-full min-w-[640px] text-left text-sm">
             <thead class="bg-canvas/40 text-[11px] uppercase tracking-[0.2em] text-muted">
               <tr>
-                <th scope="col" class="px-3 py-2">Name</th>
+                <th scope="col" class="px-3 py-2">
+                  <button
+                    type="button"
+                    data-test-id="admin-boards-sort-name"
+                    class="inline-flex items-center gap-1 hover:text-surface"
+                    @click="toggleSort('name')"
+                  >
+                    Name
+                    <span v-if="boardSort === 'name'" aria-hidden="true">{{ boardSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                  </button>
+                </th>
                 <th scope="col" class="px-3 py-2">Workspace</th>
-                <th scope="col" class="px-3 py-2">Collaborators</th>
-                <th scope="col" class="px-3 py-2">Updated</th>
+                <th scope="col" class="px-3 py-2">
+                  <button
+                    type="button"
+                    data-test-id="admin-boards-sort-collaborators"
+                    class="inline-flex items-center gap-1 hover:text-surface"
+                    @click="toggleSort('collaborators')"
+                  >
+                    Collaborators
+                    <span v-if="boardSort === 'collaborators'" aria-hidden="true">{{ boardSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                  </button>
+                </th>
+                <th scope="col" class="px-3 py-2">
+                  <button
+                    type="button"
+                    data-test-id="admin-boards-sort-created"
+                    class="inline-flex items-center gap-1 hover:text-surface"
+                    @click="toggleSort('created')"
+                  >
+                    Created
+                    <span v-if="boardSort === 'created'" aria-hidden="true">{{ boardSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                  </button>
+                </th>
+                <th scope="col" class="px-3 py-2">
+                  <button
+                    type="button"
+                    data-test-id="admin-boards-sort-updated"
+                    class="inline-flex items-center gap-1 hover:text-surface"
+                    @click="toggleSort('updated')"
+                  >
+                    Updated
+                    <span v-if="boardSort === 'updated'" aria-hidden="true">{{ boardSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                  </button>
+                </th>
                 <th scope="col" class="px-3 py-2 text-right">Actions</th>
               </tr>
             </thead>
@@ -335,6 +447,7 @@ onMounted(async () => {
                   <span v-else>Personal</span>
                 </td>
                 <td class="px-3 py-2 text-muted">{{ board.collaborators.length }}</td>
+                <td class="px-3 py-2 text-muted">{{ formatDate(board.createdAt) }}</td>
                 <td class="px-3 py-2 text-muted">{{ formatDate(board.updatedAt) }}</td>
                 <td class="px-3 py-2 text-right">
                   <button
@@ -411,6 +524,61 @@ onMounted(async () => {
         >
           No teams found.
         </p>
+      </section>
+
+      <section
+        v-else-if="tab === 'activity'"
+        data-test-id="admin-activity"
+        class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+      >
+        <div>
+          <h2 class="text-lg font-semibold text-surface">Activity</h2>
+          <p class="text-sm text-muted">
+            Recent notifications (invitations, mentions). Latest 50 records.
+          </p>
+        </div>
+
+        <p
+          v-if="activityItems.length === 0"
+          data-test-id="admin-activity-empty"
+          class="text-sm text-muted"
+        >
+          No activity recorded.
+        </p>
+        <ul
+          v-else
+          data-test-id="admin-activity-list"
+          class="flex flex-col gap-2"
+        >
+          <li
+            v-for="record in activityItems"
+            :key="record.id"
+            :data-test-id="`admin-activity-${record.id}`"
+            class="flex cursor-pointer items-start gap-3 rounded-xl border border-white/8 bg-canvas/55 p-3 transition-colors hover:bg-hover"
+            @click="openActivity(record.id)"
+          >
+            <div
+              v-if="record.readAt === null"
+              class="mt-1.5 size-2 shrink-0 rounded-full bg-[#ef6262]"
+              aria-hidden="true"
+            />
+            <div
+              v-else
+              class="mt-1.5 size-2 shrink-0 rounded-full bg-muted/30"
+              aria-hidden="true"
+            />
+            <div class="flex flex-1 flex-col gap-1">
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-sm font-medium text-surface">{{ getNotificationTitle(record) }}</p>
+                <span class="rounded-full border border-white/8 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-muted">
+                  {{ record.type }}
+                </span>
+              </div>
+              <p class="text-xs text-muted">{{ getNotificationBody(record) }}</p>
+              <p class="text-[11px] text-muted">{{ formatNotificationTime(record) }}</p>
+            </div>
+          </li>
+        </ul>
       </section>
     </div>
   </main>

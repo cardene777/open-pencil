@@ -11,7 +11,7 @@ test.describe('admin view interaction', () => {
     await cleanState(page)
   })
 
-  test('renders the admin layout with all three tabs', async ({ page }) => {
+  test('renders the admin layout with all four tabs', async ({ page }) => {
     await page.goto('/admin')
 
     await expect(page.getByTestId('admin-view')).toBeVisible()
@@ -19,6 +19,7 @@ test.describe('admin view interaction', () => {
     await expect(page.getByTestId('admin-tab-overview')).toBeVisible()
     await expect(page.getByTestId('admin-tab-boards')).toBeVisible()
     await expect(page.getByTestId('admin-tab-teams')).toBeVisible()
+    await expect(page.getByTestId('admin-tab-activity')).toBeVisible()
   })
 
   test('default tab shows the overview metrics', async ({ page }) => {
@@ -97,5 +98,27 @@ test.describe('admin view interaction', () => {
 
     await page.getByTestId('admin-dashboard-link').click()
     await expect(page).toHaveURL(/\/dashboard/)
+  })
+
+  test('sorting boards by name toggles ascending/descending', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-sort@inkly.test', name: 'Admin Sort' })
+    await seedBoards(page, 3)
+
+    await page.goto('/admin')
+    await page.getByTestId('admin-tab-boards').click()
+
+    const sortButton = page.getByTestId('admin-boards-sort-name')
+    await sortButton.click()
+    await expect(sortButton).toContainText('↑')
+
+    await sortButton.click()
+    await expect(sortButton).toContainText('↓')
+  })
+
+  test('activity tab shows empty state when no notifications exist', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-activity-empty@inkly.test', name: 'Admin Activity Empty' })
+    await page.goto('/admin')
+    await page.getByTestId('admin-tab-activity').click()
+    await expect(page.getByTestId('admin-activity-empty')).toBeVisible()
   })
 })
