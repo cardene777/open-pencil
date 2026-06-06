@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
+import { useI18n } from '@inkly/vue'
+
 import type { TeamSummary } from '@/app/api/teams'
 
 const { team } = defineProps<{
@@ -12,6 +14,8 @@ const emit = defineEmits<{
   settings: [team: TeamSummary]
 }>()
 
+const { teamCard: teamCardT } = useI18n()
+
 const updatedAtLabel = computed(() =>
   new Intl.DateTimeFormat(undefined, {
     month: 'short',
@@ -21,7 +25,18 @@ const updatedAtLabel = computed(() =>
   }).format(team.updatedAt)
 )
 
-const roleLabel = computed(() => team.role[0].toUpperCase() + team.role.slice(1))
+const roleLabel = computed(() => {
+  if (team.role === 'owner') return teamCardT.value.roleOwner
+  if (team.role === 'editor') return teamCardT.value.roleEditor
+  return teamCardT.value.roleViewer
+})
+
+const summaryLine = computed(() => {
+  const boardsText = teamCardT.value.boardsCount({ count: team.boardCount })
+  const sep = teamCardT.value.separator
+  const updated = teamCardT.value.updatedPrefix
+  return `${boardsText}${sep}${updated} ${updatedAtLabel.value}`
+})
 </script>
 
 <template>
@@ -41,12 +56,12 @@ const roleLabel = computed(() => team.role[0].toUpperCase() + team.role.slice(1)
         >
           {{ roleLabel }}
         </span>
-        <span class="text-[11px] text-muted">{{ team.memberCount }} members</span>
+        <span class="text-[11px] text-muted">{{ teamCardT.membersCount({ count: team.memberCount }) }}</span>
       </div>
 
       <div class="space-y-2">
         <h2 class="line-clamp-2 text-xl font-semibold text-surface">{{ team.name }}</h2>
-        <p class="text-xs text-muted">{{ team.boardCount }} boards · Updated {{ updatedAtLabel }}</p>
+        <p class="text-xs text-muted">{{ summaryLine }}</p>
       </div>
     </button>
 
@@ -56,7 +71,7 @@ const roleLabel = computed(() => team.role[0].toUpperCase() + team.role.slice(1)
         class="cursor-pointer rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
         @click="emit('open', team)"
       >
-        Open
+        {{ teamCardT.open }}
       </button>
       <button
         type="button"
@@ -64,7 +79,7 @@ const roleLabel = computed(() => team.role[0].toUpperCase() + team.role.slice(1)
         class="cursor-pointer rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
         @click="emit('settings', team)"
       >
-        Settings
+        {{ teamCardT.settings }}
       </button>
     </div>
   </article>

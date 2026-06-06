@@ -555,6 +555,25 @@
     "settings": "Ajustes",
     "delete": "Eliminar"
   },
+  "teamCard": {
+    "membersCount": "{count} miembros",
+    "boardsCount": "{count} tableros",
+    "separator": " · ",
+    "updatedPrefix": "Actualizado",
+    "roleOwner": "Propietario",
+    "roleEditor": "Editor",
+    "roleViewer": "Espectador",
+    "open": "Abrir",
+    "settings": "Ajustes"
+  },
+  "loginBanner": {
+    "eyebrow": "Cuenta opcional",
+    "heading": "Inicia sesión con Google para conservar tus tableros",
+    "description": "El modo anónimo sigue disponible. Si inicias sesión, Inkly migra automáticamente tus tableros anónimos actuales a tu cuenta.",
+    "migrating": "Migrando tus tableros anónimos…",
+    "loginButton": "Iniciar sesión con Google",
+    "loginPending": "Iniciando…"
+  },
   "teams": {
     "headTitle": "Equipos",
     "eyebrow": "Espacio de trabajo",
