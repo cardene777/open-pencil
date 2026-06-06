@@ -121,4 +121,26 @@ test.describe('admin view interaction', () => {
     await page.getByTestId('admin-tab-activity').click()
     await expect(page.getByTestId('admin-activity-empty')).toBeVisible()
   })
+
+  test('export CSV button is disabled when no boards exist', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-export-empty@inkly.test', name: 'Admin Export Empty' })
+    await page.goto('/admin')
+    await page.getByTestId('admin-tab-boards').click()
+    await expect(page.getByTestId('admin-boards-export')).toBeDisabled()
+  })
+
+  test('export CSV downloads a CSV file with all visible board rows', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-export@inkly.test', name: 'Admin Export' })
+    await seedBoards(page, 2)
+
+    await page.goto('/admin')
+    await page.getByTestId('admin-tab-boards').click()
+    await expect(page.locator('[data-test-id^="admin-board-row-"]')).toHaveCount(2)
+
+    const downloadPromise = page.waitForEvent('download')
+    await page.getByTestId('admin-boards-export').click()
+    const download = await downloadPromise
+
+    expect(download.suggestedFilename()).toMatch(/^inkly-boards-\d+\.csv$/)
+  })
 })

@@ -129,6 +129,41 @@ function openActivity(notificationId: string) {
   router.push(getNotificationTarget(record))
 }
 
+function escapeCsvField(value: string | number): string {
+  const text = String(value)
+  if (text.includes(',') || text.includes('"') || text.includes('\n')) {
+    return `"${text.replace(/"/g, '""')}"`
+  }
+  return text
+}
+
+function exportBoardsCsv() {
+  const header = ['Id', 'Name', 'Workspace', 'Collaborators', 'Created', 'Updated']
+  const rows = filteredBoards.value.map((board) => [
+    board.id,
+    board.name,
+    board.team?.name ?? 'Personal',
+    String(board.collaborators.length),
+    new Date(board.createdAt).toISOString(),
+    new Date(board.updatedAt).toISOString()
+  ])
+
+  const csv = [header, ...rows]
+    .map((row) => row.map(escapeCsvField).join(','))
+    .join('\n')
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `inkly-boards-${Date.now()}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  toast.success(`Exported ${rows.length} board${rows.length === 1 ? '' : 's'}`)
+}
+
 async function handleDeleteBoard(board: Board) {
   if (deletingBoardId.value) return
   const confirmed = window.confirm(`Delete board "${board.name}"? This cannot be undone.`)
@@ -330,7 +365,17 @@ onMounted(async () => {
             <h2 class="text-lg font-semibold text-surface">All boards</h2>
             <p class="text-sm text-muted">{{ filteredBoards.length }} / {{ totalBoards }} shown</p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-test-id="admin-boards-export"
+              :disabled="filteredBoards.length === 0"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+              @click="exportBoardsCsv"
+            >
+              <icon-lucide-download class="size-4" />
+              <span>Export CSV</span>
+            </button>
             <label class="sr-only" for="admin-boards-search-input">Search boards</label>
             <input
               id="admin-boards-search-input"
