@@ -526,6 +526,42 @@ export const accountMessages = i18n('account', {
   toastLogoutFail: 'Failed to sign out'
 })
 
+export const boardSettingsMessages = i18n('boardSettings', {
+  headTitleDefault: 'Board Settings',
+  headTitleWithName: params('{name} Settings'),
+  backToBoards: 'Back to boards',
+  headingFallback: 'Board settings',
+  subtitle: 'Review invitation links and the anonymous collaborators that have accepted them.',
+  openBoard: 'Open board',
+  newInvite: 'New invite',
+  loading: 'Loading board settings…',
+  invitationLinksHeading: 'Invitation links',
+  refresh: 'Refresh',
+  editorInvite: 'Editor invite',
+  viewerInvite: 'Viewer invite',
+  statusRevoked: 'Revoked',
+  statusActive: 'Active',
+  statusSeparator: ' · ',
+  expiresPrefix: 'Expires',
+  linkUnavailable: 'Link unavailable',
+  copy: 'Copy',
+  copied: 'Copied',
+  revoke: 'Revoke',
+  emptyInvitations: 'No invitation links yet.',
+  collaboratorsHeading: 'Collaborators',
+  addedPrefix: 'Added',
+  revokeDialogTitle: 'Revoke invitation',
+  revokeDialogDescription:
+    'This invite link will stop working immediately. Existing collaborators keep their current access.',
+  revokeDialogCancel: 'Cancel',
+  revokeDialogConfirm: 'Revoke link',
+  shareModalBoardFallback: 'Board',
+  toastLinkCopied: 'Link copied to clipboard',
+  toastInvitationRevoked: 'Invitation revoked',
+  toastLoadFail: 'Failed to load board settings',
+  toastRevokeFail: 'Failed to revoke invitation'
+})
+
 export const adminMessages = i18n('admin', {
   title: 'Admin',
   badge: 'Internal',
