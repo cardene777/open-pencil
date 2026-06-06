@@ -35,6 +35,7 @@ import {
   type Board
 } from '@/app/api/client'
 import { listTeams, type TeamSummary } from '@/app/api/teams'
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import LoginBanner from '@/components/LoginBanner.vue'
 import NotificationBell from '@/components/NotificationBell.vue'
 
@@ -283,6 +284,7 @@ onMounted(async () => {
           <h1 class="text-2xl font-semibold text-surface">{{ dashboard.title }}</h1>
         </div>
         <div class="flex items-center gap-3">
+          <LocaleSwitcher test-id="dashboard-locale-switcher" />
           <NotificationBell v-if="showAccountLink" />
 
           <button

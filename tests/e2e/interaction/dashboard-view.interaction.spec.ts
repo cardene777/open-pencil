@@ -103,6 +103,23 @@ test.describe('dashboard view interaction', () => {
     await expect(page.getByTestId('dashboard-section-metrics')).toHaveCount(0)
   })
 
+  test('locale switcher changes the dashboard heading and persists across reload', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'dash-locale@inkly.test', name: 'Dash Locale' })
+    await page.goto('/dashboard')
+
+    const heading = page.locator('h1').first()
+    await expect(heading).toHaveText(/ダッシュボード|Dashboard|Pulpit|Panel|Tableau de bord|仪表板/i)
+
+    await page.getByTestId('dashboard-locale-switcher').selectOption('en')
+    await expect(heading).toHaveText('Dashboard')
+
+    await page.reload()
+    await expect(heading).toHaveText('Dashboard')
+
+    // Reset for other tests sharing the same browser context
+    await page.getByTestId('dashboard-locale-switcher').selectOption('ja')
+  })
+
   test('customize panel exposes accessible drag handles and aria-live announce', async ({ page }) => {
     await mockGoogleLogin(page, { email: 'dash-a11y@inkly.test', name: 'Dash A11y' })
     await page.goto('/dashboard')
