@@ -574,6 +574,28 @@
     "loginButton": "Mit Google anmelden",
     "loginPending": "Wird gestartet…"
   },
+  "shareModal": {
+    "dialogTitle": "Teilen",
+    "dialogDescription": "Erstelle einen Einladungslink, um {boardName} zu teilen.",
+    "boardNameFallback": "Board",
+    "boardMissingNotice": "Erstelle zuerst ein Board unter /boards und öffne diesen Dialog erneut, um Einladungslinks zu erstellen.",
+    "emailLabel": "E-Mail",
+    "emailPlaceholder": "collaborator@example.com",
+    "emailRequired": "E-Mail ist erforderlich",
+    "emailInvalid": "Bitte eine gültige E-Mail-Adresse eingeben",
+    "roleLabel": "Rolle",
+    "roleEditor": "Bearbeiter",
+    "roleViewer": "Betrachter",
+    "cancel": "Schließen",
+    "submit": "Einladung erstellen",
+    "submitPending": "Wird erstellt…",
+    "invitationUrlLabel": "Einladungs-URL",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "toastInvitationCreated": "Einladungslink erstellt",
+    "toastCreateFail": "Einladung konnte nicht erstellt werden",
+    "toastLinkCopied": "Link in die Zwischenablage kopiert"
+  },
   "teams": {
     "headTitle": "Teams",
     "eyebrow": "Workspace",

@@ -574,6 +574,28 @@
     "loginButton": "Zaloguj się przez Google",
     "loginPending": "Uruchamianie…"
   },
+  "shareModal": {
+    "dialogTitle": "Udostępnij",
+    "dialogDescription": "Wygeneruj link z zaproszeniem, aby udostępnić {boardName}.",
+    "boardNameFallback": "Tablica",
+    "boardMissingNotice": "Najpierw utwórz tablicę w /boards, a następnie ponownie otwórz to okno, aby generować linki z zaproszeniem.",
+    "emailLabel": "E-mail",
+    "emailPlaceholder": "collaborator@example.com",
+    "emailRequired": "Adres e-mail jest wymagany",
+    "emailInvalid": "Wprowadź prawidłowy adres e-mail",
+    "roleLabel": "Rola",
+    "roleEditor": "Edytor",
+    "roleViewer": "Widz",
+    "cancel": "Zamknij",
+    "submit": "Utwórz zaproszenie",
+    "submitPending": "Tworzenie…",
+    "invitationUrlLabel": "URL zaproszenia",
+    "copy": "Kopiuj",
+    "copied": "Skopiowano",
+    "toastInvitationCreated": "Link z zaproszeniem utworzony",
+    "toastCreateFail": "Nie udało się utworzyć zaproszenia",
+    "toastLinkCopied": "Link skopiowany do schowka"
+  },
   "teams": {
     "headTitle": "Zespoły",
     "eyebrow": "Obszar roboczy",

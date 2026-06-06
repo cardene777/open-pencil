@@ -574,6 +574,28 @@
     "loginButton": "Войти через Google",
     "loginPending": "Запуск…"
   },
+  "shareModal": {
+    "dialogTitle": "Поделиться",
+    "dialogDescription": "Создайте ссылку-приглашение, чтобы поделиться доской «{boardName}».",
+    "boardNameFallback": "Доска",
+    "boardMissingNotice": "Сначала создайте доску в /boards, затем снова откройте этот диалог, чтобы создавать ссылки-приглашения.",
+    "emailLabel": "Электронная почта",
+    "emailPlaceholder": "collaborator@example.com",
+    "emailRequired": "Требуется электронная почта",
+    "emailInvalid": "Введите действительный адрес электронной почты",
+    "roleLabel": "Роль",
+    "roleEditor": "Редактор",
+    "roleViewer": "Наблюдатель",
+    "cancel": "Закрыть",
+    "submit": "Создать приглашение",
+    "submitPending": "Создание…",
+    "invitationUrlLabel": "URL приглашения",
+    "copy": "Копировать",
+    "copied": "Скопировано",
+    "toastInvitationCreated": "Ссылка-приглашение создана",
+    "toastCreateFail": "Не удалось создать приглашение",
+    "toastLinkCopied": "Ссылка скопирована в буфер обмена"
+  },
   "teams": {
     "headTitle": "Команды",
     "eyebrow": "Рабочее пространство",

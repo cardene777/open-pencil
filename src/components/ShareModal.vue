@@ -10,6 +10,8 @@ import {
   DialogTitle
 } from 'reka-ui'
 
+import { useI18n } from '@inkly/vue'
+
 import AppInput from '@/components/ui/AppInput.vue'
 import { isValidEmail } from '@/app/auth/email'
 import { inviteUser, type InvitationRole } from '@/app/api/client'
@@ -21,10 +23,12 @@ const emit = defineEmits<{
   created: []
 }>()
 
-const { boardId, boardName = 'Board' } = defineProps<{
+const { boardId, boardName = '' } = defineProps<{
   boardId: string | null
   boardName?: string
 }>()
+
+const { shareModal: shareModalT } = useI18n()
 
 const email = ref('')
 const role = ref<InvitationRole>('editor')
@@ -36,10 +40,15 @@ const cls = useDialogUI({
   content: 'w-[min(32rem,calc(100vw-2rem))] rounded-2xl p-5 shadow-2xl'
 })
 
+const resolvedBoardName = computed(() => boardName || shareModalT.value.boardNameFallback)
+const dialogDescriptionText = computed(() =>
+  shareModalT.value.dialogDescription({ boardName: resolvedBoardName.value })
+)
+
 const normalizedEmail = computed(() => email.value.trim())
 const emailError = computed(() => {
-  if (normalizedEmail.value.length === 0) return 'Email is required'
-  if (!isValidEmail(normalizedEmail.value)) return 'Enter a valid email address'
+  if (normalizedEmail.value.length === 0) return shareModalT.value.emailRequired
+  if (!isValidEmail(normalizedEmail.value)) return shareModalT.value.emailInvalid
   return ''
 })
 const canSubmit = computed(
@@ -68,9 +77,9 @@ async function onSubmit() {
     })
     invitationUrl.value = new URL(invitation.url, window.location.origin).toString()
     emit('created')
-    toast.info('Invitation link created')
+    toast.info(shareModalT.value.toastInvitationCreated)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to create invitation'
+    const message = error instanceof Error ? error.message : shareModalT.value.toastCreateFail
     errorMessage.value = message
     toast.error(message)
   } finally {
@@ -81,7 +90,7 @@ async function onSubmit() {
 function copyInvitationUrl() {
   if (!invitationUrl.value) return
   void copy(invitationUrl.value)
-  toast.info('Link copied to clipboard')
+  toast.info(shareModalT.value.toastLinkCopied)
 }
 </script>
 
@@ -90,23 +99,23 @@ function copyInvitationUrl() {
     <DialogPortal>
       <DialogOverlay :class="cls.overlay" />
       <DialogContent data-test-id="share-modal" :class="cls.content">
-        <DialogTitle :class="cls.title">共有</DialogTitle>
+        <DialogTitle :class="cls.title">{{ shareModalT.dialogTitle }}</DialogTitle>
         <DialogDescription :class="cls.description">
-          {{ boardName }} に参加するための招待 link を発行します。
+          {{ dialogDescriptionText }}
         </DialogDescription>
 
         <div class="mt-4 space-y-4">
           <div v-if="!boardId" class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-100">
-            `/boards` で board を作成してから開くと、招待 link を発行できます。
+            {{ shareModalT.boardMissingNotice }}
           </div>
 
           <label class="block space-y-1.5">
-            <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Email</span>
+            <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">{{ shareModalT.emailLabel }}</span>
               <AppInput
                 v-model="email"
                 test-id="share-email-input"
                 type="email"
-                placeholder="collaborator@example.com"
+                :placeholder="shareModalT.emailPlaceholder"
                 :disabled="loading || !boardId"
               />
             </label>
@@ -120,15 +129,16 @@ function copyInvitationUrl() {
           </div>
 
           <label class="block space-y-1.5">
-            <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Role</span>
+            <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">{{ shareModalT.roleLabel }}</span>
             <select
               v-model="role"
               data-test-id="share-role-select"
               class="w-full rounded border border-border bg-input px-2 py-1.5 text-xs text-surface outline-none focus:border-accent"
               :disabled="loading || !boardId"
+              :aria-label="shareModalT.roleLabel"
             >
-              <option value="editor">Editor</option>
-              <option value="viewer">Viewer</option>
+              <option value="editor">{{ shareModalT.roleEditor }}</option>
+              <option value="viewer">{{ shareModalT.roleViewer }}</option>
             </select>
           </label>
 
@@ -138,7 +148,7 @@ function copyInvitationUrl() {
               class="cursor-pointer rounded-md border border-border bg-canvas px-3 py-1.5 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="open = false"
             >
-              Close
+              {{ shareModalT.cancel }}
             </button>
             <button
               type="button"
@@ -147,7 +157,7 @@ function copyInvitationUrl() {
               :disabled="!canSubmit"
               @click="onSubmit"
             >
-              {{ loading ? 'Creating…' : 'Create invite' }}
+              {{ loading ? shareModalT.submitPending : shareModalT.submit }}
             </button>
           </div>
 
@@ -160,14 +170,14 @@ function copyInvitationUrl() {
             class="space-y-2 rounded-xl border border-border bg-canvas/80 p-3"
           >
             <div class="flex items-center justify-between gap-3">
-              <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">Invitation URL</span>
+              <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">{{ shareModalT.invitationUrlLabel }}</span>
               <button
                 type="button"
                 data-test-id="share-copy-link"
                 class="cursor-pointer rounded-md px-2 py-1 text-[11px] text-accent transition-colors hover:bg-hover"
                 @click="copyInvitationUrl"
               >
-                {{ copied ? 'Copied' : 'Copy' }}
+                {{ copied ? shareModalT.copied : shareModalT.copy }}
               </button>
             </div>
             <p data-test-id="share-link-output" class="break-all text-xs text-surface">
