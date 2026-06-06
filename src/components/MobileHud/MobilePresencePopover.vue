@@ -1,11 +1,20 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
+
+import { useI18n } from '@inkly/vue'
 
 import { initials } from '@/app/shell/ui'
 import { colorToCSS } from '@inkly/core/color'
 import { useMobileHudContext } from '@/components/MobileHud/context'
 
 const hud = useMobileHudContext()
+const { mobilePresence: mobilePresenceT } = useI18n()
+
+const localDisplayName = computed(() => hud.collabState.localName || mobilePresenceT.value.youFallback)
+const onlineCountText = computed(() =>
+  mobilePresenceT.value.onlineCount({ count: hud.onlineCount })
+)
 </script>
 
 <template>
@@ -15,7 +24,7 @@ const hud = useMobileHudContext()
         class="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-panel/70 px-3 shadow-md backdrop-blur-xl select-none active:bg-hover"
       >
         <span class="size-2 rounded-full bg-green-500" />
-        <span class="text-xs text-surface">Online: {{ hud.onlineCount }}</span>
+        <span class="text-xs text-surface">{{ onlineCountText }}</span>
       </button>
     </PopoverTrigger>
     <PopoverPortal>
@@ -26,19 +35,19 @@ const hud = useMobileHudContext()
         align="center"
         class="z-50 w-56 rounded-xl border border-border bg-panel p-3 shadow-xl"
       >
-        <div class="mb-2 text-[11px] tracking-wider text-muted uppercase">In this room</div>
+        <div class="mb-2 text-[11px] tracking-wider text-muted uppercase">{{ mobilePresenceT.inThisRoom }}</div>
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-2">
             <div
               class="flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
               :style="{ background: colorToCSS(hud.collabState.localColor) }"
             >
-              {{ initials(hud.collabState.localName || 'You') }}
+              {{ initials(localDisplayName) }}
             </div>
             <span class="min-w-0 flex-1 truncate text-xs text-surface">
-              {{ hud.collabState.localName || 'You' }}
+              {{ localDisplayName }}
             </span>
-            <span class="text-[10px] text-muted">you</span>
+            <span class="text-[10px] text-muted">{{ mobilePresenceT.youSuffix }}</span>
           </div>
 
           <div
@@ -56,7 +65,7 @@ const hud = useMobileHudContext()
             </div>
             <span class="min-w-0 flex-1 truncate text-xs text-surface">{{ peer.name }}</span>
             <span v-if="hud.followingPeer === peer.clientId" class="text-[10px] text-accent">
-              following
+              {{ mobilePresenceT.following }}
             </span>
           </div>
         </div>
@@ -65,7 +74,7 @@ const hud = useMobileHudContext()
           class="mt-3 flex h-7 w-full cursor-pointer items-center justify-center rounded border border-border bg-transparent text-xs text-muted select-none active:bg-hover"
           @click="hud.disconnect"
         >
-          Disconnect
+          {{ mobilePresenceT.disconnect }}
         </button>
       </PopoverContent>
     </PopoverPortal>

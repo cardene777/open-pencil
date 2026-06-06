@@ -574,6 +574,14 @@
     "loginButton": "Iniciar sesión con Google",
     "loginPending": "Iniciando…"
   },
+  "mobilePresence": {
+    "onlineCount": "En línea: {count}",
+    "inThisRoom": "En esta sala",
+    "youFallback": "Tú",
+    "youSuffix": "tú",
+    "following": "siguiendo",
+    "disconnect": "Desconectar"
+  },
   "safariBanner": {
     "messagePrefix": "Tu navegador no admite la API de archivos local. Los archivos se descargarán en lugar de guardarse en su lugar. ",
     "useChrome": "Usa Chrome",

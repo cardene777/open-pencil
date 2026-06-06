@@ -574,6 +574,14 @@
     "loginButton": "Google でログイン",
     "loginPending": "開始中…"
   },
+  "mobilePresence": {
+    "onlineCount": "オンライン: {count}",
+    "inThisRoom": "このルーム",
+    "youFallback": "あなた",
+    "youSuffix": "あなた",
+    "following": "フォロー中",
+    "disconnect": "切断"
+  },
   "safariBanner": {
     "messagePrefix": "お使いのブラウザはローカル file API に対応していません。 ファイルは保存ではなくダウンロードされます。 ",
     "useChrome": "Chrome を使う",
