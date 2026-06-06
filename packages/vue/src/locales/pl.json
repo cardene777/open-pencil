@@ -542,6 +542,19 @@
     "loading": "Ładowanie powiadomień…",
     "empty": "Brak powiadomień."
   },
+  "boardCard": {
+    "previewPending": "Podgląd w przygotowaniu",
+    "previewAlt": "Podgląd tablicy {name}",
+    "badge": "Tablica",
+    "peopleCount": "{count} osób",
+    "updatedPrefix": "Zaktualizowano",
+    "pinAriaPin": "Przypnij tablicę",
+    "pinAriaUnpin": "Odepnij tablicę",
+    "pinLabel": "Przypnij",
+    "pinnedLabel": "Przypięta",
+    "settings": "Ustawienia",
+    "delete": "Usuń"
+  },
   "teams": {
     "headTitle": "Zespoły",
     "eyebrow": "Obszar roboczy",

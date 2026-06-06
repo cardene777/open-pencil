@@ -542,6 +542,19 @@
     "loading": "Caricamento notifiche…",
     "empty": "Ancora nessuna notifica."
   },
+  "boardCard": {
+    "previewPending": "Anteprima in preparazione",
+    "previewAlt": "Anteprima di {name}",
+    "badge": "Bacheca",
+    "peopleCount": "{count} persone",
+    "updatedPrefix": "Aggiornata",
+    "pinAriaPin": "Fissa la bacheca",
+    "pinAriaUnpin": "Rimuovi la bacheca",
+    "pinLabel": "Fissa",
+    "pinnedLabel": "Fissata",
+    "settings": "Impostazioni",
+    "delete": "Elimina"
+  },
   "teams": {
     "headTitle": "Team",
     "eyebrow": "Workspace",

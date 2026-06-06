@@ -542,6 +542,19 @@
     "loading": "Cargando notificaciones…",
     "empty": "Aún no hay notificaciones."
   },
+  "boardCard": {
+    "previewPending": "Vista previa pendiente",
+    "previewAlt": "Vista previa de {name}",
+    "badge": "Tablero",
+    "peopleCount": "{count} personas",
+    "updatedPrefix": "Actualizado",
+    "pinAriaPin": "Fijar tablero",
+    "pinAriaUnpin": "Desfijar tablero",
+    "pinLabel": "Fijar",
+    "pinnedLabel": "Fijado",
+    "settings": "Ajustes",
+    "delete": "Eliminar"
+  },
   "teams": {
     "headTitle": "Equipos",
     "eyebrow": "Espacio de trabajo",

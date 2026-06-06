@@ -542,6 +542,19 @@
     "loading": "正在加载通知…",
     "empty": "暂无通知。"
   },
+  "boardCard": {
+    "previewPending": "预览准备中",
+    "previewAlt": "{name} 的预览",
+    "badge": "看板",
+    "peopleCount": "{count} 人",
+    "updatedPrefix": "更新于",
+    "pinAriaPin": "固定看板",
+    "pinAriaUnpin": "取消固定看板",
+    "pinLabel": "固定",
+    "pinnedLabel": "已固定",
+    "settings": "设置",
+    "delete": "删除"
+  },
   "teams": {
     "headTitle": "团队",
     "eyebrow": "工作区",
