@@ -647,6 +647,15 @@ export const mobilePresenceMessages = i18n('mobilePresence', {
   disconnect: 'Disconnect'
 })
 
+export const mentionInputMessages = i18n('mentionInput', {
+  heading: 'Mention',
+  matchingQuery: params('Matching "{query}"'),
+  prompt: 'Type a name or email',
+  loading: 'Loading people…',
+  empty: 'No matching collaborators.',
+  avatarAlt: params('{name} avatar')
+})
+
 export const safariBannerMessages = i18n('safariBanner', {
   messagePrefix:
     "Your browser doesn't support the local file API. Files will be downloaded instead of saved in place. ",

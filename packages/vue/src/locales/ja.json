@@ -582,6 +582,14 @@
     "following": "フォロー中",
     "disconnect": "切断"
   },
+  "mentionInput": {
+    "heading": "メンション",
+    "matchingQuery": "「{query}」 を検索中",
+    "prompt": "名前またはメールアドレスを入力",
+    "loading": "メンバー読み込み中…",
+    "empty": "該当するコラボレーターがいません。",
+    "avatarAlt": "{name} のアバター"
+  },
   "safariBanner": {
     "messagePrefix": "お使いのブラウザはローカル file API に対応していません。 ファイルは保存ではなくダウンロードされます。 ",
     "useChrome": "Chrome を使う",

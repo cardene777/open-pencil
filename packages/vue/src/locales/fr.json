@@ -582,6 +582,14 @@
     "following": "suivi",
     "disconnect": "Déconnecter"
   },
+  "mentionInput": {
+    "heading": "Mention",
+    "matchingQuery": "Recherche de \"{query}\"",
+    "prompt": "Saisissez un nom ou un e-mail",
+    "loading": "Chargement des personnes…",
+    "empty": "Aucun collaborateur correspondant.",
+    "avatarAlt": "Avatar de {name}"
+  },
   "safariBanner": {
     "messagePrefix": "Votre navigateur ne prend pas en charge l'API de fichiers locale. Les fichiers seront téléchargés au lieu d'être enregistrés sur place. ",
     "useChrome": "Utilisez Chrome",

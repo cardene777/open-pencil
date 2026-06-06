@@ -582,6 +582,14 @@
     "following": "siguiendo",
     "disconnect": "Desconectar"
   },
+  "mentionInput": {
+    "heading": "Mención",
+    "matchingQuery": "Buscando \"{query}\"",
+    "prompt": "Escribe un nombre o correo electrónico",
+    "loading": "Cargando personas…",
+    "empty": "No hay colaboradores coincidentes.",
+    "avatarAlt": "Avatar de {name}"
+  },
   "safariBanner": {
     "messagePrefix": "Tu navegador no admite la API de archivos local. Los archivos se descargarán en lugar de guardarse en su lugar. ",
     "useChrome": "Usa Chrome",
