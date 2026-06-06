@@ -14,6 +14,7 @@ import {
 } from 'reka-ui'
 
 import { useAuthStore } from '@/app/auth/store'
+import { readPinnedBoardIds, togglePinnedBoard } from '@/app/boards/pinned'
 import { readBoardPreview } from '@/app/boards/preview'
 import { initials, toast } from '@/app/shell/ui'
 import BoardCard from '@/components/BoardCard.vue'
@@ -42,6 +43,7 @@ const searchQuery = ref('')
 const loading = ref(false)
 const creating = ref(false)
 const previews = ref<Record<string, string>>({})
+const pinnedIds = ref<Set<string>>(new Set())
 const deleteDialogOpen = ref(false)
 const deleteTarget = ref<Board | null>(null)
 const dialogCls = useDialogUI({
@@ -56,9 +58,27 @@ const hasOwnedTeams = computed(() => ownedTeams.value.length > 0)
 
 const filteredBoards = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
-  if (!query) return boards.value
-  return boards.value.filter((board) => board.name.toLowerCase().includes(query))
+  const matched = query
+    ? boards.value.filter((board) => board.name.toLowerCase().includes(query))
+    : boards.value
+  return [...matched].sort((a, b) => {
+    const aPinned = pinnedIds.value.has(a.id) ? 1 : 0
+    const bPinned = pinnedIds.value.has(b.id) ? 1 : 0
+    if (aPinned !== bPinned) return bPinned - aPinned
+    return b.updatedAt - a.updatedAt
+  })
 })
+
+function handleTogglePin(board: Board) {
+  const nowPinned = togglePinnedBoard(board.id)
+  const next = new Set(pinnedIds.value)
+  if (nowPinned) {
+    next.add(board.id)
+  } else {
+    next.delete(board.id)
+  }
+  pinnedIds.value = next
+}
 
 function syncPreviews(nextBoards: Board[]) {
   previews.value = Object.fromEntries(
@@ -172,6 +192,7 @@ async function startGoogleLogin() {
 
 onMounted(async () => {
   await auth.init()
+  pinnedIds.value = new Set(readPinnedBoardIds())
   await Promise.all([loadBoardsView(), loadOwnedTeams()])
 })
 </script>
@@ -338,9 +359,11 @@ onMounted(async () => {
             :key="board.id"
             :board="board"
             :preview-url="previews[board.id] ?? null"
+            :pinned="pinnedIds.has(board.id)"
             @open="openBoard"
             @settings="openSettings"
             @delete="requestRemoveBoard"
+            @toggle-pin="handleTogglePin"
           />
         </div>
       </section>

@@ -6,15 +6,17 @@ import { colorToCSS } from '@inkly/core/color'
 import { colorFromAnonymousId } from '@/app/collab/cursor-color'
 import type { Board } from '@/app/api/client'
 
-const { board, previewUrl = null } = defineProps<{
+const { board, previewUrl = null, pinned = false } = defineProps<{
   board: Board
   previewUrl?: string | null
+  pinned?: boolean
 }>()
 
 const emit = defineEmits<{
   open: [board: Board]
   settings: [board: Board]
   delete: [board: Board]
+  togglePin: [board: Board]
 }>()
 
 const updatedAtLabel = computed(() =>
@@ -111,14 +113,32 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
     </button>
 
     <div class="flex items-center justify-between border-t border-border px-4 py-3">
-      <button
-        type="button"
-        data-test-id="board-settings"
-        class="cursor-pointer rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
-        @click="emit('settings', board)"
-      >
-        Settings
-      </button>
+      <div class="flex items-center gap-1">
+        <button
+          type="button"
+          data-test-id="board-pin"
+          :aria-label="pinned ? 'Unpin board' : 'Pin board'"
+          :aria-pressed="pinned"
+          :class="[
+            'cursor-pointer rounded-md px-2 py-1 text-xs transition-colors',
+            pinned
+              ? 'text-accent hover:bg-accent/10'
+              : 'text-muted hover:bg-hover hover:text-surface'
+          ]"
+          @click="emit('togglePin', board)"
+        >
+          <icon-lucide-pin class="size-3.5 inline" />
+          <span class="ml-1">{{ pinned ? 'Pinned' : 'Pin' }}</span>
+        </button>
+        <button
+          type="button"
+          data-test-id="board-settings"
+          class="cursor-pointer rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
+          @click="emit('settings', board)"
+        >
+          Settings
+        </button>
+      </div>
       <button
         type="button"
         data-test-id="board-delete"
