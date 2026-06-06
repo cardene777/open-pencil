@@ -22,11 +22,14 @@ function handleChange(event: Event) {
       :aria-hidden="true"
       class="size-4 text-muted"
     />
-    <span class="sr-only">{{ localeLabels[locale] }}</span>
+    <span :data-test-id="`${testId}-current`" class="text-xs font-medium tracking-wide text-surface">
+      {{ localeLabels[locale] }}
+    </span>
     <select
       :data-test-id="testId"
       :value="locale"
       class="cursor-pointer bg-transparent text-sm text-surface outline-none"
+      :aria-label="localeLabels[locale]"
       @change="handleChange"
     >
       <option
