@@ -443,6 +443,21 @@ export const dashboardMessages = i18n('dashboard', {
     boards: 'Boards',
     teams: 'Teams',
     account: 'Account'
+  },
+  customize: {
+    button: 'Customize',
+    panelTitle: 'Customize dashboard',
+    panelHint: 'Toggle sections and reorder them. Saved to this browser.',
+    reset: 'Reset to default',
+    done: 'Done',
+    moveUp: 'Move up',
+    moveDown: 'Move down',
+    toggleAria: 'Toggle section',
+    sectionMetrics: 'Metrics',
+    sectionQuickActions: 'Quick actions',
+    sectionPinned: 'Pinned boards',
+    sectionRecent: 'Recent boards',
+    sectionActivity: 'Activity'
   }
 })
 

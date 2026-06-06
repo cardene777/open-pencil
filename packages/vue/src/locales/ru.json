@@ -394,6 +394,21 @@
       "boards": "Доски",
       "teams": "Команды",
       "account": "Аккаунт"
+    },
+    "customize": {
+      "button": "Настроить",
+      "panelTitle": "Настройка панели",
+      "panelHint": "Включайте секции и меняйте их порядок. Сохраняется в этом браузере.",
+      "reset": "Сбросить к значениям по умолчанию",
+      "done": "Готово",
+      "moveUp": "Вверх",
+      "moveDown": "Вниз",
+      "toggleAria": "Переключить секцию",
+      "sectionMetrics": "Метрики",
+      "sectionQuickActions": "Быстрые действия",
+      "sectionPinned": "Закреплённые доски",
+      "sectionRecent": "Недавние доски",
+      "sectionActivity": "Активность"
     }
   },
   "admin": {

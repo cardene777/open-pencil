@@ -394,6 +394,21 @@
       "boards": "看板",
       "teams": "团队",
       "account": "账户"
+    },
+    "customize": {
+      "button": "自定义",
+      "panelTitle": "自定义仪表板",
+      "panelHint": "切换并重新排序各个区块。仅保存在此浏览器中。",
+      "reset": "恢复默认",
+      "done": "完成",
+      "moveUp": "上移",
+      "moveDown": "下移",
+      "toggleAria": "切换区块",
+      "sectionMetrics": "指标",
+      "sectionQuickActions": "快捷操作",
+      "sectionPinned": "已固定看板",
+      "sectionRecent": "最近的看板",
+      "sectionActivity": "动态"
     }
   },
   "admin": {

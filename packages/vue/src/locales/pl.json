@@ -394,6 +394,21 @@
       "boards": "Tablice",
       "teams": "Zespoły",
       "account": "Konto"
+    },
+    "customize": {
+      "button": "Dostosuj",
+      "panelTitle": "Dostosuj pulpit",
+      "panelHint": "Przełącz sekcje i zmień ich kolejność. Zapisywane w tej przeglądarce.",
+      "reset": "Przywróć domyślne",
+      "done": "Gotowe",
+      "moveUp": "W górę",
+      "moveDown": "W dół",
+      "toggleAria": "Przełącz sekcję",
+      "sectionMetrics": "Metryki",
+      "sectionQuickActions": "Szybkie akcje",
+      "sectionPinned": "Przypięte tablice",
+      "sectionRecent": "Ostatnie tablice",
+      "sectionActivity": "Aktywność"
     }
   },
   "admin": {

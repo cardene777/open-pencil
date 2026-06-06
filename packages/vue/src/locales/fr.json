@@ -394,6 +394,21 @@
       "boards": "Tableaux",
       "teams": "Équipes",
       "account": "Compte"
+    },
+    "customize": {
+      "button": "Personnaliser",
+      "panelTitle": "Personnaliser le tableau de bord",
+      "panelHint": "Affichez/masquez et réorganisez les sections. Enregistré dans ce navigateur.",
+      "reset": "Réinitialiser",
+      "done": "Terminé",
+      "moveUp": "Monter",
+      "moveDown": "Descendre",
+      "toggleAria": "Basculer la section",
+      "sectionMetrics": "Indicateurs",
+      "sectionQuickActions": "Actions rapides",
+      "sectionPinned": "Tableaux épinglés",
+      "sectionRecent": "Tableaux récents",
+      "sectionActivity": "Activité"
     }
   },
   "admin": {

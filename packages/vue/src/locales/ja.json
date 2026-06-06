@@ -394,6 +394,21 @@
       "boards": "ボード",
       "teams": "チーム",
       "account": "アカウント"
+    },
+    "customize": {
+      "button": "カスタマイズ",
+      "panelTitle": "ダッシュボードをカスタマイズ",
+      "panelHint": "セクションの表示・順序を変更できます。 このブラウザに保存されます。",
+      "reset": "デフォルトに戻す",
+      "done": "完了",
+      "moveUp": "上へ移動",
+      "moveDown": "下へ移動",
+      "toggleAria": "セクションを切替",
+      "sectionMetrics": "メトリック",
+      "sectionQuickActions": "クイックアクション",
+      "sectionPinned": "ピン留めボード",
+      "sectionRecent": "最近のボード",
+      "sectionActivity": "アクティビティ"
     }
   },
   "admin": {
