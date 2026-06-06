@@ -638,6 +638,29 @@ export const loginBannerMessages = i18n('loginBanner', {
   loginPending: 'Starting…'
 })
 
+export const shareModalMessages = i18n('shareModal', {
+  dialogTitle: 'Share',
+  dialogDescription: params('Issue an invitation link to share {boardName}.'),
+  boardNameFallback: 'Board',
+  boardMissingNotice: 'Create a board on /boards first, then re-open to issue invitation links.',
+  emailLabel: 'Email',
+  emailPlaceholder: 'collaborator@example.com',
+  emailRequired: 'Email is required',
+  emailInvalid: 'Enter a valid email address',
+  roleLabel: 'Role',
+  roleEditor: 'Editor',
+  roleViewer: 'Viewer',
+  cancel: 'Close',
+  submit: 'Create invite',
+  submitPending: 'Creating…',
+  invitationUrlLabel: 'Invitation URL',
+  copy: 'Copy',
+  copied: 'Copied',
+  toastInvitationCreated: 'Invitation link created',
+  toastCreateFail: 'Failed to create invitation',
+  toastLinkCopied: 'Link copied to clipboard'
+})
+
 export const teamsMessages = i18n('teams', {
   headTitle: 'Teams',
   eyebrow: 'Workspace',

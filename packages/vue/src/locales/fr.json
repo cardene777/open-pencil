@@ -574,6 +574,28 @@
     "loginButton": "Se connecter avec Google",
     "loginPending": "Démarrage…"
   },
+  "shareModal": {
+    "dialogTitle": "Partager",
+    "dialogDescription": "Générez un lien d'invitation pour partager {boardName}.",
+    "boardNameFallback": "Tableau",
+    "boardMissingNotice": "Créez d'abord un tableau sur /boards puis rouvrez ce dialogue pour générer des liens d'invitation.",
+    "emailLabel": "E-mail",
+    "emailPlaceholder": "collaborator@example.com",
+    "emailRequired": "L'e-mail est requis",
+    "emailInvalid": "Saisissez une adresse e-mail valide",
+    "roleLabel": "Rôle",
+    "roleEditor": "Éditeur",
+    "roleViewer": "Lecteur",
+    "cancel": "Fermer",
+    "submit": "Créer l'invitation",
+    "submitPending": "Création…",
+    "invitationUrlLabel": "URL d'invitation",
+    "copy": "Copier",
+    "copied": "Copié",
+    "toastInvitationCreated": "Lien d'invitation créé",
+    "toastCreateFail": "Échec de la création de l'invitation",
+    "toastLinkCopied": "Lien copié dans le presse-papiers"
+  },
   "teams": {
     "headTitle": "Équipes",
     "eyebrow": "Espace de travail",

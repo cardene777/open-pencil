@@ -574,6 +574,28 @@
     "loginButton": "使用 Google 登录",
     "loginPending": "正在启动…"
   },
+  "shareModal": {
+    "dialogTitle": "共享",
+    "dialogDescription": "生成邀请链接以共享 {boardName}。",
+    "boardNameFallback": "看板",
+    "boardMissingNotice": "请先在 /boards 创建看板, 然后重新打开此对话框以生成邀请链接。",
+    "emailLabel": "电子邮件",
+    "emailPlaceholder": "collaborator@example.com",
+    "emailRequired": "电子邮件必填",
+    "emailInvalid": "请输入有效的电子邮件地址",
+    "roleLabel": "角色",
+    "roleEditor": "编辑者",
+    "roleViewer": "查看者",
+    "cancel": "关闭",
+    "submit": "创建邀请",
+    "submitPending": "正在创建…",
+    "invitationUrlLabel": "邀请 URL",
+    "copy": "复制",
+    "copied": "已复制",
+    "toastInvitationCreated": "已创建邀请链接",
+    "toastCreateFail": "创建邀请失败",
+    "toastLinkCopied": "已将链接复制到剪贴板"
+  },
   "teams": {
     "headTitle": "团队",
     "eyebrow": "工作区",

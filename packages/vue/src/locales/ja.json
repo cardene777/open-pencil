@@ -574,6 +574,28 @@
     "loginButton": "Google でログイン",
     "loginPending": "開始中…"
   },
+  "shareModal": {
+    "dialogTitle": "共有",
+    "dialogDescription": "{boardName} に参加するための招待リンクを発行します。",
+    "boardNameFallback": "ボード",
+    "boardMissingNotice": "/boards でボードを作成してから開くと、 招待リンクを発行できます。",
+    "emailLabel": "メールアドレス",
+    "emailPlaceholder": "collaborator@example.com",
+    "emailRequired": "メールアドレスは必須です",
+    "emailInvalid": "有効なメールアドレスを入力してください",
+    "roleLabel": "ロール",
+    "roleEditor": "編集者",
+    "roleViewer": "閲覧者",
+    "cancel": "閉じる",
+    "submit": "招待を発行",
+    "submitPending": "発行中…",
+    "invitationUrlLabel": "招待 URL",
+    "copy": "コピー",
+    "copied": "コピー済",
+    "toastInvitationCreated": "招待リンクを発行しました",
+    "toastCreateFail": "招待の発行に失敗しました",
+    "toastLinkCopied": "リンクをクリップボードにコピーしました"
+  },
   "teams": {
     "headTitle": "チーム",
     "eyebrow": "ワークスペース",
