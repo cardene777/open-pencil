@@ -123,6 +123,17 @@ test.describe('admin view interaction', () => {
     await expect(page.getByTestId('admin-activity-empty')).toBeVisible()
   })
 
+  test('activity tab renders filter controls and disables export when empty', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-activity-filter@inkly.test', name: 'Admin Activity Filter' })
+    await page.goto('/admin')
+    await page.getByTestId('admin-tab-activity').click()
+
+    await expect(page.getByTestId('admin-activity-search')).toBeVisible()
+    await expect(page.getByTestId('admin-activity-type')).toBeVisible()
+    await expect(page.getByTestId('admin-activity-range')).toBeVisible()
+    await expect(page.getByTestId('admin-activity-export')).toBeDisabled()
+  })
+
   test('export CSV button is disabled when no boards exist', async ({ page }) => {
     await mockGoogleLogin(page, { email: 'admin-export-empty@inkly.test', name: 'Admin Export Empty' })
     await page.goto('/admin')

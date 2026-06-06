@@ -68,6 +68,10 @@ const moveTargetTeamId = ref<string>('personal')
 const moveDialogCls = useDialogUI({
   content: 'w-[min(28rem,calc(100vw-2rem))] rounded-2xl p-5 shadow-2xl'
 })
+const activitySearch = ref('')
+const activityTypeFilter = ref<'all' | 'invitation' | 'team_invite' | 'mention'>('all')
+const activityRangeFilter = ref<'all' | '24h' | '7d' | '30d'>('all')
+
 const memberSearch = ref('')
 const memberRoleFilter = ref<'all' | 'owner' | 'editor' | 'viewer'>('all')
 const members = ref<MemberWithTeam[]>([])
@@ -126,7 +130,35 @@ function toggleSort(key: BoardSortKey) {
   }
 }
 
-const activityItems = computed(() => notifications.items.slice(0, 50))
+const activityBase = computed(() => notifications.items.slice(0, 50))
+
+function activityRangeMs(range: 'all' | '24h' | '7d' | '30d'): number {
+  switch (range) {
+    case '24h':
+      return 24 * 60 * 60 * 1000
+    case '7d':
+      return 7 * 24 * 60 * 60 * 1000
+    case '30d':
+      return 30 * 24 * 60 * 60 * 1000
+    default:
+      return Number.POSITIVE_INFINITY
+  }
+}
+
+const activityItems = computed(() => {
+  const query = activitySearch.value.trim().toLowerCase()
+  const rangeMs = activityRangeMs(activityRangeFilter.value)
+  const threshold = Date.now() - rangeMs
+
+  return activityBase.value.filter((record) => {
+    if (activityTypeFilter.value !== 'all' && record.type !== activityTypeFilter.value) return false
+    if (Number.isFinite(rangeMs) && record.createdAt < threshold) return false
+    if (!query) return true
+    const title = getNotificationTitle(record).toLowerCase()
+    const body = getNotificationBody(record).toLowerCase()
+    return title.includes(query) || body.includes(query)
+  })
+})
 
 const filteredMembers = computed(() => {
   const query = memberSearch.value.trim().toLowerCase()
@@ -228,6 +260,44 @@ function escapeCsvField(value: string | number): string {
     return `"${text.replace(/"/g, '""')}"`
   }
   return text
+}
+
+function exportActivityCsv() {
+  const a = admin.value.activityTab
+  const header = [
+    a.csvHeaderId,
+    a.csvHeaderType,
+    a.csvHeaderTitle,
+    a.csvHeaderBody,
+    a.csvHeaderCreatedAt,
+    a.csvHeaderReadAt
+  ]
+  const rows = activityItems.value.map((record) => [
+    record.id,
+    record.type,
+    getNotificationTitle(record) || a.csvUnknown,
+    getNotificationBody(record) || a.csvUnknown,
+    new Date(record.createdAt).toISOString(),
+    record.readAt === null ? a.csvUnknown : new Date(record.readAt).toISOString()
+  ])
+
+  const csv = [header, ...rows]
+    .map((row) => row.map(escapeCsvField).join(','))
+    .join('\n')
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `inkly-activity-${Date.now()}.csv`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+  const message = rows.length === 1
+    ? formatTemplate(a.exportToastSingular, { count: rows.length })
+    : formatTemplate(a.exportToastPlural, { count: rows.length })
+  toast.success(message)
 }
 
 function exportBoardsCsv() {
@@ -893,11 +963,60 @@ onMounted(async () => {
         data-test-id="admin-activity"
         class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
-        <div>
-          <h2 class="text-lg font-semibold text-surface">{{ admin.activityTab.heading }}</h2>
-          <p class="text-sm text-muted">
-            {{ admin.activityTab.subtitle }}
-          </p>
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-surface">{{ admin.activityTab.heading }}</h2>
+            <p class="text-sm text-muted">
+              {{ formatTemplate(admin.activityTab.shownCount, { shown: activityItems.length, total: activityBase.length }) }}
+            </p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-test-id="admin-activity-export"
+              :disabled="activityItems.length === 0"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+              @click="exportActivityCsv"
+            >
+              <icon-lucide-download class="size-4" />
+              <span>{{ admin.activityTab.exportCsv }}</span>
+            </button>
+            <label class="sr-only" for="admin-activity-search-input">{{ admin.activityTab.searchAria }}</label>
+            <input
+              id="admin-activity-search-input"
+              v-model="activitySearch"
+              type="text"
+              data-test-id="admin-activity-search"
+              :placeholder="admin.activityTab.searchPlaceholder"
+              class="rounded-lg border border-border bg-input px-3 py-2 text-sm text-surface outline-none focus:border-accent w-56"
+            />
+            <label class="sr-only" for="admin-activity-type-select">{{ admin.activityTab.typeAria }}</label>
+            <select
+              id="admin-activity-type-select"
+              v-model="activityTypeFilter"
+              data-test-id="admin-activity-type"
+              :aria-label="admin.activityTab.typeAria"
+              class="rounded-lg border border-border bg-input px-2 py-2 text-sm text-surface outline-none focus:border-accent"
+            >
+              <option value="all">{{ admin.activityTab.typeAll }}</option>
+              <option value="invitation">{{ admin.activityTab.typeInvitation }}</option>
+              <option value="team_invite">{{ admin.activityTab.typeTeamInvite }}</option>
+              <option value="mention">{{ admin.activityTab.typeMention }}</option>
+            </select>
+            <label class="sr-only" for="admin-activity-range-select">{{ admin.activityTab.rangeAria }}</label>
+            <select
+              id="admin-activity-range-select"
+              v-model="activityRangeFilter"
+              data-test-id="admin-activity-range"
+              :aria-label="admin.activityTab.rangeAria"
+              class="rounded-lg border border-border bg-input px-2 py-2 text-sm text-surface outline-none focus:border-accent"
+            >
+              <option value="all">{{ admin.activityTab.rangeAll }}</option>
+              <option value="24h">{{ admin.activityTab.range24h }}</option>
+              <option value="7d">{{ admin.activityTab.range7d }}</option>
+              <option value="30d">{{ admin.activityTab.range30d }}</option>
+            </select>
+          </div>
         </div>
 
         <p
