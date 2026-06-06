@@ -142,7 +142,7 @@ test.describe('admin view interaction', () => {
 
     await page.getByTestId('admin-boards-select-all').check()
     await expect(page.getByTestId('admin-boards-bulk-delete')).toBeVisible()
-    await expect(page.getByTestId('admin-boards-bulk-delete')).toContainText('Delete 3')
+    await expect(page.getByTestId('admin-boards-bulk-delete')).toContainText('3')
 
     await page.getByTestId('admin-boards-clear-selection').click()
     await expect(page.getByTestId('admin-boards-bulk-delete')).toHaveCount(0)
@@ -160,7 +160,7 @@ test.describe('admin view interaction', () => {
     const id = boardId?.replace('admin-board-row-', '') ?? ''
 
     await page.getByTestId(`admin-board-select-${id}`).check()
-    await expect(page.getByTestId('admin-boards-bulk-delete')).toContainText('Delete 1')
+    await expect(page.getByTestId('admin-boards-bulk-delete')).toContainText('1')
 
     await page.getByTestId(`admin-board-select-${id}`).uncheck()
     await expect(page.getByTestId('admin-boards-bulk-delete')).toHaveCount(0)

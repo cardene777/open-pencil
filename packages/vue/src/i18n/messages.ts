@@ -395,3 +395,146 @@ export const dialogMessages = i18n('dialogs', {
     'Updates are not available yet. Publish a signed release with latest.json first.',
   updateCheckFailed: params('Could not check for updates: {error}')
 })
+
+export const dashboardMessages = i18n('dashboard', {
+  title: 'Dashboard',
+  brand: 'Inkly',
+  metrics: {
+    personalBoards: 'Personal boards',
+    teamBoards: 'Team boards',
+    teams: 'Teams',
+    unread: 'Unread'
+  },
+  quickActions: {
+    heading: 'Quick actions',
+    subtitle: 'Start a new board or jump to a workspace',
+    newBoard: '+ New board',
+    creating: 'Creating…',
+    allBoards: 'All boards',
+    allBoardsHint: 'Browse and manage your boards',
+    teams: 'Teams',
+    teamsHint: 'Create and manage team workspaces',
+    notifications: 'Notifications',
+    notificationsHint: '{count} unread'
+  },
+  pinned: {
+    heading: 'Pinned boards',
+    countLabel: '{count} pinned'
+  },
+  recent: {
+    heading: 'Recent boards',
+    subtitle: 'Pick up where you left off',
+    viewAll: 'View all →',
+    loading: 'Loading…',
+    empty: 'No boards yet. Create your first board above.'
+  },
+  activityFeed: {
+    heading: 'Activity',
+    subtitle: 'Recent notifications and mentions',
+    viewAll: 'View all →',
+    empty: 'No activity yet.'
+  },
+  pinAria: {
+    pin: 'Pin board',
+    unpin: 'Unpin board',
+    toggle: 'Toggle pin'
+  },
+  navLinks: {
+    boards: 'Boards',
+    teams: 'Teams',
+    account: 'Account'
+  }
+})
+
+export const adminMessages = i18n('admin', {
+  title: 'Admin',
+  badge: 'Internal',
+  navLinks: {
+    dashboard: 'Dashboard',
+    account: 'Account'
+  },
+  tabs: {
+    overview: 'Overview',
+    boards: 'Boards',
+    teams: 'Teams',
+    activity: 'Activity',
+    members: 'Members'
+  },
+  overview: {
+    totalBoards: 'Total boards',
+    personal: 'Personal',
+    teamBoards: 'Team boards',
+    collaborators: 'Collaborators'
+  },
+  boardsTab: {
+    heading: 'All boards',
+    shownCount: '{shown} / {total} shown',
+    searchPlaceholder: 'Search by name or id',
+    searchAria: 'Search boards',
+    filterAria: 'Filter boards by workspace',
+    filterAll: 'All',
+    filterPersonal: 'Personal',
+    filterTeam: 'Team',
+    exportCsv: 'Export CSV',
+    exportToastSingular: 'Exported {count} board',
+    exportToastPlural: 'Exported {count} boards',
+    bulkDelete: 'Delete {count}',
+    bulkDeleting: 'Deleting…',
+    bulkClear: 'Clear',
+    bulkConfirmSingular: 'Delete {count} selected board? This cannot be undone.',
+    bulkConfirmPlural: 'Delete {count} selected boards? This cannot be undone.',
+    bulkSuccessSingular: 'Deleted {count} board',
+    bulkSuccessPlural: 'Deleted {count} boards',
+    bulkFailSingular: 'Failed to delete {count} board',
+    bulkFailPlural: 'Failed to delete {count} boards',
+    deletePromptSingular: 'Delete board "{name}"? This cannot be undone.',
+    deleteSuccess: 'Board deleted',
+    deleteFail: 'Failed to delete board',
+    selectAllAria: 'Select all visible boards',
+    selectRowAria: 'Select {name}',
+    loading: 'Loading…',
+    empty: 'No boards match the filter.',
+    colName: 'Name',
+    colWorkspace: 'Workspace',
+    colCollaborators: 'Collaborators',
+    colCreated: 'Created',
+    colUpdated: 'Updated',
+    colActions: 'Actions',
+    delete: 'Delete',
+    workspacePersonal: 'Personal'
+  },
+  teamsTab: {
+    heading: 'All teams',
+    summary: '{owned} owned, {joined} joined',
+    owned: 'Owned',
+    joined: 'Joined',
+    membersCount: '{count} members',
+    membersCountWithRole: '{count} members · {role}',
+    empty: 'No teams found.'
+  },
+  activityTab: {
+    heading: 'Activity',
+    subtitle: 'Recent notifications (invitations, mentions). Latest 50 records.',
+    empty: 'No activity recorded.'
+  },
+  membersTab: {
+    heading: 'All members',
+    summary: '{shown} / {total} shown · owners {owners} · editors {editors} · viewers {viewers}',
+    searchPlaceholder: 'Search by name, email or role',
+    searchAria: 'Search members',
+    roleAria: 'Filter members by role',
+    roleAll: 'All roles',
+    roleOwner: 'Owner',
+    roleEditor: 'Editor',
+    roleViewer: 'Viewer',
+    loading: 'Loading members…',
+    loadFail: 'Failed to load members',
+    empty: 'No members match the filter.',
+    colName: 'Name',
+    colEmail: 'Email',
+    colTeam: 'Team',
+    colRole: 'Role',
+    colJoined: 'Joined',
+    namePlaceholder: '—'
+  }
+})

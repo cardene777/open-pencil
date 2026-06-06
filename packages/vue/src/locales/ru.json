@@ -346,5 +346,146 @@
     "textHint": "Текст и подписи",
     "boolean": "Логический",
     "booleanHint": "Истина или ложь"
+  },
+  "dashboard": {
+    "title": "Панель",
+    "brand": "Inkly",
+    "metrics": {
+      "personalBoards": "Личные доски",
+      "teamBoards": "Командные доски",
+      "teams": "Команды",
+      "unread": "Непрочитанные"
+    },
+    "quickActions": {
+      "heading": "Быстрые действия",
+      "subtitle": "Создайте новую доску или перейдите в рабочее пространство",
+      "newBoard": "+ Новая доска",
+      "creating": "Создание…",
+      "allBoards": "Все доски",
+      "allBoardsHint": "Просматривайте и управляйте досками",
+      "teams": "Команды",
+      "teamsHint": "Создавайте и управляйте командными пространствами",
+      "notifications": "Уведомления",
+      "notificationsHint": "{count} непрочитанных"
+    },
+    "pinned": {
+      "heading": "Закреплённые доски",
+      "countLabel": "{count} закреплено"
+    },
+    "recent": {
+      "heading": "Недавние доски",
+      "subtitle": "Продолжите с того места, где остановились",
+      "viewAll": "Показать все →",
+      "loading": "Загрузка…",
+      "empty": "Досок пока нет. Создайте первую доску выше."
+    },
+    "activityFeed": {
+      "heading": "Активность",
+      "subtitle": "Недавние уведомления и упоминания",
+      "viewAll": "Показать всё →",
+      "empty": "Активности пока нет."
+    },
+    "pinAria": {
+      "pin": "Закрепить доску",
+      "unpin": "Открепить доску",
+      "toggle": "Переключить закрепление"
+    },
+    "navLinks": {
+      "boards": "Доски",
+      "teams": "Команды",
+      "account": "Аккаунт"
+    }
+  },
+  "admin": {
+    "title": "Администрирование",
+    "badge": "Внутренний",
+    "navLinks": {
+      "dashboard": "Панель",
+      "account": "Аккаунт"
+    },
+    "tabs": {
+      "overview": "Обзор",
+      "boards": "Доски",
+      "teams": "Команды",
+      "activity": "Активность",
+      "members": "Участники"
+    },
+    "overview": {
+      "totalBoards": "Всего досок",
+      "personal": "Личные",
+      "teamBoards": "Командные доски",
+      "collaborators": "Соавторы"
+    },
+    "boardsTab": {
+      "heading": "Все доски",
+      "shownCount": "{shown} / {total} показано",
+      "searchPlaceholder": "Поиск по имени или ID",
+      "searchAria": "Поиск досок",
+      "filterAria": "Фильтр досок по рабочему пространству",
+      "filterAll": "Все",
+      "filterPersonal": "Личные",
+      "filterTeam": "Команда",
+      "exportCsv": "Экспорт CSV",
+      "exportToastSingular": "Экспортирована {count} доска",
+      "exportToastPlural": "Экспортировано {count} досок",
+      "bulkDelete": "Удалить {count}",
+      "bulkDeleting": "Удаление…",
+      "bulkClear": "Очистить",
+      "bulkConfirmSingular": "Удалить {count} выбранную доску? Это действие необратимо.",
+      "bulkConfirmPlural": "Удалить {count} выбранных досок? Это действие необратимо.",
+      "bulkSuccessSingular": "Удалена {count} доска",
+      "bulkSuccessPlural": "Удалено {count} досок",
+      "bulkFailSingular": "Не удалось удалить {count} доску",
+      "bulkFailPlural": "Не удалось удалить {count} досок",
+      "deletePromptSingular": "Удалить доску \"{name}\"? Это действие необратимо.",
+      "deleteSuccess": "Доска удалена",
+      "deleteFail": "Не удалось удалить доску",
+      "selectAllAria": "Выбрать все видимые доски",
+      "selectRowAria": "Выбрать {name}",
+      "loading": "Загрузка…",
+      "empty": "Ни одна доска не соответствует фильтру.",
+      "colName": "Имя",
+      "colWorkspace": "Рабочее пространство",
+      "colCollaborators": "Соавторы",
+      "colCreated": "Создано",
+      "colUpdated": "Обновлено",
+      "colActions": "Действия",
+      "delete": "Удалить",
+      "workspacePersonal": "Личное"
+    },
+    "teamsTab": {
+      "heading": "Все команды",
+      "summary": "{owned} в собственности, {joined} в участниках",
+      "owned": "В собственности",
+      "joined": "Участник",
+      "membersCount": "{count} участников",
+      "membersCountWithRole": "{count} участников · {role}",
+      "empty": "Команды не найдены."
+    },
+    "activityTab": {
+      "heading": "Активность",
+      "subtitle": "Недавние уведомления (приглашения, упоминания). Последние 50 записей.",
+      "empty": "Активность не зафиксирована."
+    },
+    "membersTab": {
+      "heading": "Все участники",
+      "summary": "{shown} / {total} показано · владельцы {owners} · редакторы {editors} · наблюдатели {viewers}",
+      "searchPlaceholder": "Поиск по имени, email или роли",
+      "searchAria": "Поиск участников",
+      "roleAria": "Фильтр участников по роли",
+      "roleAll": "Все роли",
+      "roleOwner": "Владелец",
+      "roleEditor": "Редактор",
+      "roleViewer": "Наблюдатель",
+      "loading": "Загрузка участников…",
+      "loadFail": "Не удалось загрузить участников",
+      "empty": "Ни один участник не соответствует фильтру.",
+      "colName": "Имя",
+      "colEmail": "Email",
+      "colTeam": "Команда",
+      "colRole": "Роль",
+      "colJoined": "Дата присоединения",
+      "namePlaceholder": "—"
+    }
   }
 }

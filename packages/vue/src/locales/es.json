@@ -346,5 +346,146 @@
     "textHint": "Texto y etiquetas",
     "boolean": "Booleano",
     "booleanHint": "Verdadero o falso"
+  },
+  "dashboard": {
+    "title": "Panel",
+    "brand": "Inkly",
+    "metrics": {
+      "personalBoards": "Tableros personales",
+      "teamBoards": "Tableros de equipo",
+      "teams": "Equipos",
+      "unread": "Sin leer"
+    },
+    "quickActions": {
+      "heading": "Acciones rápidas",
+      "subtitle": "Crea un nuevo tablero o ve a un espacio de trabajo",
+      "newBoard": "+ Nuevo tablero",
+      "creating": "Creando…",
+      "allBoards": "Todos los tableros",
+      "allBoardsHint": "Explora y gestiona tus tableros",
+      "teams": "Equipos",
+      "teamsHint": "Crea y gestiona espacios de equipo",
+      "notifications": "Notificaciones",
+      "notificationsHint": "{count} sin leer"
+    },
+    "pinned": {
+      "heading": "Tableros fijados",
+      "countLabel": "{count} fijados"
+    },
+    "recent": {
+      "heading": "Tableros recientes",
+      "subtitle": "Continúa donde lo dejaste",
+      "viewAll": "Ver todos →",
+      "loading": "Cargando…",
+      "empty": "Aún no hay tableros. Crea tu primer tablero arriba."
+    },
+    "activityFeed": {
+      "heading": "Actividad",
+      "subtitle": "Notificaciones y menciones recientes",
+      "viewAll": "Ver todo →",
+      "empty": "Aún no hay actividad."
+    },
+    "pinAria": {
+      "pin": "Fijar tablero",
+      "unpin": "Quitar fijación",
+      "toggle": "Alternar fijación"
+    },
+    "navLinks": {
+      "boards": "Tableros",
+      "teams": "Equipos",
+      "account": "Cuenta"
+    }
+  },
+  "admin": {
+    "title": "Administración",
+    "badge": "Interno",
+    "navLinks": {
+      "dashboard": "Panel",
+      "account": "Cuenta"
+    },
+    "tabs": {
+      "overview": "Resumen",
+      "boards": "Tableros",
+      "teams": "Equipos",
+      "activity": "Actividad",
+      "members": "Miembros"
+    },
+    "overview": {
+      "totalBoards": "Total de tableros",
+      "personal": "Personal",
+      "teamBoards": "Tableros de equipo",
+      "collaborators": "Colaboradores"
+    },
+    "boardsTab": {
+      "heading": "Todos los tableros",
+      "shownCount": "{shown} / {total} mostrados",
+      "searchPlaceholder": "Buscar por nombre o ID",
+      "searchAria": "Buscar tableros",
+      "filterAria": "Filtrar tableros por espacio de trabajo",
+      "filterAll": "Todos",
+      "filterPersonal": "Personal",
+      "filterTeam": "Equipo",
+      "exportCsv": "Exportar CSV",
+      "exportToastSingular": "{count} tablero exportado",
+      "exportToastPlural": "{count} tableros exportados",
+      "bulkDelete": "Eliminar {count}",
+      "bulkDeleting": "Eliminando…",
+      "bulkClear": "Limpiar",
+      "bulkConfirmSingular": "¿Eliminar {count} tablero seleccionado? Esto no se puede deshacer.",
+      "bulkConfirmPlural": "¿Eliminar {count} tableros seleccionados? Esto no se puede deshacer.",
+      "bulkSuccessSingular": "{count} tablero eliminado",
+      "bulkSuccessPlural": "{count} tableros eliminados",
+      "bulkFailSingular": "No se pudo eliminar {count} tablero",
+      "bulkFailPlural": "No se pudieron eliminar {count} tableros",
+      "deletePromptSingular": "¿Eliminar el tablero \"{name}\"? Esto no se puede deshacer.",
+      "deleteSuccess": "Tablero eliminado",
+      "deleteFail": "No se pudo eliminar el tablero",
+      "selectAllAria": "Seleccionar todos los tableros visibles",
+      "selectRowAria": "Seleccionar {name}",
+      "loading": "Cargando…",
+      "empty": "Ningún tablero coincide con el filtro.",
+      "colName": "Nombre",
+      "colWorkspace": "Espacio de trabajo",
+      "colCollaborators": "Colaboradores",
+      "colCreated": "Creado",
+      "colUpdated": "Actualizado",
+      "colActions": "Acciones",
+      "delete": "Eliminar",
+      "workspacePersonal": "Personal"
+    },
+    "teamsTab": {
+      "heading": "Todos los equipos",
+      "summary": "{owned} propios, {joined} unidos",
+      "owned": "Propios",
+      "joined": "Unidos",
+      "membersCount": "{count} miembros",
+      "membersCountWithRole": "{count} miembros · {role}",
+      "empty": "No se encontraron equipos."
+    },
+    "activityTab": {
+      "heading": "Actividad",
+      "subtitle": "Notificaciones recientes (invitaciones, menciones). Últimos 50 registros.",
+      "empty": "No hay actividad registrada."
+    },
+    "membersTab": {
+      "heading": "Todos los miembros",
+      "summary": "{shown} / {total} mostrados · propietarios {owners} · editores {editors} · visores {viewers}",
+      "searchPlaceholder": "Buscar por nombre, correo o rol",
+      "searchAria": "Buscar miembros",
+      "roleAria": "Filtrar miembros por rol",
+      "roleAll": "Todos los roles",
+      "roleOwner": "Propietario",
+      "roleEditor": "Editor",
+      "roleViewer": "Visor",
+      "loading": "Cargando miembros…",
+      "loadFail": "No se pudieron cargar los miembros",
+      "empty": "Ningún miembro coincide con el filtro.",
+      "colName": "Nombre",
+      "colEmail": "Correo",
+      "colTeam": "Equipo",
+      "colRole": "Rol",
+      "colJoined": "Unión",
+      "namePlaceholder": "—"
+    }
   }
 }
