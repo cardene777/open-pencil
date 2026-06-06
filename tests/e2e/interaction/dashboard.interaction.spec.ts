@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 import { cleanState, seedBoards } from '#tests/helpers/api-seed'
 import { mockGoogleLogin } from '#tests/helpers/e2e-auth'
 import { useE2ECoverage } from '#tests/helpers/e2e-coverage'
-import { clickAndWaitForResponse, expectModal } from '#tests/helpers/interaction'
+import { expectModal } from '#tests/helpers/interaction'
 
 test.describe('dashboard interaction', () => {
   useE2ECoverage(test, 'dashboard-interaction')
@@ -21,20 +21,23 @@ test.describe('dashboard interaction', () => {
     await expect(banner).toContainText(/log in|google/i)
   })
 
-  // 連続実行時に board create response が flaky になるケースを検知 (個別実行で 1 度確認、 別 PR で改善)。
-  test.skip('logged in users can create a board via the create form', async ({ page }) => {
+  test('logged in users can create a board via the create form', async ({ page }) => {
     test.setTimeout(45_000)
     await mockGoogleLogin(page, { email: 'creator@inkly.test', name: 'Board Creator' })
     await page.goto('/boards')
 
     await expect(page.getByTestId('board-card')).toHaveCount(0)
-
     await page.getByTestId('board-create-input').fill('Interaction test board')
-    const payload = await clickAndWaitForResponse<{ id: string; name: string }>(
-      page,
-      page.getByTestId('board-create-button'),
-      /\/api\/boards/
+
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/boards') &&
+        response.request().method() === 'POST' &&
+        response.ok()
     )
+    await page.getByTestId('board-create-button').click()
+    const response = await responsePromise
+    const payload = (await response.json()) as { id: string; name: string }
     expect(payload.name).toBe('Interaction test board')
   })
 
