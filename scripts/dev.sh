@@ -36,10 +36,17 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
-echo "[dev] starting API server on http://localhost:3001 (env: $ENV_FILE)"
+API_LOCAL_OVERRIDE="$REPO_ROOT/.env.development.local"
+if [ -f "$API_LOCAL_OVERRIDE" ]; then
+  API_ENV_ARG="$ENV_FILE,$API_LOCAL_OVERRIDE"
+  echo "[dev] starting API server on http://localhost:3001 (env: $ENV_FILE + $API_LOCAL_OVERRIDE)"
+else
+  API_ENV_ARG="$ENV_FILE"
+  echo "[dev] starting API server on http://localhost:3001 (env: $ENV_FILE)"
+fi
 (
   cd "$REPO_ROOT/packages/api"
-  exec bun --env-file="$ENV_FILE" run src/server.ts
+  exec bun --env-file="$API_ENV_ARG" run src/server.ts
 ) &
 API_PID=$!
 

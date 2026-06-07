@@ -247,7 +247,10 @@ bun run dev:full
 `bun run dev:full` は `scripts/dev.sh` 経由で API server と Vite の両方を並行起動し、`Ctrl+C` で一括停止する。
 Editor は `http://localhost:1420/` または `http://localhost:1420/editor` の両方で起動する (後者は Landing PR マージ後に新トップページから案内するエイリアス)。
 `.env.development` のテスト値は本番では使わない (ダミー dev 値)。
-ローカルで一時的に値を上書きしたい場合は `.env.development.local` を作って override する (Vite は local 系を最優先で解決する)。
+ローカルで一時的に値を上書きしたい場合は `.env.development.local` を作って override する (Vite は local 系を最優先で解決し、 `dev:full` の API 起動も local 系を後段で読み込む)。
+
+`/api/test/*` 系の破壊的 helper (DB 全削除など) はテンプレでは無効化済み。
+Playwright e2e や Google ログイン (テストモード) を試したい時だけ `.env.development.local` で `INKLY_API_AUTH_ENABLE_TEST_UTILS=1` と `VITE_INKLY_AUTH_TEST_MODE=1` を立て、 ローカル外に露出させない (`bun run dev` を `--host` 付きで起動しない) ことを確認する。
 
 #### 個別に起動したい場合
 
