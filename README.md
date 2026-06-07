@@ -238,9 +238,25 @@ See the [roadmap](https://inkly.dev/development/roadmap) for product direction a
 
 ```sh
 bun install
-bun run dev        # Dev server at localhost:1420
-bun run tauri dev  # Desktop app (requires Rust)
+
+# 推奨 — API server (3001) + Vite (1420) を 1 コマンドで起動
+cp .env.development.example .env.development   # 初回のみ
+bun run dev:full
 ```
+
+`bun run dev:full` は `scripts/dev.sh` 経由で API server と Vite の両方を並行起動し、`Ctrl+C` で一括停止する。
+Landing は `http://localhost:1420/`、Editor は `http://localhost:1420/editor`。
+`.env.development` のテスト値は本番では使わない (ダミー dev 値)。
+
+#### 個別に起動したい場合
+
+```sh
+bun run dev        # Vite のみ (localhost:1420)
+bun run dev:api    # API server のみ (localhost:3001)
+bun run tauri dev  # Desktop app (Rust 必要)
+```
+
+API を立てずに Vite だけで動かすと `/dashboard` `/boards` 等の auth 必須画面で「Failed to load session」エラーになる。Landing (`/`) と Editor (`/editor`) は API なしでも閲覧できる。
 
 ### Quality gates
 
