@@ -250,7 +250,15 @@ Editor は `http://localhost:1420/` または `http://localhost:1420/editor` の
 ローカルで一時的に値を上書きしたい場合は `.env.development.local` を作って override する (Vite は local 系を最優先で解決し、 `dev:full` の API 起動も local 系を後段で読み込む)。
 
 `/api/test/*` 系の破壊的 helper (DB 全削除など) はテンプレでは無効化済み。
-Playwright e2e や Google ログイン (テストモード) を試したい時だけ `.env.development.local` で `INKLY_API_AUTH_ENABLE_TEST_UTILS=1` と `VITE_INKLY_AUTH_TEST_MODE=1` を立て、 ローカル外に露出させない (`bun run dev` を `--host` 付きで起動しない) ことを確認する。
+Playwright e2e や Google ログイン (テストモード) を試したい時だけ `.env.development.local` で `INKLY_API_AUTH_ENABLE_TEST_UTILS=1` と `VITE_INKLY_AUTH_TEST_MODE=1` を立てる。
+ただし、 **test utils を有効化したまま Vite を LAN や公開ネットワークに露出させないこと**:
+
+- `bun run dev --host` / `bun run dev:full -- --host` 等で 0.0.0.0 bind しない
+- `TAURI_DEV_HOST` 経由で外部端末から繋がない
+- ngrok / Cloudflare Tunnel / reverse proxy 等で外部公開しない
+- 共有 dev server を再利用しない
+
+Vite が外部から繋がる状態だと、 同 dev server の `/api` proxy 経由で `/api/test/reset` (users / boards / teams / sessions 等を全削除) や `/api/auth/test/login` (任意ユーザーとして認証) に **ローカルホスト判定をすり抜けて到達可能**。 API 側でトークン guard が追加されるまでは、 localhost のみで開く運用にする。
 
 #### 個別に起動したい場合
 
