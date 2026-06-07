@@ -44,9 +44,11 @@ else
   API_ENV_ARG="$ENV_FILE"
   echo "[dev] starting API server on http://localhost:3001 (env: $ENV_FILE)"
 fi
+# dev:api と同じ cwd (repo root) で起動して INKLY_API_DB_PATH の相対解決を統一する
+# (cwd が異なると packages/api 起点 vs repo root 起点で DB ファイルが分裂する)
 (
-  cd "$REPO_ROOT/packages/api"
-  exec bun --env-file="$API_ENV_ARG" run src/server.ts
+  cd "$REPO_ROOT"
+  exec bun --env-file="$API_ENV_ARG" run packages/api/src/server.ts
 ) &
 API_PID=$!
 
