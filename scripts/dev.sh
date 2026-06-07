@@ -56,16 +56,21 @@ echo "[dev] Open http://localhost:1420/ (Landing) or /editor"
 echo "[dev] Ctrl+C to stop both."
 echo ""
 
-wait -n "$API_PID" "$VITE_PID" 2>/dev/null || true
-
+# どちらかの child が落ちるまで polling で待つ。
+# Bash 4.3+ の `wait -n` は使わない (macOS デフォルト Bash 3.2 では不正オプション)。
 EXIT_CODE=0
-if ! kill -0 "$API_PID" 2>/dev/null; then
-  echo "[dev] API server exited; stopping vite as well."
-  EXIT_CODE=1
-fi
-if ! kill -0 "$VITE_PID" 2>/dev/null; then
-  echo "[dev] Vite exited; stopping API server as well."
-  EXIT_CODE=1
-fi
+while true; do
+  if ! kill -0 "$API_PID" 2>/dev/null; then
+    echo "[dev] API server exited; stopping vite as well."
+    EXIT_CODE=1
+    break
+  fi
+  if ! kill -0 "$VITE_PID" 2>/dev/null; then
+    echo "[dev] Vite exited; stopping API server as well."
+    EXIT_CODE=1
+    break
+  fi
+  sleep 1
+done
 
 exit "$EXIT_CODE"
