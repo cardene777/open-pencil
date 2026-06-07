@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 
 import { CanvasHelper } from '#tests/helpers/canvas'
 
-export function useEditorSetup(url = '/') {
+export function useEditorSetup(url = '/editor') {
   let page: Page
   let canvas: CanvasHelper
 
@@ -29,7 +29,7 @@ export function useEditorSetup(url = '/') {
   }
 }
 
-export function useEditorSetupWithClear(url = '/') {
+export function useEditorSetupWithClear(url = '/editor') {
   const ctx = useEditorSetup(url)
 
   test.beforeEach(async () => {

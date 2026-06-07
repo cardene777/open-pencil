@@ -46,9 +46,9 @@ onMounted(() => {
 <template>
   <main
     data-test-id="invite-redirect-view"
-    class="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(91,171,255,0.18),transparent_30%),linear-gradient(180deg,var(--color-canvas),#0b1018)] px-6"
+    class="shell-bg flex min-h-screen items-center justify-center px-6"
   >
-    <div class="w-full max-w-md rounded-[28px] border border-white/10 bg-panel/85 p-8 text-center shadow-2xl backdrop-blur-xl">
+    <div class="w-full max-w-md rounded-[28px] border border-border bg-panel/85 p-8 text-center shadow-2xl backdrop-blur-xl">
       <template v-if="loading">
         <p class="text-sm uppercase tracking-[0.18em] text-accent">Invite</p>
         <h1 class="mt-3 text-2xl font-semibold text-surface">Verifying invitation…</h1>

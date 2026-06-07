@@ -25,7 +25,7 @@ test.describe('editor accessibility', () => {
   test('default chrome has no critical accessibility violations', async ({ page }) => {
     const canvas = new CanvasHelper(page)
 
-    await page.goto('/')
+    await page.goto('/editor')
     await canvas.waitForInit()
     await expect(page.getByTestId('editor-root')).toBeVisible()
     await expect(page.getByTestId('toolbar')).toBeVisible()
@@ -45,7 +45,7 @@ test.describe('editor accessibility', () => {
   test('selected-shape chrome has no critical accessibility violations', async ({ page }) => {
     const canvas = new CanvasHelper(page)
 
-    await page.goto('/')
+    await page.goto('/editor')
     await canvas.waitForInit()
     await canvas.drawRect(120, 120, 160, 120)
     await expect(page.getByTestId('design-panel-single')).toBeVisible()

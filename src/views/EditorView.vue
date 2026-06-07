@@ -28,6 +28,7 @@ import MobileHud from '@/components/MobileHud/MobileHud.vue'
 import PropertiesPanel from '@/components/PropertiesPanel.vue'
 import SafariBanner from '@/components/SafariBanner.vue'
 import TabBar from '@/components/TabBar.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import Tip from '@/components/ui/Tip.vue'
 import Toolbar from '@/components/Toolbar/Toolbar.vue'
 
@@ -197,7 +198,10 @@ onUnmounted(() => {
           {{ boardTeamName }}
         </span>
       </div>
-      <span v-if="boardRoomId" class="text-[11px] text-muted">Board {{ boardRoomId }}</span>
+      <div class="flex items-center gap-3">
+        <span v-if="boardRoomId" class="text-[11px] text-muted">Board {{ boardRoomId }}</span>
+        <ThemeToggle test-id="editor-theme-toggle" />
+      </div>
     </div>
 
     <!-- Desktop layout -->

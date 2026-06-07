@@ -23,6 +23,7 @@ import BoardCard from '@/components/BoardCard.vue'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import LoginBanner from '@/components/LoginBanner.vue'
 import NotificationBell from '@/components/NotificationBell.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import AppInput from '@/components/ui/AppInput.vue'
 import {
   createBoard,
@@ -205,20 +206,21 @@ onMounted(async () => {
 <template>
   <main
     data-test-id="boards-view"
-    class="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(89,140,255,0.16),transparent_30%),linear-gradient(180deg,var(--color-canvas),#0d1017)] px-6 py-10"
+    class="shell-bg min-h-screen px-6 py-10"
   >
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-8">
       <section
-        class="flex flex-col gap-6 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+        class="flex flex-col gap-6 rounded-[28px] border border-border bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex items-center justify-end gap-3">
           <LocaleSwitcher test-id="boards-locale-switcher" />
+          <ThemeToggle test-id="boards-theme-toggle" />
           <NotificationBell v-if="showAccountLink" />
 
           <RouterLink
             to="/dashboard"
             data-test-id="boards-dashboard-link"
-            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
+            class="inline-flex items-center gap-2 rounded-full border border-border bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-layout-dashboard class="size-4" />
             <span>Dashboard</span>
@@ -227,7 +229,7 @@ onMounted(async () => {
           <RouterLink
             to="/teams"
             data-test-id="boards-teams-link"
-            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
+            class="inline-flex items-center gap-2 rounded-full border border-border bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-users class="size-4" />
             <span>Teams</span>
@@ -237,7 +239,7 @@ onMounted(async () => {
             v-if="showAccountLink"
             to="/account"
             data-test-id="boards-account-link"
-            class="inline-flex items-center gap-3 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
+            class="inline-flex items-center gap-3 rounded-full border border-border bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
           >
             <img
               v-if="auth.user?.image"

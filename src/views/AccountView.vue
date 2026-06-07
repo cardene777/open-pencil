@@ -18,6 +18,7 @@ import { useI18n } from '@inkly/vue'
 import { useAuthStore } from '@/app/auth/store'
 import { toast, initials } from '@/app/shell/ui'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 import { useDialogUI } from '@/components/ui/dialog'
 
 const { account: accountT } = useI18n()
@@ -73,11 +74,11 @@ async function confirmSignOut() {
 <template>
   <main
     data-test-id="account-view"
-    class="min-h-screen bg-[radial-gradient(circle_at_top,rgba(89,140,255,0.18),transparent_35%),linear-gradient(180deg,var(--color-canvas),#0d1017)] px-6 py-10"
+    class="shell-bg min-h-screen px-6 py-10"
   >
     <div class="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <section
-        class="flex flex-col gap-3 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl md:flex-row md:items-start md:justify-between"
+        class="flex flex-col gap-3 rounded-[28px] border border-border bg-panel/80 p-6 shadow-2xl backdrop-blur-xl md:flex-row md:items-start md:justify-between"
       >
         <div>
           <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">
@@ -88,7 +89,10 @@ async function confirmSignOut() {
             {{ accountT.subtitle }}
           </p>
         </div>
-        <LocaleSwitcher test-id="account-locale-switcher" />
+        <div class="flex items-center gap-2">
+          <LocaleSwitcher test-id="account-locale-switcher" />
+          <ThemeToggle test-id="account-theme-toggle" />
+        </div>
       </section>
 
       <section
@@ -100,7 +104,7 @@ async function confirmSignOut() {
 
       <section
         v-else-if="!auth.isAuthenticated"
-        class="rounded-[24px] border border-white/8 bg-panel/80 p-6 shadow-xl"
+        class="rounded-[24px] border border-border bg-panel/80 p-6 shadow-xl"
       >
         <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div class="space-y-2">
@@ -113,7 +117,7 @@ async function confirmSignOut() {
           <button
             type="button"
             data-test-id="account-login-button"
-            class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-medium text-canvas transition-colors hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-60"
+            class="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-strong disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="auth.loginPending"
             @click="startLogin"
           >
@@ -126,7 +130,7 @@ async function confirmSignOut() {
       <section
         v-else
         data-test-id="account-profile"
-        class="rounded-[24px] border border-white/8 bg-panel/80 p-6 shadow-xl"
+        class="rounded-[24px] border border-border bg-panel/80 p-6 shadow-xl"
       >
         <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           <div class="flex items-center gap-4">
@@ -135,12 +139,12 @@ async function confirmSignOut() {
               :src="auth.user.image"
               :alt="avatarAltText"
               data-test-id="account-avatar-image"
-              class="size-16 rounded-full border border-white/10 object-cover"
+              class="size-16 rounded-full border border-border object-cover"
             />
             <div
               v-else
               data-test-id="account-avatar-fallback"
-              class="flex size-16 items-center justify-center rounded-full border border-white/10 bg-[linear-gradient(135deg,rgba(103,149,255,0.85),rgba(78,95,172,0.85))] text-lg font-semibold text-white"
+              class="flex size-16 items-center justify-center rounded-full border border-border bg-[linear-gradient(135deg,rgba(103,149,255,0.85),rgba(78,95,172,0.85))] text-lg font-semibold text-white"
             >
               {{ avatarInitials }}
             </div>

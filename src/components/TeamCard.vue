@@ -52,7 +52,7 @@ const summaryLine = computed(() => {
     >
       <div class="flex items-start justify-between gap-3">
         <span
-          class="rounded-full border border-white/10 bg-canvas/60 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted"
+          class="rounded-full border border-border bg-canvas/60 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted"
         >
           {{ roleLabel }}
         </span>

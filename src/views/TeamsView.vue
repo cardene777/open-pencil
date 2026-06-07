@@ -122,10 +122,10 @@ onMounted(async () => {
 <template>
   <main
     data-test-id="teams-view"
-    class="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(255,187,92,0.16),transparent_28%),linear-gradient(180deg,var(--color-canvas),#0d1118)] px-6 py-10"
+    class="shell-bg-team min-h-screen px-6 py-10"
   >
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-8">
-      <section class="rounded-[28px] border border-white/8 bg-panel/85 p-6 shadow-2xl backdrop-blur-xl">
+      <section class="rounded-[28px] border border-border bg-panel/85 p-6 shadow-2xl backdrop-blur-xl">
         <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div class="space-y-2">
             <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">{{ teamsT.eyebrow }}</p>

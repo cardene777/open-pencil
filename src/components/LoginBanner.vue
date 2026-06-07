@@ -16,7 +16,7 @@ const { loginBanner: loginBannerT } = useI18n()
 <template>
   <section
     data-test-id="login-banner"
-    class="flex flex-col gap-4 rounded-[24px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(81,131,255,0.08))] p-5 md:flex-row md:items-center md:justify-between"
+    class="flex flex-col gap-4 rounded-[24px] border border-border bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(81,131,255,0.08))] p-5 md:flex-row md:items-center md:justify-between"
   >
     <div class="space-y-2">
       <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-accent">

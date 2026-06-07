@@ -28,7 +28,7 @@ const { mentionInput: mentionInputT } = useI18n()
 <template>
   <div
     data-test-id="mention-input"
-    class="w-80 rounded-2xl border border-white/10 bg-panel/96 p-2 shadow-2xl backdrop-blur-xl"
+    class="w-80 rounded-2xl border border-border bg-panel/96 p-2 shadow-2xl backdrop-blur-xl"
   >
     <div class="px-2 py-1">
       <p class="text-[10px] font-medium uppercase tracking-[0.18em] text-accent">{{ mentionInputT.heading }}</p>

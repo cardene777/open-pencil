@@ -32,6 +32,7 @@ import {
 import { getTeam, listTeams, type TeamMember, type TeamSummary } from '@/app/api/teams'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import LoginBanner from '@/components/LoginBanner.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 import { useI18n } from '@inkly/vue'
 
@@ -535,21 +536,22 @@ onMounted(async () => {
 <template>
   <main
     data-test-id="admin-view"
-    class="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(239,98,98,0.12),transparent_30%),linear-gradient(180deg,var(--color-canvas),#0d1017)] px-6 py-10"
+    class="shell-bg-admin min-h-screen px-6 py-10"
   >
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <header class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-[#ef6262]">{{ admin.badge }}</p>
+          <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-[var(--color-admin-accent)]">{{ admin.badge }}</p>
           <span class="text-muted">|</span>
           <h1 class="text-2xl font-semibold text-surface">{{ admin.title }}</h1>
         </div>
         <div class="flex items-center gap-3">
           <LocaleSwitcher test-id="admin-locale-switcher" />
+          <ThemeToggle test-id="admin-theme-toggle" />
           <RouterLink
             to="/dashboard"
             data-test-id="admin-dashboard-link"
-            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
+            class="inline-flex items-center gap-2 rounded-full border border-border bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-layout-dashboard class="size-4" />
             <span>{{ admin.navLinks.dashboard }}</span>
@@ -559,7 +561,7 @@ onMounted(async () => {
             v-if="auth.isAuthenticated"
             to="/account"
             data-test-id="admin-account-link"
-            class="inline-flex items-center gap-3 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
+            class="inline-flex items-center gap-3 rounded-full border border-border bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
           >
             <img
               v-if="auth.user?.image"
@@ -587,7 +589,7 @@ onMounted(async () => {
 
       <section
         data-test-id="admin-tabs"
-        class="flex gap-2 rounded-full border border-white/8 bg-panel/80 p-1.5 shadow-lg w-fit"
+        class="flex gap-2 rounded-full border border-border bg-panel/80 p-1.5 shadow-lg w-fit"
       >
         <button
           type="button"
@@ -595,7 +597,7 @@ onMounted(async () => {
           :class="[
             'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
             tab === 'overview'
-              ? 'bg-[#ef6262]/85 text-white shadow'
+              ? 'bg-[color:var(--color-admin-accent)]/85 text-white shadow'
               : 'text-muted hover:text-surface'
           ]"
           @click="activateTab('overview')"
@@ -608,7 +610,7 @@ onMounted(async () => {
           :class="[
             'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
             tab === 'boards'
-              ? 'bg-[#ef6262]/85 text-white shadow'
+              ? 'bg-[color:var(--color-admin-accent)]/85 text-white shadow'
               : 'text-muted hover:text-surface'
           ]"
           @click="activateTab('boards')"
@@ -621,7 +623,7 @@ onMounted(async () => {
           :class="[
             'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
             tab === 'teams'
-              ? 'bg-[#ef6262]/85 text-white shadow'
+              ? 'bg-[color:var(--color-admin-accent)]/85 text-white shadow'
               : 'text-muted hover:text-surface'
           ]"
           @click="activateTab('teams')"
@@ -634,7 +636,7 @@ onMounted(async () => {
           :class="[
             'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
             tab === 'activity'
-              ? 'bg-[#ef6262]/85 text-white shadow'
+              ? 'bg-[color:var(--color-admin-accent)]/85 text-white shadow'
               : 'text-muted hover:text-surface'
           ]"
           @click="activateTab('activity')"
@@ -647,7 +649,7 @@ onMounted(async () => {
           :class="[
             'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
             tab === 'members'
-              ? 'bg-[#ef6262]/85 text-white shadow'
+              ? 'bg-[color:var(--color-admin-accent)]/85 text-white shadow'
               : 'text-muted hover:text-surface'
           ]"
           @click="activateTab('members')"
@@ -663,28 +665,28 @@ onMounted(async () => {
       >
         <div
           data-test-id="admin-stat-total"
-          class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
+          class="flex flex-col gap-1 rounded-2xl border border-border bg-panel/80 p-4 shadow-lg"
         >
           <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.overview.totalBoards }}</p>
           <p class="text-2xl font-semibold text-surface">{{ totalBoards }}</p>
         </div>
         <div
           data-test-id="admin-stat-personal"
-          class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
+          class="flex flex-col gap-1 rounded-2xl border border-border bg-panel/80 p-4 shadow-lg"
         >
           <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.overview.personal }}</p>
           <p class="text-2xl font-semibold text-surface">{{ personalBoards }}</p>
         </div>
         <div
           data-test-id="admin-stat-team-boards"
-          class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
+          class="flex flex-col gap-1 rounded-2xl border border-border bg-panel/80 p-4 shadow-lg"
         >
           <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.overview.teamBoards }}</p>
           <p class="text-2xl font-semibold text-surface">{{ teamBoards }}</p>
         </div>
         <div
           data-test-id="admin-stat-collaborators"
-          class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
+          class="flex flex-col gap-1 rounded-2xl border border-border bg-panel/80 p-4 shadow-lg"
         >
           <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.overview.collaborators }}</p>
           <p class="text-2xl font-semibold text-surface">{{ totalCollaborators }}</p>
@@ -694,7 +696,7 @@ onMounted(async () => {
       <section
         v-else-if="tab === 'boards'"
         data-test-id="admin-boards"
-        class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+        class="flex flex-col gap-4 rounded-[28px] border border-border bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
@@ -734,7 +736,7 @@ onMounted(async () => {
               v-if="selectedBoardIds.size > 0"
               type="button"
               data-test-id="admin-boards-clear-selection"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-muted transition-colors hover:bg-hover hover:text-surface"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-canvas/60 px-3 py-2 text-sm text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="clearBoardSelection"
             >
               {{ admin.boardsTab.bulkClear }}
@@ -743,7 +745,7 @@ onMounted(async () => {
               type="button"
               data-test-id="admin-boards-export"
               :disabled="filteredBoards.length === 0"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-canvas/60 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
               @click="exportBoardsCsv"
             >
               <icon-lucide-download class="size-4" />
@@ -790,7 +792,7 @@ onMounted(async () => {
         <div
           v-else
           data-test-id="admin-boards-table-wrap"
-          class="overflow-x-auto rounded-xl border border-white/8"
+          class="overflow-x-auto rounded-xl border border-border"
         >
           <table class="w-full min-w-[640px] text-left text-sm">
             <thead class="bg-canvas/40 text-[11px] uppercase tracking-[0.2em] text-muted">
@@ -803,7 +805,7 @@ onMounted(async () => {
                     data-test-id="admin-boards-select-all"
                     :checked="allFilteredSelected"
                     :aria-label="admin.boardsTab.selectAllAria"
-                    class="size-4 cursor-pointer accent-[#ef6262]"
+                    class="size-4 cursor-pointer accent-[var(--color-admin-accent)]"
                     @change="toggleSelectAllFiltered"
                   />
                 </th>
@@ -861,8 +863,8 @@ onMounted(async () => {
                 :key="board.id"
                 :data-test-id="`admin-board-row-${board.id}`"
                 :class="[
-                  'border-t border-white/5 transition-colors',
-                  selectedBoardIds.has(board.id) ? 'bg-[#ef6262]/5' : 'hover:bg-hover/60'
+                  'border-t border-border transition-colors',
+                  selectedBoardIds.has(board.id) ? 'bg-[color:var(--color-admin-accent)]/5' : 'hover:bg-hover/60'
                 ]"
               >
                 <td class="w-10 px-3 py-2">
@@ -871,7 +873,7 @@ onMounted(async () => {
                     :data-test-id="`admin-board-select-${board.id}`"
                     :checked="selectedBoardIds.has(board.id)"
                     :aria-label="formatTemplate(admin.boardsTab.selectRowAria, { name: board.name })"
-                    class="size-4 cursor-pointer accent-[#ef6262]"
+                    class="size-4 cursor-pointer accent-[var(--color-admin-accent)]"
                     @change="toggleBoardSelection(board.id)"
                   />
                 </td>
@@ -913,7 +915,7 @@ onMounted(async () => {
       <section
         v-else-if="tab === 'teams'"
         data-test-id="admin-teams"
-        class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+        class="flex flex-col gap-4 rounded-[28px] border border-border bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div>
           <h2 class="text-lg font-semibold text-surface">{{ admin.teamsTab.heading }}</h2>
@@ -931,7 +933,7 @@ onMounted(async () => {
               v-for="team in ownedTeams"
               :key="team.id"
               :data-test-id="`admin-team-owned-${team.id}`"
-              class="cursor-pointer rounded-xl border border-white/8 bg-canvas/55 p-3 text-sm transition-colors hover:bg-hover"
+              class="cursor-pointer rounded-xl border border-border bg-canvas/55 p-3 text-sm transition-colors hover:bg-hover"
               @click="openTeam(team)"
             >
               <p class="font-medium text-surface">{{ team.name }}</p>
@@ -951,7 +953,7 @@ onMounted(async () => {
               v-for="team in memberTeams"
               :key="team.id"
               :data-test-id="`admin-team-joined-${team.id}`"
-              class="cursor-pointer rounded-xl border border-white/8 bg-canvas/55 p-3 text-sm transition-colors hover:bg-hover"
+              class="cursor-pointer rounded-xl border border-border bg-canvas/55 p-3 text-sm transition-colors hover:bg-hover"
               @click="openTeam(team)"
             >
               <p class="font-medium text-surface">{{ team.name }}</p>
@@ -972,7 +974,7 @@ onMounted(async () => {
       <section
         v-else-if="tab === 'activity'"
         data-test-id="admin-activity"
-        class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+        class="flex flex-col gap-4 rounded-[28px] border border-border bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
@@ -986,7 +988,7 @@ onMounted(async () => {
               type="button"
               data-test-id="admin-activity-export"
               :disabled="activityItems.length === 0"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-canvas/60 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
               @click="exportActivityCsv"
             >
               <icon-lucide-download class="size-4" />
@@ -1046,12 +1048,12 @@ onMounted(async () => {
             v-for="record in activityItems"
             :key="record.id"
             :data-test-id="`admin-activity-${record.id}`"
-            class="flex cursor-pointer items-start gap-3 rounded-xl border border-white/8 bg-canvas/55 p-3 transition-colors hover:bg-hover"
+            class="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-canvas/55 p-3 transition-colors hover:bg-hover"
             @click="openActivity(record.id)"
           >
             <div
               v-if="record.readAt === null"
-              class="mt-1.5 size-2 shrink-0 rounded-full bg-[#ef6262]"
+              class="mt-1.5 size-2 shrink-0 rounded-full bg-[var(--color-admin-accent)]"
               aria-hidden="true"
             />
             <div
@@ -1062,7 +1064,7 @@ onMounted(async () => {
             <div class="flex flex-1 flex-col gap-1">
               <div class="flex items-center justify-between gap-2">
                 <p class="text-sm font-medium text-surface">{{ getNotificationTitle(record, notificationsFormatT) }}</p>
-                <span class="rounded-full border border-white/8 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-muted">
+                <span class="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-muted">
                   {{ record.type }}
                 </span>
               </div>
@@ -1076,7 +1078,7 @@ onMounted(async () => {
       <section
         v-else-if="tab === 'members'"
         data-test-id="admin-members"
-        class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+        class="flex flex-col gap-4 rounded-[28px] border border-border bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
@@ -1090,7 +1092,7 @@ onMounted(async () => {
               type="button"
               data-test-id="admin-members-export"
               :disabled="filteredMembers.length === 0"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-canvas/60 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
               @click="exportMembersCsv"
             >
               <icon-lucide-download class="size-4" />
@@ -1145,7 +1147,7 @@ onMounted(async () => {
         <div
           v-else
           data-test-id="admin-members-table-wrap"
-          class="overflow-x-auto rounded-xl border border-white/8"
+          class="overflow-x-auto rounded-xl border border-border"
         >
           <table class="w-full min-w-[640px] text-left text-sm">
             <thead class="bg-canvas/40 text-[11px] uppercase tracking-[0.2em] text-muted">
@@ -1162,7 +1164,7 @@ onMounted(async () => {
                 v-for="entry in filteredMembers"
                 :key="`${entry.team.id}-${entry.member.userId}`"
                 :data-test-id="`admin-member-row-${entry.team.id}-${entry.member.userId}`"
-                class="border-t border-white/5 hover:bg-hover/60"
+                class="border-t border-border hover:bg-hover/60"
               >
                 <td class="px-3 py-2 text-surface">{{ entry.member.user.name || admin.membersTab.namePlaceholder }}</td>
                 <td class="px-3 py-2 text-muted">{{ entry.member.user.email }}</td>
@@ -1183,7 +1185,7 @@ onMounted(async () => {
                         ? 'border-amber-400/30 bg-amber-400/10 text-amber-200'
                         : entry.member.role === 'editor'
                           ? 'border-accent/30 bg-accent/10 text-accent'
-                          : 'border-white/10 bg-canvas/55 text-muted'
+                          : 'border-border bg-canvas/55 text-muted'
                     ]"
                   >
                     {{ entry.member.role }}
@@ -1230,7 +1232,7 @@ onMounted(async () => {
               type="button"
               data-test-id="admin-bulk-move-cancel"
               :disabled="bulkMoving"
-              class="cursor-pointer rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-muted transition-colors hover:bg-hover hover:text-surface disabled:opacity-50"
+              class="cursor-pointer rounded-lg border border-border bg-canvas/60 px-3 py-2 text-sm text-muted transition-colors hover:bg-hover hover:text-surface disabled:opacity-50"
               @click="closeBulkMoveDialog"
             >
               {{ admin.boardsTab.bulkMoveDialogCancel }}

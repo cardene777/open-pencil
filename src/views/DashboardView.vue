@@ -38,6 +38,7 @@ import { listTeams, type TeamSummary } from '@/app/api/teams'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import LoginBanner from '@/components/LoginBanner.vue'
 import NotificationBell from '@/components/NotificationBell.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
 
 const { dashboard, notificationsFormat: notificationsFormatT } = useI18n()
 
@@ -346,7 +347,7 @@ onMounted(async () => {
 <template>
   <main
     data-test-id="dashboard-view"
-    class="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(89,140,255,0.16),transparent_30%),linear-gradient(180deg,var(--color-canvas),#0d1017)] px-6 py-10"
+    class="shell-bg min-h-screen px-6 py-10"
   >
     <div class="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <header class="flex items-center justify-between">
@@ -357,6 +358,7 @@ onMounted(async () => {
         </div>
         <div class="flex items-center gap-3">
           <LocaleSwitcher test-id="dashboard-locale-switcher" />
+          <ThemeToggle test-id="dashboard-theme-toggle" />
           <NotificationBell v-if="showAccountLink" />
 
           <button
@@ -366,7 +368,7 @@ onMounted(async () => {
               'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition-colors',
               customizing
                 ? 'border-accent/40 bg-accent/10 text-accent'
-                : 'border-white/10 bg-canvas/55 text-surface hover:bg-hover'
+                : 'border-border bg-canvas/55 text-surface hover:bg-hover'
             ]"
             @click="customizing = !customizing"
           >
@@ -377,7 +379,7 @@ onMounted(async () => {
           <RouterLink
             to="/boards"
             data-test-id="dashboard-boards-link"
-            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
+            class="inline-flex items-center gap-2 rounded-full border border-border bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-layout-grid class="size-4" />
             <span>{{ dashboard.navLinks.boards }}</span>
@@ -386,7 +388,7 @@ onMounted(async () => {
           <RouterLink
             to="/teams"
             data-test-id="dashboard-teams-link"
-            class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
+            class="inline-flex items-center gap-2 rounded-full border border-border bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-users class="size-4" />
             <span>{{ dashboard.navLinks.teams }}</span>
@@ -396,7 +398,7 @@ onMounted(async () => {
             v-if="showAccountLink"
             to="/account"
             data-test-id="dashboard-account-link"
-            class="inline-flex items-center gap-3 rounded-full border border-white/10 bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
+            class="inline-flex items-center gap-3 rounded-full border border-border bg-canvas/55 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover"
           >
             <img
               v-if="auth.user?.image"
@@ -442,7 +444,7 @@ onMounted(async () => {
             <button
               type="button"
               data-test-id="dashboard-customize-reset"
-              class="cursor-pointer rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-muted transition-colors hover:bg-hover hover:text-surface"
+              class="cursor-pointer rounded-lg border border-border bg-canvas/60 px-3 py-2 text-sm text-muted transition-colors hover:bg-hover hover:text-surface"
               @click="handleResetLayout"
             >
               {{ dashboard.customize.reset }}
@@ -484,7 +486,7 @@ onMounted(async () => {
             role="listitem"
             :class="[
               'flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition-opacity outline-none focus-visible:ring-2 focus-visible:ring-accent',
-              draggingSectionId === section.id || keyboardGrabbedId === section.id ? 'opacity-60 border-accent bg-canvas/75' : 'border-white/8 bg-canvas/55',
+              draggingSectionId === section.id || keyboardGrabbedId === section.id ? 'opacity-60 border-accent bg-canvas/75' : 'border-border bg-canvas/55',
               draggingSectionId && draggingSectionId !== section.id ? 'cursor-copy' : 'cursor-grab'
             ]"
             @dragstart="(event) => handleDragStart(section.id, event)"
@@ -548,7 +550,7 @@ onMounted(async () => {
       >
         <div
           data-test-id="dashboard-metric-personal-boards"
-          class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
+          class="flex flex-col gap-1 rounded-2xl border border-border bg-panel/80 p-4 shadow-lg"
         >
           <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ dashboard.metrics.personalBoards }}</p>
           <p class="text-2xl font-semibold text-surface">{{ personalBoardCount }}</p>
@@ -556,7 +558,7 @@ onMounted(async () => {
 
         <div
           data-test-id="dashboard-metric-team-boards"
-          class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
+          class="flex flex-col gap-1 rounded-2xl border border-border bg-panel/80 p-4 shadow-lg"
         >
           <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ dashboard.metrics.teamBoards }}</p>
           <p class="text-2xl font-semibold text-surface">{{ teamBoardCount }}</p>
@@ -564,7 +566,7 @@ onMounted(async () => {
 
         <div
           data-test-id="dashboard-metric-teams"
-          class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
+          class="flex flex-col gap-1 rounded-2xl border border-border bg-panel/80 p-4 shadow-lg"
         >
           <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ dashboard.metrics.teams }}</p>
           <p class="text-2xl font-semibold text-surface">{{ totalTeams }}</p>
@@ -572,7 +574,7 @@ onMounted(async () => {
 
         <div
           data-test-id="dashboard-metric-unread"
-          class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
+          class="flex flex-col gap-1 rounded-2xl border border-border bg-panel/80 p-4 shadow-lg"
         >
           <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ dashboard.metrics.unread }}</p>
           <p class="text-2xl font-semibold text-surface">{{ totalUnread }}</p>
@@ -583,7 +585,7 @@ onMounted(async () => {
         v-if="isSectionEnabled('quickActions')"
         data-test-id="dashboard-quick-actions"
         :style="{ order: indexOfSection('quickActions') }"
-        class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+        class="flex flex-col gap-4 rounded-[28px] border border-border bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex items-center justify-between">
           <div>
@@ -606,7 +608,7 @@ onMounted(async () => {
           <RouterLink
             to="/boards"
             data-test-id="dashboard-link-boards"
-            class="flex flex-col gap-1 rounded-xl border border-white/8 bg-canvas/55 p-4 text-sm text-surface transition-colors hover:bg-hover"
+            class="flex flex-col gap-1 rounded-xl border border-border bg-canvas/55 p-4 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-layout-grid class="size-5 text-accent" />
             <span class="font-medium">{{ dashboard.quickActions.allBoards }}</span>
@@ -616,7 +618,7 @@ onMounted(async () => {
           <RouterLink
             to="/teams"
             data-test-id="dashboard-link-teams"
-            class="flex flex-col gap-1 rounded-xl border border-white/8 bg-canvas/55 p-4 text-sm text-surface transition-colors hover:bg-hover"
+            class="flex flex-col gap-1 rounded-xl border border-border bg-canvas/55 p-4 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-users class="size-5 text-accent" />
             <span class="font-medium">{{ dashboard.quickActions.teams }}</span>
@@ -626,7 +628,7 @@ onMounted(async () => {
           <RouterLink
             to="/notifications"
             data-test-id="dashboard-link-notifications"
-            class="flex flex-col gap-1 rounded-xl border border-white/8 bg-canvas/55 p-4 text-sm text-surface transition-colors hover:bg-hover"
+            class="flex flex-col gap-1 rounded-xl border border-border bg-canvas/55 p-4 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-bell class="size-5 text-accent" />
             <span class="font-medium">{{ dashboard.quickActions.notifications }}</span>
@@ -639,7 +641,7 @@ onMounted(async () => {
         v-if="isSectionEnabled('pinned') && pinnedBoards.length > 0"
         data-test-id="dashboard-pinned-boards"
         :style="{ order: indexOfSection('pinned') }"
-        class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+        class="flex flex-col gap-4 rounded-[28px] border border-border bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex items-center justify-between">
           <div>
@@ -656,7 +658,7 @@ onMounted(async () => {
             v-for="board in pinnedBoards"
             :key="board.id"
             :data-test-id="`dashboard-pinned-board-${board.id}`"
-            class="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-canvas/55 transition-colors hover:bg-hover"
+            class="group relative cursor-pointer overflow-hidden rounded-2xl border border-border bg-canvas/55 transition-colors hover:bg-hover"
             @click="openBoard(board)"
           >
             <button
@@ -697,7 +699,7 @@ onMounted(async () => {
         v-if="isSectionEnabled('recent')"
         data-test-id="dashboard-recent-boards"
         :style="{ order: indexOfSection('recent') }"
-        class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+        class="flex flex-col gap-4 rounded-[28px] border border-border bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex items-center justify-between">
           <div>
@@ -736,7 +738,7 @@ onMounted(async () => {
             v-for="board in recentBoards"
             :key="board.id"
             :data-test-id="`dashboard-recent-board-${board.id}`"
-            class="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-canvas/55 transition-colors hover:bg-hover"
+            class="group relative cursor-pointer overflow-hidden rounded-2xl border border-border bg-canvas/55 transition-colors hover:bg-hover"
             @click="openBoard(board)"
           >
             <button
@@ -782,7 +784,7 @@ onMounted(async () => {
         v-if="isSectionEnabled('activity') && auth.isAuthenticated"
         data-test-id="dashboard-activity"
         :style="{ order: indexOfSection('activity') }"
-        class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
+        class="flex flex-col gap-4 rounded-[28px] border border-border bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex items-center justify-between">
           <div>
@@ -814,7 +816,7 @@ onMounted(async () => {
             v-for="notification in latestNotifications"
             :key="notification.id"
             :data-test-id="`dashboard-activity-${notification.id}`"
-            class="flex cursor-pointer items-start gap-3 rounded-xl border border-white/8 bg-canvas/55 p-3 transition-colors hover:bg-hover"
+            class="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-canvas/55 p-3 transition-colors hover:bg-hover"
             @click="openNotification(notification.id)"
           >
             <div

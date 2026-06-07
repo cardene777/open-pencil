@@ -78,7 +78,7 @@ test('autosave status indicator transitions saving → saved → idle', async ({
     deviceScaleFactor: 2
   })
   const page = await context.newPage()
-  await page.goto('/')
+  await page.goto('/editor')
   const canvas = new CanvasHelper(page)
   await canvas.waitForInit()
 
@@ -108,7 +108,7 @@ test('reload restores edited document from IndexedDB cache', async ({ browser })
     deviceScaleFactor: 2
   })
   const page = await context.newPage()
-  await page.goto('/')
+  await page.goto('/editor')
   const canvas = new CanvasHelper(page)
   await canvas.waitForInit()
 

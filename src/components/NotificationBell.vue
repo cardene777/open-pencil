@@ -66,7 +66,7 @@ onUnmounted(() => {
       <button
         type="button"
         data-test-id="notification-bell-trigger"
-        class="relative inline-flex size-11 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-canvas/55 text-surface transition-colors hover:bg-hover"
+        class="relative inline-flex size-11 cursor-pointer items-center justify-center rounded-full border border-border bg-canvas/55 text-surface transition-colors hover:bg-hover"
         :aria-label="notificationBellT.triggerAriaLabel"
       >
         <icon-lucide-bell class="size-4" :aria-hidden="true" />

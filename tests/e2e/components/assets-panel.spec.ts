@@ -28,7 +28,7 @@ async function selectedNodeSnapshot(page: Page) {
 
 test('assets panel groups component sets and inserts the default variant', async ({ page }) => {
   const canvas = new CanvasHelper(page)
-  await page.goto('/?test')
+  await page.goto('/editor?test')
   await canvas.waitForInit()
 
   const ids = await page.evaluate(() => {
@@ -189,7 +189,7 @@ test('assets panel groups component sets and inserts the default variant', async
 
 test('assets insertion accounts for entered container coordinates', async ({ page }) => {
   const canvas = new CanvasHelper(page)
-  await page.goto('/?test')
+  await page.goto('/editor?test')
   await canvas.waitForInit()
 
   const setup = await page.evaluate(() => {

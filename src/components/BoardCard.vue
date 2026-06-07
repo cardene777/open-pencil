@@ -55,7 +55,7 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
       @click="emit('open', board)"
     >
       <div
-        class="mb-4 overflow-hidden rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))]"
+        class="mb-4 overflow-hidden rounded-2xl border border-border bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01))]"
       >
         <img
           v-if="previewUrl"
@@ -75,7 +75,7 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
 
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2">
-          <span class="rounded-full border border-white/10 bg-canvas/60 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted">
+          <span class="rounded-full border border-border bg-canvas/60 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted">
             {{ boardCardT.badge }}
           </span>
           <span

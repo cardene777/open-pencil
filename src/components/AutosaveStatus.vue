@@ -33,7 +33,7 @@ const label = computed(() => {
     >
       <span
         v-if="status === 'saving'"
-        class="inline-block size-3 animate-spin rounded-full border-2 border-white/30 border-t-white"
+        class="inline-block size-3 animate-spin rounded-full border-2 border-border border-t-white"
       />
       <span
         v-else

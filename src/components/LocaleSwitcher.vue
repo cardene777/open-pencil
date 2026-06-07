@@ -17,7 +17,7 @@ function handleChange(event: Event) {
 </script>
 
 <template>
-  <label class="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-canvas/55 px-2 py-1.5 text-sm text-surface transition-colors hover:bg-hover">
+  <label class="inline-flex items-center gap-1.5 rounded-full border border-border bg-canvas/55 px-2 py-1.5 text-sm text-surface transition-colors hover:bg-hover">
     <icon-lucide-languages
       :aria-hidden="true"
       class="size-4 text-muted"

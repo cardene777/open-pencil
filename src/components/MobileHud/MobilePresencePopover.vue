@@ -21,7 +21,7 @@ const onlineCountText = computed(() =>
   <PopoverRoot v-if="hud.collabState.connected">
     <PopoverTrigger as-child>
       <button
-        class="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-white/10 bg-panel/70 px-3 shadow-md backdrop-blur-xl select-none active:bg-hover"
+        class="flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-border bg-panel/70 px-3 shadow-md backdrop-blur-xl select-none active:bg-hover"
       >
         <span class="size-2 rounded-full bg-green-500" />
         <span class="text-xs text-surface">{{ onlineCountText }}</span>

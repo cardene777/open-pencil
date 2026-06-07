@@ -44,7 +44,7 @@ const { panels } = useI18n()
           v-for="(stop, idx) in bar.stops"
           :key="idx"
           class="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-sm border-2 shadow-sm"
-          :class="idx === bar.activeStopIndex ? 'border-white' : 'border-white/60'"
+          :class="idx === bar.activeStopIndex ? 'border-white' : 'border-border'"
           :style="{ left: `${stop.position * 100}%`, background: colorToCSS(stop.color) }"
           @pointerdown.stop="bar.actions.stopPointerDown(idx, $event)"
         />
