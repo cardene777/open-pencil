@@ -9,7 +9,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:api": "cd packages/api && bun --env-file=../../.env.development run src/server.ts",
+    "dev:api": "bun --env-file=.env.development run packages/api/src/server.ts",
     "dev:full": "bash scripts/dev.sh",
     "build": "bun run build:packages && bun run lint && vite build",
     "preview": "vite preview",

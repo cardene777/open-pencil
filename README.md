@@ -245,8 +245,9 @@ bun run dev:full
 ```
 
 `bun run dev:full` は `scripts/dev.sh` 経由で API server と Vite の両方を並行起動し、`Ctrl+C` で一括停止する。
-Landing は `http://localhost:1420/`、Editor は `http://localhost:1420/editor`。
+Editor は `http://localhost:1420/` または `http://localhost:1420/editor` の両方で起動する (後者は Landing PR マージ後に新トップページから案内するエイリアス)。
 `.env.development` のテスト値は本番では使わない (ダミー dev 値)。
+ローカルで一時的に値を上書きしたい場合は `.env.development.local` を作って override する (Vite は local 系を最優先で解決する)。
 
 #### 個別に起動したい場合
 
@@ -256,7 +257,7 @@ bun run dev:api    # API server のみ (localhost:3001)
 bun run tauri dev  # Desktop app (Rust 必要)
 ```
 
-API を立てずに Vite だけで動かすと `/dashboard` `/boards` 等の auth 必須画面で「Failed to load session」エラーになる。Landing (`/`) と Editor (`/editor`) は API なしでも閲覧できる。
+API を立てずに Vite だけで動かすと `/dashboard` `/boards` 等の auth 必須画面で「Failed to load session」エラーになる。Editor (`/` または `/editor`) は API なしでも閲覧できる。
 
 ### Quality gates
 

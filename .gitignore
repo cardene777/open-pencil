@@ -32,13 +32,12 @@ public/canvaskit-webgpu/
 test-results/
 # Git worktrees for parallel agent work
 .worktrees/
-.env
-.env.local
-.env.development
-.env.production
-!.env.development.example
-!.env.production.example
-!.env.local.example
+# すべての .env* を ignore してから *.example だけ復帰させる
+# (.env.staging / .env.test / .env.preview / packages/api/.env.* 等の派生 mode に対しても
+# live secret 流出を防ぐため、 必ず明示 example 経路に限定する)
+.env*
+!.env*.example
+!**/.env*.example
 **/.context/
 packages/docs/.vitepress/cache/
 packages/docs/.vitepress/dist/

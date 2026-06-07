@@ -43,10 +43,15 @@ echo "[dev] starting API server on http://localhost:3001 (env: $ENV_FILE)"
 ) &
 API_PID=$!
 
-echo "[dev] starting Vite dev server on http://localhost:1420 (env: $ENV_FILE)"
+echo "[dev] starting Vite dev server on http://localhost:1420"
+# Vite に env-file を preload しない。 Vite 自身に .env / .env.development /
+# .env.development.local の優先順 (local が最強) を解決させ、 開発者が
+# .env.development.local で安全に override できるようにする。
+# (bun --env-file= で process.env に先に注入すると Vite は existing process.env を尊重し、
+# .env.development.local の上書きが効かなくなる)
 (
   cd "$REPO_ROOT"
-  exec bun --env-file="$ENV_FILE" run vite
+  exec bun run vite
 ) &
 VITE_PID=$!
 
