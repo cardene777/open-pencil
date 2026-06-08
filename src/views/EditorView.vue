@@ -121,13 +121,13 @@ function scheduleBoardPreview(boardId: string) {
   }, 50)
 }
 
-function nextSheetName() {
-  return `Sheet ${boardPages.value.length + 1}`
+function nextPageName() {
+  return `Page ${boardPages.value.length + 1}`
 }
 
-function duplicateSheetName(name: string) {
+function duplicatePageName(name: string) {
   const trimmed = name.trim()
-  return trimmed.length > 0 ? `${trimmed} Copy` : 'Sheet Copy'
+  return trimmed.length > 0 ? `${trimmed} Copy` : 'Page Copy'
 }
 
 async function loadBoardPage(
@@ -232,7 +232,7 @@ async function handleCreatePage() {
 
   try {
     const page = await createBoardPage(boardRoomId.value, {
-      name: nextSheetName(),
+      name: nextPageName(),
       position: boardPages.value.length
     })
     addBoardPage(page)
@@ -314,7 +314,7 @@ async function handleDuplicatePage(pageId: string) {
 
     const sourceContent = await fetchPageContent(boardId, pageId)
     const duplicatedPage = await createBoardPage(boardId, {
-      name: duplicateSheetName(sourcePage.name),
+      name: duplicatePageName(sourcePage.name),
       position: boardPages.value.length
     })
 
