@@ -7,6 +7,7 @@ export interface GoogleOAuthConfig {
 
 export interface InklyAuthConfig {
   basePath: string
+  baseURL: string
   secret: string
   google: GoogleOAuthConfig | null
   enableTestUtils: boolean
@@ -15,6 +16,7 @@ export interface InklyAuthConfig {
 }
 
 const DEFAULT_TRUSTED_ORIGINS = ['http://localhost:1420', 'http://127.0.0.1:1420']
+const DEFAULT_BASE_URL = 'http://localhost:3001'
 
 export interface ResolveInklyAuthConfigOptions {
   env?: NodeJS.ProcessEnv
@@ -45,6 +47,7 @@ export function resolveInklyAuthConfig(options: ResolveInklyAuthConfigOptions): 
         .map((origin) => origin.trim())
         .filter((origin) => origin.length > 0)
     : DEFAULT_TRUSTED_ORIGINS
+  const baseURL = readEnv(env.BETTER_AUTH_URL) ?? readEnv(env.INKLY_API_BASE_URL) ?? DEFAULT_BASE_URL
 
   if (!authSecret) {
     warnings.push(
@@ -71,6 +74,7 @@ export function resolveInklyAuthConfig(options: ResolveInklyAuthConfigOptions): 
 
   return {
     basePath: INKLY_API_AUTH_BASE_PATH,
+    baseURL,
     secret: authSecret ?? options.fallbackSecret,
     google,
     enableTestUtils,
