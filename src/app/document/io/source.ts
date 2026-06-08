@@ -4,6 +4,8 @@ import type { Editor, EditorState } from '@inkly/core/editor'
 import { exportFigFile } from '@inkly/core/io/formats/fig'
 import { perfTracer } from '@inkly/core/profiler'
 
+import { encodeBoardContentBytes, saveBoardContent } from '@/app/api/client'
+import { resolveBoardIdFromLocation } from '@/app/boards/location'
 import { createAutosave } from '@/app/document/autosave'
 import {
   type BytesFingerprint,
@@ -19,6 +21,8 @@ import {
 import { savePenToCache } from '@/app/document/io/pen-cache'
 import { createSaveActions } from '@/app/document/io/save'
 import { createDocumentSourceState } from '@/app/document/io/source-state'
+
+const REMOTE_AUTOSAVE_DEBOUNCE_MS = 5000
 
 type DocumentSourceState = EditorState & {
   documentName: string
@@ -90,12 +94,63 @@ export function createDocumentSourceActions({
 
   let lastCachedVersion = state.sceneVersion
   let lastCachedFingerprint: BytesFingerprint | null = null
+  let lastRemoteSavedFingerprint: BytesFingerprint | null = null
   let savedResetTimer: ReturnType<typeof setTimeout> | null = null
+  let remoteAutosaveTimer: ReturnType<typeof setTimeout> | null = null
   const runOnIdle = (cb: () => void): void => {
     const ric = (globalThis as { requestIdleCallback?: (cb: () => void) => void })
       .requestIdleCallback
     if (typeof ric === 'function') ric(cb)
     else setTimeout(cb, 0)
+  }
+
+  async function flushRemoteBoardAutosave(version: number): Promise<void> {
+    const boardId =
+      typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
+    if (!boardId) return
+
+    await new Promise<void>((resolve) => runOnIdle(resolve))
+    if (version !== state.sceneVersion) return
+
+    try {
+      const bytes = await perfTracer.measureAsync(
+        'autosave:encode:board',
+        'IO',
+        () => buildFigFile(),
+        { version }
+      )
+      const nextFingerprint = perfTracer.measure(
+        'autosave:fingerprint:board',
+        'IO',
+        () => fingerprint(bytes),
+        { version, bytes: bytes.byteLength }
+      )
+      if (fingerprintEquals(lastRemoteSavedFingerprint, nextFingerprint)) return
+      if (version !== state.sceneVersion) return
+
+      const content = encodeBoardContentBytes(bytes)
+      void saveBoardContent(boardId, content)
+        .then(() => {
+          lastRemoteSavedFingerprint = nextFingerprint
+        })
+        .catch((error) => {
+          console.warn('Board DB autosave failed:', error)
+        })
+    } catch (error) {
+      console.warn('Board DB autosave preparation failed:', error)
+    }
+  }
+
+  function scheduleRemoteBoardAutosave(version: number) {
+    const boardId =
+      typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
+    if (!boardId) return
+
+    if (remoteAutosaveTimer) clearTimeout(remoteAutosaveTimer)
+    remoteAutosaveTimer = setTimeout(() => {
+      remoteAutosaveTimer = null
+      void flushRemoteBoardAutosave(version)
+    }, REMOTE_AUTOSAVE_DEBOUNCE_MS)
   }
 
   async function runAutosave(version: number): Promise<void> {
@@ -105,12 +160,9 @@ export function createDocumentSourceActions({
     const endTotal = perfTracer.mark('autosave:total', 'IO', { version })
     state.autosaveStatus = 'saving'
     try {
-      const bytes = await perfTracer.measureAsync(
-        'autosave:encode',
-        'IO',
-        () => buildFigFile(),
-        { version }
-      )
+      const bytes = await perfTracer.measureAsync('autosave:encode', 'IO', () => buildFigFile(), {
+        version
+      })
       const nextFingerprint = perfTracer.measure(
         'autosave:fingerprint',
         'IO',
@@ -127,11 +179,8 @@ export function createDocumentSourceActions({
         return
       }
       const cacheName = getDownloadName() ?? `${state.documentName}.fig`
-      // URL から board id を抽出 (/board/:id 形式)、 board に紐付かない場合は 'latest' fallback
-      const boardMatch = typeof window !== 'undefined'
-        ? window.location.pathname.match(/^\/board\/([^/]+)/)
-        : null
-      const boardId = boardMatch?.[1] ?? null
+      const boardId =
+        typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
       await perfTracer.measureAsync(
         'autosave:write',
         'IO',
@@ -164,6 +213,7 @@ export function createDocumentSourceActions({
     (version) => {
       if (version === lastCachedVersion) return
       autosaveScheduler.schedule(version)
+      scheduleRemoteBoardAutosave(version)
     }
   )
 
@@ -202,6 +252,7 @@ export function createDocumentSourceActions({
     disposeAutosave()
     stopIndexedDBAutosave()
     autosaveScheduler.cancel()
+    if (remoteAutosaveTimer) clearTimeout(remoteAutosaveTimer)
   }
 
   return {

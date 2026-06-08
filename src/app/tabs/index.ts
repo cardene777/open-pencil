@@ -3,10 +3,10 @@ import { shallowRef, computed, triggerRef } from 'vue'
 import { BUILTIN_IO_FORMATS, IORegistry } from '@inkly/core/io'
 import { readFigFile } from '@inkly/core/io/formats/fig'
 import { computeAllLayouts } from '@inkly/core/layout'
-import type { SceneGraph, SceneNode } from '@inkly/core/scene-graph'
-import { fetchIcons } from '@inkly/core/icons'
+import type { SceneGraph } from '@inkly/core/scene-graph'
 import { fontManager } from '@inkly/core/text/fonts'
 
+import { resolveBoardIdFromLocation } from '@/app/boards/location'
 import { setInklyStore } from '@/app/browser-bridge'
 import { setActiveEditorStore } from '@/app/editor/active-store'
 import { createEditorStore } from '@/app/editor/session'
@@ -48,7 +48,7 @@ function collectExtraFontStyles(graph: SceneGraph): Array<[string, string]> {
 
   const defaultFonts: Array<[string, string[]]> = [
     ['Noto Sans JP', ['Regular', 'Bold']],
-    ['Inter', ['Regular', 'Medium', 'SemiBold', 'Bold']],
+    ['Inter', ['Regular', 'Medium', 'SemiBold', 'Bold']]
   ]
   for (const [f, styles] of defaultFonts) {
     for (const s of styles) {
@@ -61,53 +61,6 @@ function collectExtraFontStyles(graph: SceneGraph): Array<[string, string]> {
   }
 
   return result
-}
-
-const ICON_FAMILY_MAP: Record<string, string> = {
-  lucide: 'lucide',
-  feather: 'feather',
-  'material symbols sharp': 'material-symbols',
-  'material symbols': 'material-symbols',
-  phosphor: 'ph'
-}
-
-// Icon fonts (lucide, Material Symbols, etc.) are bundled in /public.
-// fontManager.loadFont automatically picks them up via BUNDLED_FONTS in fonts.ts.
-
-async function resolveIconFontNodes(graph: SceneGraph): Promise<void> {
-  const iconNodes: Array<{ node: SceneNode; prefix: string; iconName: string }> = []
-  for (const node of graph.getAllNodes()) {
-    if (node.type !== 'TEXT' || !node.text) continue
-    const family = node.fontFamily?.toLowerCase() ?? ''
-    const prefix = ICON_FAMILY_MAP[family]
-    if (!prefix) continue
-    iconNodes.push({ node, prefix, iconName: node.text })
-  }
-  if (iconNodes.length === 0) return
-
-  const names = [...new Set(iconNodes.map((i) => `${i.prefix}:${i.iconName}`))]
-  const icons = await fetchIcons(names).catch(() => new Map())
-
-  for (const { node, prefix, iconName } of iconNodes) {
-    const data = icons.get(`${prefix}:${iconName}`)
-    if (!data || data.paths.length === 0) continue
-    const path = data.paths[0]
-    node.vectorNetwork = path.vectorNetwork
-    ;(node as any).type = 'VECTOR'
-    node.text = ''
-    const fillColor = node.fills[0]?.color
-    if (path.stroke && !path.fill) {
-      node.strokes = [{
-        visible: true,
-        color: fillColor ?? { r: 0, g: 0, b: 0, a: 1 },
-        opacity: 1,
-        weight: path.strokeWidth || 1.5,
-        align: 'CENTER',
-        dashPattern: []
-      }]
-      node.fills = []
-    }
-  }
 }
 
 let nextTabId = 1
@@ -208,11 +161,8 @@ export async function openFileInNewTab(
     try {
       const bytes = new Uint8Array(await file.arrayBuffer())
       const { savePenToCache } = await import('@/app/document/io/pen-cache')
-      // URL から board id を抽出 (/board/:id 形式)、 board に紐付かない場合は 'latest' fallback
-      const boardMatch = typeof window !== 'undefined'
-        ? window.location.pathname.match(/^\/board\/([^/]+)/)
-        : null
-      const boardId = boardMatch?.[1] ?? null
+      const boardId =
+        typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
       void savePenToCache(file.name, file.type || 'application/octet-stream', bytes, boardId)
     } catch (err) {
       console.warn('[tabs] failed to persist document cache:', err)
@@ -246,7 +196,7 @@ export async function openFileInNewTab(
       store.loadFontsForNodes(allNodeIds).catch(() => []),
       ...extraFonts.map(([f, s]) => fontManager.loadFont(f, s).catch(() => null)),
       // lucide icon font (bundled in /public)
-      fontManager.loadFont('lucide', 'Regular').catch(() => null),
+      fontManager.loadFont('lucide', 'Regular').catch(() => null)
     ])
     fontPromise.then(() => {
       const pid = store.graph.getPages()[0]?.id ?? store.graph.rootId

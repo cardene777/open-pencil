@@ -3,7 +3,9 @@ import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 
 import './app.css'
+import { decodeBoardContentBytes, fetchBoardContent } from '@/app/api/client'
 import { useAuthStore } from '@/app/auth/store'
+import { resolveBoardIdFromLocation, resolveBoardNameFromLocation } from '@/app/boards/location'
 import { preloadFonts } from '@/app/editor/fonts'
 import { startPerfTraceReporter } from '@/app/perf-trace/reporter'
 import { IS_TAURI } from '@/constants'
@@ -36,21 +38,40 @@ if (!IS_TAURI) {
     registerSW({ immediate: true })
   })
 
-  // Restore the last opened document from IndexedDB so a reload does not
-  // force the user to drag the file back in. We do this after mount + a
-  // small delay so the editor / canvas are fully wired up before we feed
-  // the cached file into openFileInNewTab.
+  // Restore the last opened document so a reload does not force the user
+  // to drag the file back in. Board routes prefer DB content first and
+  // keep IndexedDB as the fast local fallback.
   void (async () => {
     try {
-      const [{ loadCachedPen, fileFromCachedPen }, tabsMod] = await Promise.all([
+      const [{ loadCachedPen, fileFromCachedPen, savePenToCache }, tabsMod] = await Promise.all([
         import('@/app/document/io/pen-cache'),
         import('@/app/tabs')
       ])
-      // URL から board id を抽出 (/board/:id 形式)、 board に紐付かない場合は 'latest' fallback
-      const boardMatch = typeof window !== 'undefined'
-        ? window.location.pathname.match(/^\/board\/([^/]+)/)
-        : null
-      const boardId = boardMatch?.[1] ?? null
+      const boardId =
+        typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
+      const boardName =
+        typeof window !== 'undefined' ? resolveBoardNameFromLocation(window.location) : null
+
+      if (boardId) {
+        try {
+          const remoteContent = await fetchBoardContent(boardId)
+          if (remoteContent?.content) {
+            const bytes = decodeBoardContentBytes(remoteContent.content)
+            const fileName = `${boardName ?? 'Untitled board'}.fig`
+            await savePenToCache(fileName, 'application/octet-stream', bytes, boardId)
+            await tabsMod.openFileInNewTab(
+              new File([bytes], fileName, { type: 'application/octet-stream' }),
+              undefined,
+              undefined,
+              { skipPersistCache: true }
+            )
+            return
+          }
+        } catch (err) {
+          console.warn('[main] failed to restore board content from DB:', err)
+        }
+      }
+
       const cached = await loadCachedPen(boardId)
       if (!cached) return
       await tabsMod.openFileInNewTab(fileFromCachedPen(cached), undefined, undefined, {

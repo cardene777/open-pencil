@@ -8,6 +8,7 @@ export const boards = sqliteTable('boards', {
   creatorAnonymousId: text('creator_anonymous_id').notNull(),
   creatorUserId: text('creator_user_id').references(() => users.id, { onDelete: 'set null' }),
   teamId: text('team_id').references(() => teams.id, { onDelete: 'set null' }),
+  content: text('content'),
   createdAt: integer('created_at', { mode: 'number' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'number' }).notNull()
 })

@@ -30,6 +30,11 @@ export interface BoardTeamSummary {
   name: string
 }
 
+export interface BoardContentResponse {
+  content: string | null
+  updatedAt: number
+}
+
 export interface Invitation {
   id: string
   boardId: string
@@ -149,6 +154,27 @@ export function clearAnonymousId() {
   window.localStorage.removeItem(ANONYMOUS_ID_STORAGE_KEY)
 }
 
+export function encodeBoardContentBytes(bytes: Uint8Array): string {
+  if (typeof bytes.toBase64 === 'function') {
+    return bytes.toBase64()
+  }
+
+  let binary = ''
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte)
+  }
+  return btoa(binary)
+}
+
+export function decodeBoardContentBytes(base64: string): Uint8Array {
+  if (typeof Uint8Array.fromBase64 === 'function') {
+    return Uint8Array.fromBase64(base64)
+  }
+
+  const binary = atob(base64)
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0))
+}
+
 export function createBoardEditorLocation(board: Board) {
   const query: Record<string, string> = {
     name: board.name
@@ -167,6 +193,27 @@ export function createBoardEditorLocation(board: Board) {
 export async function listBoards() {
   const response = await apiRequest<{ boards: Board[] }>(BOARD_API_ENDPOINTS.boards)
   return response.boards
+}
+
+export async function fetchBoardContent(boardId: string): Promise<BoardContentResponse | null> {
+  const { response, data } = await requestJson<BoardContentResponse>(
+    BOARD_API_ENDPOINTS.content(boardId)
+  )
+
+  if (response.status === 404) return null
+  if (!response.ok) {
+    const errorBody = data as ApiErrorBody | null
+    throw new Error(errorBody?.error?.message ?? `Request failed with status ${response.status}`)
+  }
+
+  return data as BoardContentResponse
+}
+
+export async function saveBoardContent(boardId: string, content: string): Promise<void> {
+  await apiRequest<{ saved: boolean }>(BOARD_API_ENDPOINTS.content(boardId), {
+    method: 'PUT',
+    body: JSON.stringify({ content })
+  })
 }
 
 export function createBoard(input: { name: string; teamId?: string | null } | string) {

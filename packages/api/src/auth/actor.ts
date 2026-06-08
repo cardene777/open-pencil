@@ -19,21 +19,31 @@ export function isBoardOwner(board: BoardRecord, actor: RequestActor) {
   return false
 }
 
+export function isBoardCollaborator(board: BoardRecord, actor: RequestActor) {
+  if (isBoardOwner(board, actor)) return true
+
+  const anonymousId = actor.anonymousId?.trim()
+  if (!anonymousId) return false
+
+  return board.collaborators.some((collaborator) => collaborator.anonymousId === anonymousId)
+}
+
 export async function resolveRequestActor(
   auth: InklyAuth,
   request: Request,
   resolveAnonymous: () => string
 ): Promise<RequestActor> {
+  const anonymousId = resolveAnonymous()
   const session = await getAuthSession(auth, request)
   if (session) {
     return {
-      anonymousId: null,
+      anonymousId,
       userId: session.user.id
     }
   }
 
   return {
-    anonymousId: resolveAnonymous(),
+    anonymousId,
     userId: null
   }
 }

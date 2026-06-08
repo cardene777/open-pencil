@@ -74,6 +74,11 @@ export interface BoardRecord {
   collaborators: BoardCollaboratorRecord[]
 }
 
+export interface BoardContentRecord {
+  content: string | null
+  updatedAt: number
+}
+
 export interface CreateBoardInput {
   name: string
   creatorAnonymousId?: string | null
@@ -95,9 +100,11 @@ export interface UpdateBoardInput {
 export interface BoardStore {
   createBoard(input: CreateBoardInput): Promise<BoardRecord>
   findBoard(id: string): Promise<BoardRecord | null>
+  getBoardContent(boardId: string): Promise<BoardContentRecord | null>
   listBoardsForAnonymous(anonymousId: string): Promise<BoardRecord[]>
   listBoardsForUser(userId: string): Promise<BoardRecord[]>
   listBoardsForTeam(teamId: string): Promise<BoardRecord[]>
+  saveBoardContent(boardId: string, content: string): Promise<void>
   deleteBoard(id: string): Promise<BoardRecord | null>
   addCollaborator(boardId: string, input: AddBoardCollaboratorInput): Promise<BoardRecord | null>
   updateBoard(id: string, input: UpdateBoardInput): Promise<BoardRecord | null>

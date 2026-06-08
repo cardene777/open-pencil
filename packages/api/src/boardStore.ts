@@ -58,7 +58,12 @@ async function createInMemoryDatabase() {
 
 async function mapBoardRows(
   database: ApiDatabase,
-  rows: Array<Pick<typeof boards.$inferSelect, 'id' | 'name' | 'creatorAnonymousId' | 'creatorUserId' | 'teamId' | 'createdAt' | 'updatedAt'>>
+  rows: Array<
+    Pick<
+      typeof boards.$inferSelect,
+      'id' | 'name' | 'creatorAnonymousId' | 'creatorUserId' | 'teamId' | 'createdAt' | 'updatedAt'
+    >
+  >
 ): Promise<BoardRecord[]> {
   if (rows.length === 0) return []
 
@@ -109,9 +114,7 @@ function validateCreateBoardInput(input: CreateBoardInput) {
   }
 }
 
-export async function createBoardStore(
-  options: CreateBoardStoreOptions = {}
-): Promise<BoardStore> {
+export async function createBoardStore(options: CreateBoardStoreOptions = {}): Promise<BoardStore> {
   const database = options.database ?? (await createInMemoryDatabase())
   const now = options.now ?? Date.now
   const mapBoard = createRecordMapper(database)
@@ -159,6 +162,23 @@ export async function createBoardStore(
       const row = await database.db.select().from(boards).where(eq(boards.id, id)).get()
       return row ? cloneBoard(await mapBoard(row)) : null
     },
+    async getBoardContent(boardId: string) {
+      const row = await database.db
+        .select({
+          content: boards.content,
+          updatedAt: boards.updatedAt
+        })
+        .from(boards)
+        .where(eq(boards.id, boardId))
+        .get()
+
+      return row
+        ? {
+            content: row.content,
+            updatedAt: row.updatedAt
+          }
+        : null
+    },
     async listBoardsForAnonymous(anonymousId: string) {
       const boardRows = await database.db
         .selectDistinct({
@@ -173,10 +193,7 @@ export async function createBoardStore(
         .from(boards)
         .leftJoin(collaborators, eq(boards.id, collaborators.boardId))
         .where(
-          or(
-            eq(boards.creatorAnonymousId, anonymousId),
-            eq(collaborators.anonymousId, anonymousId)
-          )
+          or(eq(boards.creatorAnonymousId, anonymousId), eq(collaborators.anonymousId, anonymousId))
         )
         .orderBy(desc(boards.updatedAt))
         .all()
@@ -219,6 +236,16 @@ export async function createBoardStore(
 
       return await mapBoardRows(database, boardRows)
     },
+    async saveBoardContent(boardId: string, content: string) {
+      await database.db
+        .update(boards)
+        .set({
+          content,
+          updatedAt: now()
+        })
+        .where(eq(boards.id, boardId))
+        .run()
+    },
     async deleteBoard(id: string) {
       const record = await store.findBoard(id)
       if (!record) return null
@@ -249,11 +276,7 @@ export async function createBoardStore(
           })
           .run()
 
-        await tx
-          .update(boards)
-          .set({ updatedAt })
-          .where(eq(boards.id, boardId))
-          .run()
+        await tx.update(boards).set({ updatedAt }).where(eq(boards.id, boardId)).run()
       })
 
       const record = await store.findBoard(boardId)
@@ -264,7 +287,7 @@ export async function createBoardStore(
       if (!record) return null
 
       const nextName = input.name?.trim()
-      const nextTeamId = input.teamId === undefined ? record.teamId : (input.teamId?.trim() || null)
+      const nextTeamId = input.teamId === undefined ? record.teamId : input.teamId?.trim() || null
       const changes: typeof boards.$inferInsert = {
         id: record.id,
         name: nextName && nextName.length > 0 ? nextName : record.name,
