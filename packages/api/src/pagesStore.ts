@@ -43,6 +43,24 @@ export async function createPageStore(options: CreatePageStoreOptions = {}): Pro
         .orderBy(asc(pages.position), asc(pages.createdAt))
         .all()
 
+      // migration 0009 以前に作成された board は page 0 件のため、
+      // 初回アクセス時に Sheet 1 を遡及自動生成する (lazy migration)。
+      if (rows.length === 0) {
+        const boardExists = await database.db
+          .select({ id: boards.id })
+          .from(boards)
+          .where(eq(boards.id, boardId))
+          .get()
+        if (!boardExists) return []
+
+        const seeded = await store.createPage({
+          boardId,
+          name: 'Sheet 1',
+          position: 0
+        })
+        return [seeded]
+      }
+
       return rows.map((row) => clonePage(mapPage(row)))
     },
     async findPage(pageId: string) {
