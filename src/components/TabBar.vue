@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { watch } from 'vue'
-import { templateRef } from '@vueuse/core'
 import {
   ContextMenuContent,
   ContextMenuItem,
@@ -30,13 +28,16 @@ const emit = defineEmits<{
   duplicatePage: [pageId: string]
 }>()
 
-const renameInput = templateRef<HTMLInputElement>('renameInput')
 const rename = useInlineRename((pageId, name) => emit('renamePage', { pageId, name }))
 const { pages: pageMessages } = useI18n()
 
-watch(renameInput, (input) => {
-  if (input) void rename.focusInput(input)
-})
+// v-for 内 ref はそのまま渡すと array になりうるため、 mount された input を
+// その場で focus する callback ref に統一する。
+function setRenameInput(el: unknown) {
+  if (el instanceof HTMLInputElement) {
+    void rename.focusInput(el)
+  }
+}
 
 function startRename(page: Page) {
   rename.start(page.id, page.name)
@@ -70,7 +71,7 @@ function onClose(e: MouseEvent, pageId: string) {
             <icon-lucide-file-spreadsheet class="size-3 shrink-0 opacity-60" />
             <input
               v-if="rename.editingId.value === page.id"
-              ref="renameInput"
+              :ref="setRenameInput"
               data-test-id="tabbar-page-input"
               class="min-w-0 flex-1 rounded border border-accent bg-input px-1 py-0 text-xs text-surface outline-none"
               :value="page.name"
