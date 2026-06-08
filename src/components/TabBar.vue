@@ -33,9 +33,13 @@ const { pages: pageMessages } = useI18n()
 
 // v-for 内 ref はそのまま渡すと array になりうるため、 mount された input を
 // その場で focus する callback ref に統一する。
+// 直前の dblclick / context menu の mouseup が outside-click として誤検知されて
+// 即 blur されないよう requestAnimationFrame で 1 frame 待ってから focus する。
 function setRenameInput(el: unknown) {
   if (el instanceof HTMLInputElement) {
-    void rename.focusInput(el)
+    requestAnimationFrame(() => {
+      if (rename.editingId.value !== null) void rename.focusInput(el)
+    })
   }
 }
 
@@ -76,7 +80,10 @@ function onClose(e: MouseEvent, pageId: string) {
               class="min-w-0 flex-1 rounded border border-accent bg-input px-1 py-0 text-xs text-surface outline-none"
               :value="page.name"
               @blur="rename.commit(page.id, $event)"
+              @mousedown.stop
               @click.stop
+              @dblclick.stop
+              @pointerdown.stop
               @keydown.stop="rename.onKeydown"
             />
             <span
