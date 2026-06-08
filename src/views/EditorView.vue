@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useEventListener, useUrlSearchParams } from '@vueuse/core'
-import { useRoute } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import { useHead } from '@unhead/vue'
 import { SplitterGroup, SplitterPanel, SplitterResizeHandle } from 'reka-ui'
 
@@ -191,6 +191,16 @@ onUnmounted(() => {
       class="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-canvas/95 px-4 py-2"
     >
       <div class="flex min-w-0 items-center gap-2">
+        <RouterLink
+          to="/dashboard"
+          data-test-id="editor-back-to-dashboard"
+          class="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted hover:bg-surface hover:text-surface"
+          title="ダッシュボードへ戻る"
+        >
+          <span aria-hidden="true">←</span>
+          <span>ダッシュボード</span>
+        </RouterLink>
+        <span class="text-muted">/</span>
         <span data-test-id="editor-document-name" class="truncate text-sm font-medium text-surface">
           {{ store.state.documentName }}
         </span>

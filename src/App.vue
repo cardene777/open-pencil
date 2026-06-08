@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useHead } from '@unhead/vue'
 import { TooltipProvider } from 'reka-ui'
 
@@ -19,6 +20,11 @@ const { dialogs } = useI18n()
 provideEditor(store)
 useAppTheme()
 
+const route = useRoute()
+// /board/:id を切り替えた時に EditorView を再マウントして state isolation を保つ
+// (Vue Router は同じ component を route 間で reuse するため、 明示的な :key 指定で再生成を促す)
+const viewKey = computed(() => route.path)
+
 onMounted(() => {
   fadeOutGlobalLoader()
   toast.setupGlobalErrorHandler()
@@ -28,7 +34,7 @@ onMounted(() => {
 
 <template>
   <TooltipProvider :delay-duration="400">
-    <RouterView />
+    <RouterView :key="viewKey" />
     <AppToast />
     <ClearCacheDialog />
   </TooltipProvider>
