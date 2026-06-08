@@ -260,9 +260,15 @@ API を立てずに Vite だけで動かすと `/dashboard` `/boards` 等の aut
 
 ### DB
 
-ローカル開発は SQLite ファイル (`.context/api-data/inkly.db`) で完結する。
-テストは `INKLY_API_DB_MODE=memory` で in-memory にリセット可能。
-本番は `.env.local` に `TURSO_DATABASE_URL=libsql://...` (+ optional `TURSO_AUTH_TOKEN`) を設定すると Turso (libSQL remote) に自動切替する。
+DB の接続先は環境変数で完全に切替できる:
+
+| 設定 | 接続先 |
+|---|---|
+| `TURSO_DATABASE_URL` に値あり | Turso (libSQL remote) |
+| `INKLY_API_DB_MODE=memory` | in-memory (e2e 用、 リセット可能) |
+| どちらも空 | ローカル SQLite ファイル (`.context/api-data/inkly.db`) |
+
+ローカルでも Turso に接続したい場合は `.env.local` の `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` に値を設定する。
 
 Turso のセットアップ:
 
@@ -281,32 +287,21 @@ bun run packages/api/src/db/migrate.ts
 
 ### Google ログイン
 
-ローカルで本物の Google OAuth を試したい場合のみ設定する (試さないなら未設定で OK、 Google ログインボタンは "Google login is not configured" を返す)。
+Google ログインを使う場合は GCP 側のセットアップが必要。 値が空のままなら Google ログインボタンは "Google login is not configured" を返す。
 
 1. [GCP Console](https://console.cloud.google.com) でプロジェクト作成
 2. 「APIs & Services」→「Credentials」→「Create OAuth 2.0 Client ID」(type: Web application)
 3. 承認済みリダイレクト URI に `http://localhost:3001/api/auth/callback/google` を追加
-4. 取得した Client ID / Client Secret を `.env.local` に書く:
-
-```sh
-INKLY_API_GOOGLE_CLIENT_ID=...
-INKLY_API_GOOGLE_CLIENT_SECRET=...
-```
-
+4. 取得した Client ID / Client Secret を `.env.local` の `INKLY_API_GOOGLE_CLIENT_ID` / `INKLY_API_GOOGLE_CLIENT_SECRET` に設定
 5. `bun run dev:full` を再起動 → Dashboard で「Google でログイン」が動く
 
 ### 招待メール (Resend)
 
-招待メールを実際に送信したい場合のみ設定する (未設定なら no-op、 開発で困らない)。
+招待メールを実際に送信したい場合は Resend 側のセットアップが必要。 値が空のままならメール送信は no-op。
 
 1. [Resend](https://resend.com) でアカウント作成
 2. API key を発行
-3. `.env.local` に追記:
-
-```sh
-INKLY_API_RESEND_KEY=re_...
-```
-
+3. `.env.local` の `INKLY_API_RESEND_KEY` に値を設定
 4. `bun run dev:full` を再起動 → 招待 flow でメール送信される
 
 ### Quality gates
