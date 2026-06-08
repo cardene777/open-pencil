@@ -49,7 +49,10 @@ function setRenameInput(el: unknown) {
   if (editingPageId.value === null) return
   requestAnimationFrame(() => {
     el.focus()
-    el.select()
+    // 全選択しない (前回入力が次の文字入力で上書き消去されるのを避けるため)、
+    // カーソルは末尾に置く。
+    const len = el.value.length
+    el.setSelectionRange(len, len)
   })
 }
 
