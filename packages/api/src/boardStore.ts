@@ -159,7 +159,7 @@ export async function createBoardStore(options: CreateBoardStoreOptions = {}): P
           .values({
             id: crypto.randomUUID(),
             boardId: id,
-            name: 'Sheet 1',
+            name: 'Page 1',
             content: null,
             position: 0,
             createdAt,

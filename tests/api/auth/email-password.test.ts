@@ -110,7 +110,7 @@ describe('email and password auth', () => {
     })
     expect(pagesResponse.status).toBe(200)
     const pages = ((await pagesResponse.json()) as { pages: Array<{ id: string; name: string }> }).pages
-    expect(pages).toEqual([expect.objectContaining({ name: 'Sheet 1' })])
+    expect(pages).toEqual([expect.objectContaining({ name: 'Page 1' })])
 
     const contentResponse = await app.request(`/api/boards/${board.id}/pages/${pages[0].id}/content`, {
       headers: authHeaders({}, signUpCookie)
@@ -149,7 +149,7 @@ describe('email and password auth', () => {
     const laterPages = (
       (await laterPagesResponse.json()) as { pages: Array<{ id: string; name: string }> }
     ).pages
-    expect(laterPages).toEqual([expect.objectContaining({ name: 'Sheet 1' })])
+    expect(laterPages).toEqual([expect.objectContaining({ name: 'Page 1' })])
 
     const laterContentResponse = await app.request(
       `/api/boards/${board.id}/pages/${laterPages[0].id}/content`,

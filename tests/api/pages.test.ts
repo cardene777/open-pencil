@@ -25,7 +25,7 @@ describe('page routes', () => {
       pages: [
         expect.objectContaining({
           boardId: board.id,
-          name: 'Sheet 1',
+          name: 'Page 1',
           position: 0,
           content: null
         })
@@ -52,11 +52,11 @@ describe('page routes', () => {
         'content-type': 'application/json',
         'X-Inkly-Anonymous-Id': 'anon-owner'
       },
-      body: JSON.stringify({ name: 'Sheet 2' })
+      body: JSON.stringify({ name: 'Page 2' })
     })
     expect(createPageResponse.status).toBe(201)
     const createdPage = (await createPageResponse.json()) as { id: string; name: string }
-    expect(createdPage.name).toBe('Sheet 2')
+    expect(createdPage.name).toBe('Page 2')
 
     const renamePageResponse = await app.request(`/api/boards/${board.id}/pages/${createdPage.id}`, {
       method: 'PATCH',
@@ -238,7 +238,7 @@ describe('page routes', () => {
     })
     expect(pagesResponse.status).toBe(200)
     const pages = ((await pagesResponse.json()) as { pages: Array<{ id: string; name: string }> }).pages
-    expect(pages).toEqual([expect.objectContaining({ name: 'Sheet 1' })])
+    expect(pages).toEqual([expect.objectContaining({ name: 'Page 1' })])
 
     const contentResponse = await app.request(`/api/boards/${board.id}/pages/${pages[0].id}/content`, {
       headers: {

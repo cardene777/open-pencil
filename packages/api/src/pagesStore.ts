@@ -44,7 +44,7 @@ export async function createPageStore(options: CreatePageStoreOptions = {}): Pro
         .all()
 
       // migration 0009 以前に作成された board は page 0 件のため、
-      // 初回アクセス時に Sheet 1 を遡及自動生成する (lazy migration)。
+      // 初回アクセス時に Page 1 を遡及自動生成する (lazy migration)。
       if (rows.length === 0) {
         const boardExists = await database.db
           .select({ id: boards.id })
@@ -55,7 +55,7 @@ export async function createPageStore(options: CreatePageStoreOptions = {}): Pro
 
         const seeded = await store.createPage({
           boardId,
-          name: 'Sheet 1',
+          name: 'Page 1',
           position: 0
         })
         return [seeded]

@@ -48,7 +48,7 @@ describe('board routes', () => {
     database.close()
   })
 
-  test('creates Sheet 1 automatically for a new board', async () => {
+  test('creates Page 1 automatically for a new board', async () => {
     const { app, database } = await createTestApiApp({ secret: TEST_API_SECRET })
     const createResponse = await app.request('/api/boards', {
       method: 'POST',
@@ -69,7 +69,7 @@ describe('board routes', () => {
       pages: [
         expect.objectContaining({
           boardId: board.id,
-          name: 'Sheet 1',
+          name: 'Page 1',
           position: 0,
           content: null
         })

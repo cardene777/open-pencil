@@ -54,7 +54,6 @@ function onClose(e: MouseEvent, pageId: string) {
 
 <template>
   <TabsRoot
-    v-if="pages.length > 0"
     :model-value="activePageId ?? undefined"
     activation-mode="automatic"
     class="scrollbar-none flex h-9 shrink-0 items-end overflow-x-auto border-b border-border bg-canvas"

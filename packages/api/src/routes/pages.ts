@@ -7,7 +7,7 @@ import type { InklyAuth } from '../auth/index.js'
 import type { BoardRecord, BoardStore, PageStore } from '../types.js'
 
 const createPageSchema = z.object({
-  name: z.string().trim().min(1).max(120).default('Sheet'),
+  name: z.string().trim().min(1).max(120).default('Page'),
   position: z.number().int().optional()
 })
 
