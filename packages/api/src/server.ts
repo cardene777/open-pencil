@@ -1,6 +1,7 @@
 import type { ServerWebSocket } from 'bun'
 
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 
 import { createInklyAuth, type InklyAuth } from './auth/index.js'
 import { createBoardStore } from './boardStore.js'
@@ -97,6 +98,24 @@ export async function createApiApp(options: CreateApiAppOptions) {
       logger: console
     })
   const app = new Hono()
+
+  // CORS: client (vite dev http://localhost:1420) からの cookie 付き fetch を許可する
+  // (better-auth は cookie session を使うため credentials: 'include' を server 側でも accept する必要)
+  // 許可 origin は INKLY_API_TRUSTED_ORIGINS env (auth/config.ts と同 SSOT) を使う
+  const trustedOrigins = (env.INKLY_API_TRUSTED_ORIGINS?.trim()
+    ? env.INKLY_API_TRUSTED_ORIGINS.split(',')
+        .map((o) => o.trim())
+        .filter((o) => o.length > 0)
+    : ['http://localhost:1420', 'http://127.0.0.1:1420'])
+  app.use(
+    '/api/*',
+    cors({
+      origin: trustedOrigins,
+      credentials: true,
+      allowMethods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+      allowHeaders: ['Content-Type', 'Authorization', 'X-Inkly-Anonymous-Id']
+    })
+  )
 
   app.onError((error, c) => {
     const message = error instanceof Error ? (error.stack ?? error.message) : String(error)

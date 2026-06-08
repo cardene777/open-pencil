@@ -114,6 +114,7 @@ function buildHeaders(init: RequestInit): Headers {
 export async function requestJson<T>(input: string, init: RequestInit = {}) {
   const response = await fetch(input, {
     ...init,
+    credentials: 'include',
     headers: buildHeaders(init)
   })
 
