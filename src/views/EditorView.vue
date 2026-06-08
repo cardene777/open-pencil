@@ -458,16 +458,6 @@ onUnmounted(() => {
 <template>
   <div data-test-id="editor-root" class="flex h-screen w-screen flex-col">
     <SafariBanner />
-    <TabBar
-      v-if="boardRoomId"
-      :pages="boardPages"
-      :active-page-id="activeBoardPageId"
-      @create-page="void handleCreatePage()"
-      @switch-page="void handleSwitchPage($event)"
-      @rename-page="void handleRenamePage($event.pageId, $event.name)"
-      @delete-page="void handleDeletePage($event)"
-      @duplicate-page="void handleDuplicatePage($event)"
-    />
     <div
       v-if="showChrome && boardRoomId"
       class="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-canvas/95 px-4 py-2"
@@ -476,7 +466,7 @@ onUnmounted(() => {
         <RouterLink
           to="/dashboard"
           data-test-id="editor-back-to-dashboard"
-          class="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted hover:bg-surface hover:text-surface"
+          class="flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-xs text-muted"
           title="ダッシュボードへ戻る"
         >
           <span aria-hidden="true">←</span>
@@ -514,6 +504,16 @@ onUnmounted(() => {
       </div>
       <span v-if="boardRoomId" class="text-[11px] text-muted">Board {{ boardRoomId }}</span>
     </div>
+    <TabBar
+      v-if="boardRoomId"
+      :pages="boardPages"
+      :active-page-id="activeBoardPageId"
+      @create-page="void handleCreatePage()"
+      @switch-page="void handleSwitchPage($event)"
+      @rename-page="void handleRenamePage($event.pageId, $event.name)"
+      @delete-page="void handleDeletePage($event)"
+      @duplicate-page="void handleDuplicatePage($event)"
+    />
 
     <!-- Desktop layout -->
     <SplitterGroup
