@@ -2,20 +2,29 @@
 # scripts/dev.sh — API server (3001) + Vite (1420) を 1 コマンドで並行起動
 #
 # 使い方:
-#   1) cp .env.local.example .env.local  (初回のみ)
-#   2) bun run dev:full
+#   .env.dev (実 secret + Turso 接続) または .env.local (ローカル開発用) を作成してから:
+#     bun run dev:full
 #
 # 終了は Ctrl+C で両 process を一括停止。
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENV_FILE="$REPO_ROOT/.env.local"
-EXAMPLE_FILE="$REPO_ROOT/.env.local.example"
 
-if [ ! -f "$ENV_FILE" ]; then
-  echo "[dev] .env.local が見つかりません。" >&2
-  echo "[dev] cp $EXAMPLE_FILE $ENV_FILE してから再実行してください。" >&2
+# .env.dev を優先、 無ければ .env.local。 どちらも無ければ fail-fast。
+ENV_FILE=""
+ENV_LABEL=""
+if [ -f "$REPO_ROOT/.env.dev" ]; then
+  ENV_FILE="$REPO_ROOT/.env.dev"
+  ENV_LABEL=".env.dev"
+elif [ -f "$REPO_ROOT/.env.local" ]; then
+  ENV_FILE="$REPO_ROOT/.env.local"
+  ENV_LABEL=".env.local"
+else
+  echo "[dev] .env.dev も .env.local も見つかりません。" >&2
+  echo "[dev] cp $REPO_ROOT/.env.dev.example $REPO_ROOT/.env.dev  (実 secret 用)" >&2
+  echo "[dev] cp $REPO_ROOT/.env.local.example $REPO_ROOT/.env.local  (完全ローカル用)" >&2
+  echo "[dev] のどちらかを作成してから再実行してください。" >&2
   exit 1
 fi
 
@@ -38,7 +47,7 @@ trap cleanup EXIT INT TERM
 
 # dev:full + dev:api の cwd を repo root に統一して INKLY_API_DB_PATH の
 # 相対パス解決を一貫させる (cwd が異なると DB ファイルが分裂する)
-echo "[dev] starting API server on http://localhost:3001 (env: $ENV_FILE)"
+echo "[dev] starting API server on http://localhost:3001 (env: $ENV_LABEL)"
 (
   cd "$REPO_ROOT"
   exec bun --env-file="$ENV_FILE" run packages/api/src/server.ts
