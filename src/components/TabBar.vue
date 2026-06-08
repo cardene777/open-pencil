@@ -97,28 +97,31 @@ function onClose(e: MouseEvent, pageId: string) {
   >
     <TabsList class="flex h-full items-end">
       <ContextMenuRoot v-for="page in pages" :key="page.id" :modal="false">
-        <ContextMenuTrigger as-child>
+        <!-- editing 中は TabsTrigger を完全に切り離して input を独立表示する。
+             TabsTrigger は role="tab" で keyboard navigation を listen するため、
+             input 内文字入力が tab 切替 (letter typing) として奪われるのを防ぐ。 -->
+        <div
+          v-if="editingPageId === page.id"
+          class="group/page flex h-9 max-w-52 min-w-0 items-center gap-1.5 border-r border-border bg-panel px-3 text-xs text-surface"
+        >
+          <icon-lucide-file-spreadsheet class="size-3 shrink-0 opacity-60" />
+          <input
+            :ref="setRenameInput"
+            v-model="editingValue"
+            data-test-id="tabbar-page-input"
+            class="min-w-0 flex-1 rounded border border-accent bg-input px-1 py-0 text-xs text-surface outline-none"
+            @blur="commitRename(page.id)"
+            @keydown="onRenameKeydown($event, page.id)"
+          />
+        </div>
+        <ContextMenuTrigger v-else as-child>
           <TabsTrigger
             :value="page.id"
             data-test-id="tabbar-page-tab"
             class="group/page flex h-full max-w-52 min-w-0 cursor-pointer items-center gap-1.5 border-r border-border px-3 text-xs transition-colors outline-none select-none focus-visible:ring-1 focus-visible:ring-accent data-[state=active]:bg-panel data-[state=active]:text-surface data-[state=inactive]:text-muted data-[state=inactive]:hover:text-surface"
           >
             <icon-lucide-file-spreadsheet class="size-3 shrink-0 opacity-60" />
-            <input
-              v-if="editingPageId === page.id"
-              :ref="setRenameInput"
-              v-model="editingValue"
-              data-test-id="tabbar-page-input"
-              class="min-w-0 flex-1 rounded border border-accent bg-input px-1 py-0 text-xs text-surface outline-none"
-              @blur="commitRename(page.id)"
-              @mousedown.stop
-              @click.stop
-              @dblclick.stop
-              @pointerdown.stop
-              @keydown.stop="onRenameKeydown($event, page.id)"
-            />
             <span
-              v-else
               class="min-w-0 flex-1 truncate"
               @dblclick.stop="void startRename(page)"
             >
