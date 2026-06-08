@@ -11,7 +11,13 @@ provideCollabPanel()
 
 const route = useRoute()
 const shareOpen = ref(false)
-const boardId = computed(() => (typeof route.query.board === 'string' ? route.query.board : null))
+const boardId = computed(() => {
+  const paramId = route.params.id
+  if (typeof paramId === 'string' && paramId.length > 0) return paramId
+  return typeof route.query.board === 'string' && route.query.board.length > 0
+    ? route.query.board
+    : null
+})
 const boardName = computed(() => (typeof route.query.name === 'string' ? route.query.name : 'Board'))
 </script>
 
