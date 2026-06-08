@@ -10,8 +10,11 @@ export interface InklyAuthConfig {
   secret: string
   google: GoogleOAuthConfig | null
   enableTestUtils: boolean
+  trustedOrigins: string[]
   warnings: string[]
 }
+
+const DEFAULT_TRUSTED_ORIGINS = ['http://localhost:1420', 'http://127.0.0.1:1420']
 
 export interface ResolveInklyAuthConfigOptions {
   env?: NodeJS.ProcessEnv
@@ -35,6 +38,13 @@ export function resolveInklyAuthConfig(options: ResolveInklyAuthConfigOptions): 
   const googleClientId = readEnv(env.INKLY_API_GOOGLE_CLIENT_ID)
   const googleClientSecret = readEnv(env.INKLY_API_GOOGLE_CLIENT_SECRET)
   const enableTestUtils = readEnvFlag(env.INKLY_API_AUTH_ENABLE_TEST_UTILS)
+  const trustedOriginsEnv = readEnv(env.INKLY_API_TRUSTED_ORIGINS)
+  const trustedOrigins = trustedOriginsEnv
+    ? trustedOriginsEnv
+        .split(',')
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0)
+    : DEFAULT_TRUSTED_ORIGINS
 
   if (!authSecret) {
     warnings.push(
@@ -64,6 +74,7 @@ export function resolveInklyAuthConfig(options: ResolveInklyAuthConfigOptions): 
     secret: authSecret ?? options.fallbackSecret,
     google,
     enableTestUtils,
+    trustedOrigins,
     warnings
   }
 }
