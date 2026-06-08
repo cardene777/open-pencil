@@ -68,14 +68,25 @@ function cancelRename() {
   editingValue.value = ''
 }
 
-function onRenameKeydown(e: KeyboardEvent, pageId: string) {
-  if (e.code === 'Enter') {
-    e.preventDefault()
-    commitRename(pageId)
-  } else if (e.code === 'Escape') {
+function onRenameKeydown(e: KeyboardEvent) {
+  // IME 変換中の Enter / Escape は無視 (e.isComposing)
+  if (e.isComposing) return
+  if (e.code === 'Escape') {
     e.preventDefault()
     cancelRename()
   }
+}
+
+function onConfirmClick(e: MouseEvent, pageId: string) {
+  e.preventDefault()
+  e.stopPropagation()
+  commitRename(pageId)
+}
+
+function onCancelClick(e: MouseEvent) {
+  e.preventDefault()
+  e.stopPropagation()
+  cancelRename()
 }
 
 function onSwitchPage(pageId: string) {
@@ -99,10 +110,11 @@ function onClose(e: MouseEvent, pageId: string) {
       <ContextMenuRoot v-for="page in pages" :key="page.id" :modal="false">
         <!-- editing 中は TabsTrigger を完全に切り離して input を独立表示する。
              TabsTrigger は role="tab" で keyboard navigation を listen するため、
-             input 内文字入力が tab 切替 (letter typing) として奪われるのを防ぐ。 -->
+             input 内文字入力が tab 切替 (letter typing) として奪われるのを防ぐ。
+             Enter は IME 確定と衝突するので使わず、 横のチェック button で確定する。 -->
         <div
           v-if="editingPageId === page.id"
-          class="group/page flex h-9 max-w-52 min-w-0 items-center gap-1.5 border-r border-border bg-panel px-3 text-xs text-surface"
+          class="group/page flex h-9 min-w-0 items-center gap-1 border-r border-border bg-panel px-2 text-xs text-surface"
         >
           <icon-lucide-file-spreadsheet class="size-3 shrink-0 opacity-60" />
           <input
@@ -110,9 +122,30 @@ function onClose(e: MouseEvent, pageId: string) {
             v-model="editingValue"
             data-test-id="tabbar-page-input"
             class="min-w-0 flex-1 rounded border border-accent bg-input px-1 py-0 text-xs text-surface outline-none"
-            @blur="commitRename(page.id)"
-            @keydown="onRenameKeydown($event, page.id)"
+            @keydown="onRenameKeydown($event)"
           />
+          <Tip :label="pageMessages.confirm">
+            <button
+              data-test-id="tabbar-page-confirm"
+              class="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-green-300 hover:bg-hover hover:text-green-200"
+              :aria-label="pageMessages.confirm"
+              @mousedown.prevent
+              @click="onConfirmClick($event, page.id)"
+            >
+              <icon-lucide-check class="size-3.5" />
+            </button>
+          </Tip>
+          <Tip :label="pageMessages.cancel">
+            <button
+              data-test-id="tabbar-page-cancel"
+              class="flex size-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted hover:bg-hover hover:text-surface"
+              :aria-label="pageMessages.cancel"
+              @mousedown.prevent
+              @click="onCancelClick($event)"
+            >
+              <icon-lucide-x class="size-3.5" />
+            </button>
+          </Tip>
         </div>
         <ContextMenuTrigger v-else as-child>
           <TabsTrigger

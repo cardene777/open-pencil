@@ -323,6 +323,8 @@ export const pageMessages = i18n('pages', {
   newPage: 'New page',
   rename: 'Rename',
   delete: 'Delete',
+  confirm: 'Confirm',
+  cancel: 'Cancel',
   pageName: params('Page {number}')
 })
 
