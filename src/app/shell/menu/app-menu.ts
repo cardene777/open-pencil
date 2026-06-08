@@ -75,7 +75,7 @@ export function useAppMenu() {
           import('@/app/document/io/pen-cache'),
           import('@/app/tabs')
         ])
-        await cacheMod.clearCachedPen()
+        await cacheMod.clearAllCachedPens()
         tabsMod.createTab()
       })
     },

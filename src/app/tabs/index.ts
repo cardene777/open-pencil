@@ -208,7 +208,12 @@ export async function openFileInNewTab(
     try {
       const bytes = new Uint8Array(await file.arrayBuffer())
       const { savePenToCache } = await import('@/app/document/io/pen-cache')
-      void savePenToCache(file.name, file.type || 'application/octet-stream', bytes)
+      // URL から board id を抽出 (/board/:id 形式)、 board に紐付かない場合は 'latest' fallback
+      const boardMatch = typeof window !== 'undefined'
+        ? window.location.pathname.match(/^\/board\/([^/]+)/)
+        : null
+      const boardId = boardMatch?.[1] ?? null
+      void savePenToCache(file.name, file.type || 'application/octet-stream', bytes, boardId)
     } catch (err) {
       console.warn('[tabs] failed to persist document cache:', err)
     }

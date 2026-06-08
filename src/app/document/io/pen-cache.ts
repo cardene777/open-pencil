@@ -4,15 +4,14 @@
  * back in. Stored in IndexedDB because documents can easily exceed the
  * localStorage quota (5MB+) and we want binary-safe storage.
  *
- * Only the latest document is kept (single-slot store) to keep the surface
- * tiny. A future change can promote this to a multi-entry "recent files"
- * panel if needed.
+ * board id があれば board:<id> 単位で保存、 無ければ 'latest' (board に紐付かない
+ * tab / drag-and-drop で開いた場合 fallback)。 board ごとに 1 スロット。
  */
 
 const DB_NAME = 'inkly-document-cache'
 const DB_VERSION = 1
 const STORE_NAME = 'documents'
-const ENTRY_KEY = 'latest'
+const LATEST_KEY = 'latest'
 
 export interface CachedPenDocument {
   name: string
@@ -23,6 +22,13 @@ export interface CachedPenDocument {
 
 function isIndexedDBAvailable(): boolean {
   return typeof indexedDB !== 'undefined'
+}
+
+function entryKey(boardId?: string | null): string {
+  if (boardId && boardId.trim().length > 0) {
+    return `board:${boardId.trim()}`
+  }
+  return LATEST_KEY
 }
 
 function openDB(): Promise<IDBDatabase> {
@@ -76,12 +82,20 @@ function reqToPromise<T>(req: IDBRequest<T>): Promise<T> {
   })
 }
 
-export async function savePenToCache(name: string, mimeType: string, bytes: Uint8Array): Promise<void> {
+export async function savePenToCache(
+  name: string,
+  mimeType: string,
+  bytes: Uint8Array,
+  boardId?: string | null
+): Promise<void> {
   if (!isIndexedDBAvailable()) return
   try {
     await withStore('readwrite', async (store) => {
       await reqToPromise(
-        store.put({ name, mimeType, bytes, updatedAt: Date.now() } satisfies CachedPenDocument, ENTRY_KEY)
+        store.put(
+          { name, mimeType, bytes, updatedAt: Date.now() } satisfies CachedPenDocument,
+          entryKey(boardId)
+        )
       )
     })
   } catch (err) {
@@ -89,11 +103,11 @@ export async function savePenToCache(name: string, mimeType: string, bytes: Uint
   }
 }
 
-export async function loadCachedPen(): Promise<CachedPenDocument | null> {
+export async function loadCachedPen(boardId?: string | null): Promise<CachedPenDocument | null> {
   if (!isIndexedDBAvailable()) return null
   try {
     return await withStore('readonly', async (store) => {
-      const value = await reqToPromise(store.get(ENTRY_KEY))
+      const value = await reqToPromise(store.get(entryKey(boardId)))
       if (!value || typeof value !== 'object') return null
       const v = value as Partial<CachedPenDocument>
       if (!v.name || !v.bytes || !(v.bytes instanceof Uint8Array)) return null
@@ -110,14 +124,28 @@ export async function loadCachedPen(): Promise<CachedPenDocument | null> {
   }
 }
 
-export async function clearCachedPen(): Promise<void> {
+export async function clearCachedPen(boardId?: string | null): Promise<void> {
   if (!isIndexedDBAvailable()) return
   try {
     await withStore('readwrite', async (store) => {
-      await reqToPromise(store.delete(ENTRY_KEY))
+      await reqToPromise(store.delete(entryKey(boardId)))
     })
   } catch (err) {
     console.warn('[pen-cache] clear failed:', err)
+  }
+}
+
+/**
+ * 全 board の pen cache をまとめて削除する (settings の cache clear menu 等で使用)。
+ */
+export async function clearAllCachedPens(): Promise<void> {
+  if (!isIndexedDBAvailable()) return
+  try {
+    await withStore('readwrite', async (store) => {
+      await reqToPromise(store.clear())
+    })
+  } catch (err) {
+    console.warn('[pen-cache] clearAll failed:', err)
   }
 }
 
