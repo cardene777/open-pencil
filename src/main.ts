@@ -46,7 +46,12 @@ if (!IS_TAURI) {
         import('@/app/document/io/pen-cache'),
         import('@/app/tabs')
       ])
-      const cached = await loadCachedPen()
+      // URL から board id を抽出 (/board/:id 形式)、 board に紐付かない場合は 'latest' fallback
+      const boardMatch = typeof window !== 'undefined'
+        ? window.location.pathname.match(/^\/board\/([^/]+)/)
+        : null
+      const boardId = boardMatch?.[1] ?? null
+      const cached = await loadCachedPen(boardId)
       if (!cached) return
       await tabsMod.openFileInNewTab(fileFromCachedPen(cached), undefined, undefined, {
         skipPersistCache: true

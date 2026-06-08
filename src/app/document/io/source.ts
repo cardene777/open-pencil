@@ -127,10 +127,15 @@ export function createDocumentSourceActions({
         return
       }
       const cacheName = getDownloadName() ?? `${state.documentName}.fig`
+      // URL から board id を抽出 (/board/:id 形式)、 board に紐付かない場合は 'latest' fallback
+      const boardMatch = typeof window !== 'undefined'
+        ? window.location.pathname.match(/^\/board\/([^/]+)/)
+        : null
+      const boardId = boardMatch?.[1] ?? null
       await perfTracer.measureAsync(
         'autosave:write',
         'IO',
-        () => savePenToCache(cacheName, 'application/octet-stream', bytes),
+        () => savePenToCache(cacheName, 'application/octet-stream', bytes, boardId),
         { version, bytes: bytes.byteLength }
       )
       lastCachedFingerprint = nextFingerprint
