@@ -105,7 +105,14 @@ describe('email and password auth', () => {
       boards: [expect.objectContaining({ id: board.id, name: 'Partner board' })]
     })
 
-    const contentResponse = await app.request(`/api/boards/${board.id}/content`, {
+    const pagesResponse = await app.request(`/api/boards/${board.id}/pages`, {
+      headers: authHeaders({}, signUpCookie)
+    })
+    expect(pagesResponse.status).toBe(200)
+    const pages = ((await pagesResponse.json()) as { pages: Array<{ id: string; name: string }> }).pages
+    expect(pages).toEqual([expect.objectContaining({ name: 'Sheet 1' })])
+
+    const contentResponse = await app.request(`/api/boards/${board.id}/pages/${pages[0].id}/content`, {
       headers: authHeaders({}, signUpCookie)
     })
     expect(contentResponse.status).toBe(200)
@@ -135,9 +142,21 @@ describe('email and password auth', () => {
       boards: [expect.objectContaining({ id: board.id, name: 'Partner board' })]
     })
 
-    const laterContentResponse = await app.request(`/api/boards/${board.id}/content`, {
+    const laterPagesResponse = await app.request(`/api/boards/${board.id}/pages`, {
       headers: authHeaders({}, signInCookie)
     })
+    expect(laterPagesResponse.status).toBe(200)
+    const laterPages = (
+      (await laterPagesResponse.json()) as { pages: Array<{ id: string; name: string }> }
+    ).pages
+    expect(laterPages).toEqual([expect.objectContaining({ name: 'Sheet 1' })])
+
+    const laterContentResponse = await app.request(
+      `/api/boards/${board.id}/pages/${laterPages[0].id}/content`,
+      {
+        headers: authHeaders({}, signInCookie)
+      }
+    )
     expect(laterContentResponse.status).toBe(200)
     expect(await laterContentResponse.json()).toEqual({
       content: null,

@@ -16,10 +16,6 @@ const updateBoardSchema = z.object({
   teamId: z.string().trim().min(1).nullable().optional()
 })
 
-const updateBoardContentSchema = z.object({
-  content: z.string()
-})
-
 interface ValidationErrorBody {
   error: {
     code: string
@@ -260,40 +256,6 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
 
     await options.boardStore.deleteBoard(board.id)
     return c.json({ deleted: true })
-  })
-
-  app.get('/boards/:id/content', async (c) => {
-    const board = await options.boardStore.findBoard(c.req.param('id'))
-    if (!board) return notFoundResponse('board_not_found', 'Board not found')
-
-    const anonymousId = resolveAnonymousId(c)
-    if (!(await canAccessBoard(board, c.req.raw, anonymousId))) {
-      return forbiddenResponse('Only board collaborators can view board content')
-    }
-
-    const content = await options.boardStore.getBoardContent(board.id)
-    if (!content) return notFoundResponse('board_not_found', 'Board not found')
-    return c.json(content)
-  })
-
-  app.put('/boards/:id/content', async (c) => {
-    const body = await c.req.json().catch(() => ({}))
-    const parsed = updateBoardContentSchema.safeParse(body)
-    if (!parsed.success) {
-      const issue = parsed.error.issues[0]?.message ?? 'Invalid request body'
-      return c.json(validationError(issue), 400)
-    }
-
-    const board = await options.boardStore.findBoard(c.req.param('id'))
-    if (!board) return notFoundResponse('board_not_found', 'Board not found')
-
-    const anonymousId = resolveAnonymousId(c)
-    if (!(await canAccessBoard(board, c.req.raw, anonymousId))) {
-      return forbiddenResponse('Only board collaborators can update board content')
-    }
-
-    await options.boardStore.saveBoardContent(board.id, parsed.data.content)
-    return c.json({ saved: true })
   })
 
   app.get('/boards/:id/invitations', async (c) => {

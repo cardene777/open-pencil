@@ -1,4 +1,4 @@
-import { shallowRef, computed, triggerRef } from 'vue'
+import { computed, shallowRef } from 'vue'
 
 import { BUILTIN_IO_FORMATS, IORegistry } from '@inkly/core/io'
 import { readFigFile } from '@inkly/core/io/formats/fig'
@@ -49,13 +49,12 @@ function collectExtraFontStyles(graph: SceneGraph): Array<[string, string]> {
     ['Noto Sans JP', ['Regular', 'Bold']],
     ['Inter', ['Regular', 'Medium', 'SemiBold', 'Bold']]
   ]
-  for (const [f, styles] of defaultFonts) {
-    for (const s of styles) {
-      const key = `${f}|${s}`
-      if (!seen.has(key)) {
-        seen.add(key)
-        result.push([f, s])
-      }
+  for (const [family, styles] of defaultFonts) {
+    for (const style of styles) {
+      const key = `${family}|${style}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      result.push([family, style])
     }
   }
 
@@ -63,80 +62,71 @@ function collectExtraFontStyles(graph: SceneGraph): Array<[string, string]> {
 }
 
 let nextTabId = 1
+const activeTabRef = shallowRef<Tab | null>(null)
 
 function generateTabId(): string {
   return `tab-${nextTabId++}`
 }
 
-const tabsRef = shallowRef<Tab[]>([])
-const activeTabId = shallowRef('')
-
-export const activeTab = computed(() => tabsRef.value.find((t) => t.id === activeTabId.value))
-
-export const allTabs = computed(() =>
-  tabsRef.value.map((t) => ({
-    id: t.id,
-    name: t.store.state.documentName,
-    isActive: t.id === activeTabId.value
-  }))
-)
-
-export function getActiveStore(): EditorStore {
-  const tab = tabsRef.value.find((t) => t.id === activeTabId.value)
-  if (!tab) throw new Error('No active tab')
-  return tab.store
-}
-
-export function createTab(store?: EditorStore, initialGraph?: SceneGraph): Tab {
-  const s = store ?? createEditorStore(initialGraph)
-  const tab: Tab = { id: generateTabId(), store: s }
-  tabsRef.value = [...tabsRef.value, tab]
-  activateTab(tab)
-  return tab
-}
-
 function activateTab(tab: Tab) {
-  activeTabId.value = tab.id
+  activeTabRef.value = tab
   setActiveEditorStore(tab.store)
-  triggerRef(tabsRef)
   setInklyStore(tab.store)
 }
 
-export function switchTab(tabId: string) {
-  const tab = tabsRef.value.find((t) => t.id === tabId)
-  if (!tab) return
+function disposeTab(tab: Tab | null) {
+  tab?.store.dispose()
+}
+
+function ensureActiveTab(): Tab {
+  if (activeTabRef.value) return activeTabRef.value
+  return createTab()
+}
+
+export const activeTab = computed(() => activeTabRef.value)
+
+export const allTabs = computed(() => {
+  const tab = activeTabRef.value
+  if (!tab) return []
+  return [
+    {
+      id: tab.id,
+      name: tab.store.state.documentName,
+      isActive: true
+    }
+  ]
+})
+
+export function getActiveStore(): EditorStore {
+  return ensureActiveTab().store
+}
+
+export function createTab(store?: EditorStore, initialGraph?: SceneGraph): Tab {
+  const nextStore = store ?? createEditorStore(initialGraph)
+  const tab: Tab = { id: generateTabId(), store: nextStore }
+  const previous = activeTabRef.value
   activateTab(tab)
+  if (previous && previous.id !== tab.id) disposeTab(previous)
+  return tab
+}
+
+export function switchTab(tabId: string) {
+  if (activeTabRef.value?.id === tabId) return
 }
 
 export function resetAllTabs(): Tab {
-  for (const tab of tabsRef.value) {
-    tab.store.dispose()
-  }
-  tabsRef.value = []
-  activeTabId.value = ''
+  const previous = activeTabRef.value
+  activeTabRef.value = null
+  disposeTab(previous)
   return createTab()
 }
 
 export function closeTab(tabId: string) {
-  const idx = tabsRef.value.findIndex((t) => t.id === tabId)
-  if (idx === -1) return
-
-  const closingTab = tabsRef.value[idx]
-  const wasActive = activeTabId.value === tabId
-  tabsRef.value = tabsRef.value.filter((t) => t.id !== tabId)
-
-  if (tabsRef.value.length === 0) {
-    createTab()
-    closingTab.store.dispose()
-    return
-  }
-
-  if (wasActive) {
-    const newIdx = Math.min(idx, tabsRef.value.length - 1)
-    activateTab(tabsRef.value[newIdx])
-  }
-
-  closingTab.store.dispose()
+  if (activeTabRef.value?.id !== tabId) return
+  const previous = activeTabRef.value
+  activeTabRef.value = null
+  disposeTab(previous)
+  createTab()
 }
 
 function yieldToUI(): Promise<void> {
@@ -150,7 +140,7 @@ export async function openFileInNewTab(
   handle?: FileSystemFileHandle,
   path?: string
 ): Promise<void> {
-  const current = activeTab.value
+  const current = activeTabRef.value
   const isUntouched =
     current?.store.state.documentName === 'Untitled' && !current.store.undo.canUndo
   const store = isUntouched ? current.store : createTab().store
@@ -170,28 +160,25 @@ export async function openFileInNewTab(
           data: new Uint8Array(await file.arrayBuffer())
         })
 
-    // Trigger CJK fallback EARLY (before any awaits that may block on CanvasKit)
     const cjkPromise = fontManager.ensureCJKFallback().catch(() => [])
 
-    // 2 重 computeAllLayouts を回避。store.replaceGraph 後の fontPromise 完了で 1 回だけ実行する。
     store.replaceGraph(imported)
     store.undo.clear()
     store.setDocumentSource(file.name, sourceFormat, handle, path)
     store.clearSelection()
 
-    const allNodeIds = imported.getPages().flatMap((p) => p.childIds)
+    const allNodeIds = imported.getPages().flatMap((page) => page.childIds)
     const extraFonts = collectExtraFontStyles(imported)
 
     const fontPromise = Promise.all([
       cjkPromise,
       store.loadFontsForNodes(allNodeIds).catch(() => []),
-      ...extraFonts.map(([f, s]) => fontManager.loadFont(f, s).catch(() => null)),
-      // lucide icon font (bundled in /public)
+      ...extraFonts.map(([family, style]) => fontManager.loadFont(family, style).catch(() => null)),
       fontManager.loadFont('lucide', 'Regular').catch(() => null)
     ])
     fontPromise.then(() => {
-      const pid = store.graph.getPages()[0]?.id ?? store.graph.rootId
-      computeAllLayouts(store.graph, pid)
+      const pageId = store.graph.getPages()[0]?.id ?? store.graph.rootId
+      computeAllLayouts(store.graph, pageId)
       store.requestRender()
     })
     const pageId = store.graph.getPages()[0]?.id ?? store.graph.rootId
@@ -203,13 +190,13 @@ export async function openFileInNewTab(
 }
 
 export function tabCount(): number {
-  return tabsRef.value.length
+  return activeTabRef.value ? 1 : 0
 }
 
 export function useTabsStore() {
   return {
     tabs: allTabs,
-    activeTabId,
+    activeTabId: computed(() => activeTabRef.value?.id ?? ''),
     createTab,
     switchTab,
     closeTab,

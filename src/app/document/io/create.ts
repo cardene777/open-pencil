@@ -64,6 +64,9 @@ export function createDocumentIOActions(
     setPlannedFilePath: sourceActions.setPlannedFilePath,
     startWatchingCurrentFile: sourceActions.startWatchingCurrentFile,
     disposeDocumentIO: sourceActions.disposeDocumentIO,
+    flushRemotePageAutosaveNow: sourceActions.flushRemotePageAutosaveNow,
+    syncRemotePageAutosaveBaseline: sourceActions.syncRemotePageAutosaveBaseline,
+    resetRemotePageAutosaveState: sourceActions.resetRemotePageAutosaveState,
     openFigFile,
     saveFigFile: sourceActions.saveFigFile,
     saveFigFileAs: sourceActions.saveFigFileAs

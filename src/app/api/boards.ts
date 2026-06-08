@@ -1,7 +1,9 @@
 export const BOARD_API_ENDPOINTS = {
   boards: '/api/boards',
   board: (boardId: string) => `/api/boards/${boardId}`,
-  content: (boardId: string) => `/api/boards/${boardId}/content`,
+  pages: (boardId: string) => `/api/boards/${boardId}/pages`,
+  page: (boardId: string, pageId: string) => `/api/boards/${boardId}/pages/${pageId}`,
+  pageContent: (boardId: string, pageId: string) => `/api/boards/${boardId}/pages/${pageId}/content`,
   invitations: (boardId: string) => `/api/boards/${boardId}/invitations`,
   invitation: (boardId: string, invitationId: string) =>
     `/api/boards/${boardId}/invitations/${invitationId}`,

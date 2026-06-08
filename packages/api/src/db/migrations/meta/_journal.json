@@ -64,6 +64,13 @@
       "when": 1780906890174,
       "tag": "0008_bored_psynapse",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1780913944245,
+      "tag": "0009_acoustic_magdalene",
+      "breakpoints": true
     }
   ]
 }

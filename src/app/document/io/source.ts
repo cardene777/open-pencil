@@ -4,8 +4,7 @@ import type { Editor, EditorState } from '@inkly/core/editor'
 import { exportFigFile } from '@inkly/core/io/formats/fig'
 import { perfTracer } from '@inkly/core/profiler'
 
-import { encodeBoardContentBytes, saveBoardContent } from '@/app/api/client'
-import { resolveBoardIdFromLocation } from '@/app/boards/location'
+import { encodeBoardContentBytes, savePageContent } from '@/app/api/client'
 import { createAutosave } from '@/app/document/autosave'
 import {
   type BytesFingerprint,
@@ -19,6 +18,7 @@ import {
 } from '@/app/document/io/names'
 import { createSaveActions } from '@/app/document/io/save'
 import { createDocumentSourceState } from '@/app/document/io/source-state'
+import { getActiveBoardPageContext } from '@/app/pages'
 
 const REMOTE_AUTOSAVE_DEBOUNCE_MS = 5000
 
@@ -91,7 +91,7 @@ export function createDocumentSourceActions({
   })
 
   let lastRemoteVersion = state.sceneVersion
-  let lastRemoteSavedFingerprint: BytesFingerprint | null = null
+  const lastRemoteSavedFingerprintByPageId = new Map<string, BytesFingerprint>()
   let savedResetTimer: ReturnType<typeof setTimeout> | null = null
   let remoteAutosaveTimer: ReturnType<typeof setTimeout> | null = null
   const runOnIdle = (cb: () => void): void => {
@@ -101,10 +101,16 @@ export function createDocumentSourceActions({
     else setTimeout(cb, 0)
   }
 
-  async function flushRemoteBoardAutosave(version: number): Promise<void> {
-    const boardId =
-      typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
-    if (!boardId) {
+  function clearAutosaveTimers() {
+    if (remoteAutosaveTimer) clearTimeout(remoteAutosaveTimer)
+    if (savedResetTimer) clearTimeout(savedResetTimer)
+    remoteAutosaveTimer = null
+    savedResetTimer = null
+  }
+
+  async function flushRemotePageAutosave(version: number): Promise<void> {
+    const context = getActiveBoardPageContext()
+    if (!context) {
       state.autosaveStatus = 'idle'
       return
     }
@@ -122,11 +128,13 @@ export function createDocumentSourceActions({
         { version }
       )
       const nextFingerprint = perfTracer.measure(
-        'autosave:fingerprint:board',
+        'autosave:fingerprint:page',
         'IO',
         () => fingerprint(bytes),
         { version, bytes: bytes.byteLength }
       )
+      const lastRemoteSavedFingerprint =
+        lastRemoteSavedFingerprintByPageId.get(context.pageId) ?? null
       if (fingerprintEquals(lastRemoteSavedFingerprint, nextFingerprint)) {
         lastRemoteVersion = version
         state.autosaveStatus = 'saved'
@@ -139,8 +147,8 @@ export function createDocumentSourceActions({
       if (version !== state.sceneVersion) return
 
       const content = encodeBoardContentBytes(bytes)
-      await saveBoardContent(boardId, content)
-      lastRemoteSavedFingerprint = nextFingerprint
+      await savePageContent(context.boardId, context.pageId, content)
+      lastRemoteSavedFingerprintByPageId.set(context.pageId, nextFingerprint)
       lastRemoteVersion = version
       state.autosaveStatus = 'saved'
       if (savedResetTimer) clearTimeout(savedResetTimer)
@@ -148,22 +156,19 @@ export function createDocumentSourceActions({
         state.autosaveStatus = 'idle'
       }, 2000)
     } catch (error) {
-      console.warn('Board DB autosave failed:', error)
+      console.warn('Page DB autosave failed:', error)
       state.autosaveStatus = 'idle'
     } finally {
       endTotal()
     }
   }
 
-  function scheduleRemoteBoardAutosave(version: number) {
-    const boardId =
-      typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
-    if (!boardId) return
-
+  function scheduleRemotePageAutosave(version: number) {
+    if (!getActiveBoardPageContext()) return
     if (remoteAutosaveTimer) clearTimeout(remoteAutosaveTimer)
     remoteAutosaveTimer = setTimeout(() => {
       remoteAutosaveTimer = null
-      void flushRemoteBoardAutosave(version)
+      void flushRemotePageAutosave(version)
     }, REMOTE_AUTOSAVE_DEBOUNCE_MS)
   }
 
@@ -171,9 +176,35 @@ export function createDocumentSourceActions({
     () => state.sceneVersion,
     (version) => {
       if (version === lastRemoteVersion) return
-      scheduleRemoteBoardAutosave(version)
+      scheduleRemotePageAutosave(version)
     }
   )
+
+  async function flushRemotePageAutosaveNow() {
+    if (remoteAutosaveTimer) {
+      clearTimeout(remoteAutosaveTimer)
+      remoteAutosaveTimer = null
+    }
+    await flushRemotePageAutosave(state.sceneVersion)
+  }
+
+  async function syncRemotePageAutosaveBaseline(pageId: string, bytes?: Uint8Array | null) {
+    const baselineBytes = bytes ?? (await buildFigFile())
+    lastRemoteSavedFingerprintByPageId.set(pageId, fingerprint(baselineBytes))
+    lastRemoteVersion = state.sceneVersion
+    state.autosaveStatus = 'idle'
+    if (remoteAutosaveTimer) {
+      clearTimeout(remoteAutosaveTimer)
+      remoteAutosaveTimer = null
+    }
+  }
+
+  function resetRemotePageAutosaveState() {
+    clearAutosaveTimers()
+    lastRemoteSavedFingerprintByPageId.clear()
+    lastRemoteVersion = state.sceneVersion
+    state.autosaveStatus = 'idle'
+  }
 
   function setDocumentSource(
     fileName: string,
@@ -209,8 +240,7 @@ export function createDocumentSourceActions({
     stopWatchingFile()
     disposeAutosave()
     stopRemoteAutosave()
-    if (remoteAutosaveTimer) clearTimeout(remoteAutosaveTimer)
-    if (savedResetTimer) clearTimeout(savedResetTimer)
+    clearAutosaveTimers()
   }
 
   return {
@@ -218,6 +248,9 @@ export function createDocumentSourceActions({
     setPlannedFilePath,
     startWatchingCurrentFile,
     disposeDocumentIO,
+    flushRemotePageAutosaveNow,
+    syncRemotePageAutosaveBaseline,
+    resetRemotePageAutosaveState,
     saveFigFile,
     saveFigFileAs
   }

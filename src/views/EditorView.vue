@@ -5,28 +5,50 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 import { SplitterGroup, SplitterPanel, SplitterResizeHandle } from 'reka-ui'
 
-import { useViewportKind, formatShortcut, useI18n } from '@inkly/vue'
-import { toast } from '@/app/shell/ui'
-import { useKeyboard } from '@/app/shell/keyboard/use'
-import { loadEditorLayout, saveEditorLayout } from '@/app/shell/layout-storage'
-import { openFileFromPath, useMenu } from '@/app/shell/menu/use'
-import { writeBoardPreview } from '@/app/boards/preview'
-import { validateBoardNameInput } from '@/app/boards/name'
-import { useCollab, COLLAB_KEY } from '@/app/collab/use'
+import { readFigFile } from '@inkly/core/io/formats/fig'
+import { SceneGraph } from '@inkly/core/scene-graph'
+import { formatShortcut, useI18n, useViewportKind } from '@inkly/vue'
+import {
+  createBoardPage,
+  decodeBoardContentBytes,
+  deleteBoardPage,
+  fetchPageContent,
+  listBoardPages,
+  savePageContent,
+  updateBoard,
+  updateBoardPage
+} from '@/app/api/client'
 import { connectAutomation } from '@/app/automation/bridge/server'
 import { spawnMCPIfNeeded } from '@/app/automation/mcp/spawn'
-import { isTauri } from '@/app/tauri/env'
-import { appMenuShortcut } from '@/app/shell/menu/shortcut'
+import { validateBoardNameInput } from '@/app/boards/name'
+import { writeBoardPreview } from '@/app/boards/preview'
+import { useCollab, COLLAB_KEY } from '@/app/collab/use'
 import { createDemoShapes } from '@/app/demo/document'
+import { applyImportedDocument } from '@/app/document/io/imported-document'
 import { useEditorStore } from '@/app/editor/active-store'
-import { activeTab, createTab, getActiveStore, openFileInNewTab, resetAllTabs, tabCount } from '@/app/tabs'
-import { decodeBoardContentBytes, fetchBoardContent, updateBoard } from '@/app/api/client'
+import {
+  activeBoardPageId,
+  addBoardPage,
+  boardPages,
+  clearBoardPages,
+  removeBoardPage,
+  setActiveBoardPageId,
+  setBoardPages,
+  updateBoardPageEntry
+} from '@/app/pages'
+import { loadEditorLayout, saveEditorLayout } from '@/app/shell/layout-storage'
+import { useKeyboard } from '@/app/shell/keyboard/use'
+import { openFileFromPath, useMenu } from '@/app/shell/menu/use'
+import { appMenuShortcut } from '@/app/shell/menu/shortcut'
+import { toast } from '@/app/shell/ui'
+import { isTauri } from '@/app/tauri/env'
+import { activeTab, createTab, getActiveStore, resetAllTabs, tabCount } from '@/app/tabs'
 
+import AutosaveStatus from '@/components/AutosaveStatus.vue'
 import CollabPanel from '@/components/CollabPanel/CollabPanel.vue'
 import EditorCanvas from '@/components/EditorCanvas.vue'
 import LayersPanel from '@/components/LayersPanel.vue'
 import MobileDrawer from '@/components/MobileDrawer.vue'
-import AutosaveStatus from '@/components/AutosaveStatus.vue'
 import MobileHud from '@/components/MobileHud/MobileHud.vue'
 import PropertiesPanel from '@/components/PropertiesPanel.vue'
 import SafariBanner from '@/components/SafariBanner.vue'
@@ -39,10 +61,6 @@ const router = useRouter()
 const params = useUrlSearchParams('history')
 const showChrome = !('no-chrome' in params)
 
-// board route で EditorView が mount された時、 既存 tab の残骸を完全破棄して
-// 新規 tab を作成する。 これにより前 board の SceneGraph が次 board に漏れない。
-// /board/:id route なら DB fetch 経路 (watch(boardRoomId)) で content を load する。
-// /editor route (board 紐付かず) なら空のままで OK。
 const isBoardRoute = typeof route.params.id === 'string' && route.params.id.length > 0
 const createdInitialTab = tabCount() === 0
 const firstTab = isBoardRoute
@@ -66,7 +84,6 @@ const collab = useCollab(getActiveStore)
 provide(COLLAB_KEY, collab)
 
 const boardRoomId = computed(() => {
-  // /board/:id route の :id を優先、 無ければ ?board= クエリ (旧形式 backward compat)
   const paramId = route.params.id
   if (typeof paramId === 'string' && paramId.length > 0) return paramId
   return typeof route.query.board === 'string' && route.query.board.length > 0
@@ -86,6 +103,8 @@ const editingBoardName = ref('')
 const editingBoardNameInput = ref<HTMLInputElement | null>(null)
 const savingBoardName = ref(false)
 let previewWriteTimer: ReturnType<typeof setTimeout> | null = null
+let boardLoadToken = 0
+let pageLoadToken = 0
 
 function flushBoardPreview(boardId: string) {
   const sceneCanvas = document.querySelector<HTMLCanvasElement>('[data-test-id="scene-canvas-element"]')
@@ -102,59 +121,59 @@ function scheduleBoardPreview(boardId: string) {
   }, 50)
 }
 
-useEventListener(
-  document,
-  'wheel',
-  (e: WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) e.preventDefault()
-  },
-  { passive: false }
-)
-
-const automationCleanup = ref<(() => void) | null>(null)
-const mcpCleanup = ref<(() => void) | null>(null)
-const fileAssociationCleanup = ref<(() => void) | null>(null)
-const initialEditorLayout = loadEditorLayout()
-
-type PendingOpenFile = {
-  path: string
+function nextSheetName() {
+  return `Sheet ${boardPages.value.length + 1}`
 }
 
-async function openPendingAssociatedFiles() {
-  const { invoke } = await import('@tauri-apps/api/core')
-  const files = await invoke<PendingOpenFile[]>('take_pending_open')
-  for (const file of files) {
-    await openFileFromPath(file.path)
-  }
+function duplicateSheetName(name: string) {
+  const trimmed = name.trim()
+  return trimmed.length > 0 ? `${trimmed} Copy` : 'Sheet Copy'
 }
 
-async function bindAssociatedFileOpen() {
-  if (!isTauri()) return
-  const { listen } = await import('@tauri-apps/api/event')
-  fileAssociationCleanup.value = await listen('open-associated-files', () => {
-    void openPendingAssociatedFiles().catch((e) => console.error('[Open With]', e))
-  })
-  await openPendingAssociatedFiles()
-}
+async function loadBoardPage(
+  boardId: string,
+  pageId: string,
+  options: { fitViewport?: boolean; flushCurrent?: boolean } = {}
+) {
+  const targetPage = boardPages.value.find((page) => page.id === pageId)
+  if (!targetPage) return
 
-watch(
-  boardName,
-  (name) => {
-    if (!name) return
-    getActiveStore().state.documentName = name
-  },
-  { immediate: true }
-)
+  const shouldFlushCurrent = options.flushCurrent ?? true
+  const token = ++pageLoadToken
 
-async function loadBoardContentFromDB(boardId: string, name: string | null): Promise<void> {
   try {
-    const remoteContent = await fetchBoardContent(boardId)
-    if (!remoteContent?.content) return
-    const bytes = decodeBoardContentBytes(remoteContent.content)
-    const fileName = `${name ?? 'Untitled board'}.fig`
-    await openFileInNewTab(new File([bytes], fileName, { type: 'application/octet-stream' }))
-  } catch (err) {
-    console.warn('[EditorView] failed to load board content from DB:', err)
+    store.state.loading = true
+    if (shouldFlushCurrent) {
+      await store.flushRemotePageAutosaveNow()
+    }
+
+    const remoteContent = await fetchPageContent(boardId, pageId)
+    if (token !== pageLoadToken) return
+    if (!remoteContent) {
+      throw new Error('Page content not found')
+    }
+
+    const bytes = remoteContent.content ? decodeBoardContentBytes(remoteContent.content) : null
+    const graph = bytes
+      ? await readFigFile(new File([bytes], `${targetPage.name}.fig`), { populate: 'first-page' })
+      : new SceneGraph()
+
+    if (token !== pageLoadToken) return
+
+    setActiveBoardPageId(pageId)
+    await applyImportedDocument(store, graph)
+    store.setDocumentSource(`${boardName.value ?? 'Untitled board'}.fig`, 'fig')
+    await store.syncRemotePageAutosaveBaseline(pageId, bytes)
+    if (options.fitViewport) {
+      await store.fitCurrentPageToViewport()
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to load page'
+    toast.error(message)
+  } finally {
+    if (token === pageLoadToken) {
+      store.state.loading = false
+    }
   }
 }
 
@@ -208,18 +227,189 @@ async function saveBoardName() {
   }
 }
 
+async function handleCreatePage() {
+  if (!boardRoomId.value) return
+
+  try {
+    const page = await createBoardPage(boardRoomId.value, {
+      name: nextSheetName(),
+      position: boardPages.value.length
+    })
+    addBoardPage(page)
+    await loadBoardPage(boardRoomId.value, page.id, { fitViewport: true })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to create page'
+    toast.error(message)
+  }
+}
+
+async function handleSwitchPage(pageId: string) {
+  if (!boardRoomId.value || activeBoardPageId.value === pageId) return
+  await loadBoardPage(boardRoomId.value, pageId, { fitViewport: true })
+}
+
+async function handleRenamePage(pageId: string, name: string) {
+  const boardId = boardRoomId.value
+  if (!boardId) return
+
+  const validation = validateBoardNameInput(name)
+  if (!validation.ok) {
+    toast.error(validation.message)
+    return
+  }
+
+  try {
+    const page = await updateBoardPage(boardId, pageId, { name: validation.value })
+    updateBoardPageEntry(page)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to rename page'
+    toast.error(message)
+  }
+}
+
+async function handleDeletePage(pageId: string) {
+  const boardId = boardRoomId.value
+  if (!boardId) return
+
+  const currentPages = boardPages.value
+  const currentIndex = currentPages.findIndex((page) => page.id === pageId)
+  if (currentIndex === -1) return
+
+  const remainingPages = currentPages.filter((page) => page.id !== pageId)
+  const fallbackPage =
+    remainingPages[Math.max(0, currentIndex - 1)] ?? remainingPages[0] ?? null
+  const wasActive = activeBoardPageId.value === pageId
+
+  try {
+    await deleteBoardPage(boardId, pageId)
+    removeBoardPage(pageId)
+
+    if (wasActive) {
+      setActiveBoardPageId(null)
+      store.resetRemotePageAutosaveState()
+      if (fallbackPage) {
+        await loadBoardPage(boardId, fallbackPage.id, {
+          fitViewport: true,
+          flushCurrent: false
+        })
+      }
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to delete page'
+    toast.error(message)
+  }
+}
+
+async function handleDuplicatePage(pageId: string) {
+  const boardId = boardRoomId.value
+  if (!boardId) return
+
+  const sourcePage = boardPages.value.find((page) => page.id === pageId)
+  if (!sourcePage) return
+
+  try {
+    if (activeBoardPageId.value === pageId) {
+      await store.flushRemotePageAutosaveNow()
+    }
+
+    const sourceContent = await fetchPageContent(boardId, pageId)
+    const duplicatedPage = await createBoardPage(boardId, {
+      name: duplicateSheetName(sourcePage.name),
+      position: boardPages.value.length
+    })
+
+    if (sourceContent?.content) {
+      await savePageContent(boardId, duplicatedPage.id, sourceContent.content)
+    }
+
+    addBoardPage(duplicatedPage)
+    await loadBoardPage(boardId, duplicatedPage.id, { fitViewport: true })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to duplicate page'
+    toast.error(message)
+  }
+}
+
+useEventListener(
+  document,
+  'wheel',
+  (e: WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) e.preventDefault()
+  },
+  { passive: false }
+)
+
+const automationCleanup = ref<(() => void) | null>(null)
+const mcpCleanup = ref<(() => void) | null>(null)
+const fileAssociationCleanup = ref<(() => void) | null>(null)
+const initialEditorLayout = loadEditorLayout()
+
+type PendingOpenFile = {
+  path: string
+}
+
+async function openPendingAssociatedFiles() {
+  const { invoke } = await import('@tauri-apps/api/core')
+  const files = await invoke<PendingOpenFile[]>('take_pending_open')
+  for (const file of files) {
+    await openFileFromPath(file.path)
+  }
+}
+
+async function bindAssociatedFileOpen() {
+  if (!isTauri()) return
+  const { listen } = await import('@tauri-apps/api/event')
+  fileAssociationCleanup.value = await listen('open-associated-files', () => {
+    void openPendingAssociatedFiles().catch((e) => console.error('[Open With]', e))
+  })
+  await openPendingAssociatedFiles()
+}
+
+watch(
+  boardName,
+  (name) => {
+    if (!name) return
+    getActiveStore().state.documentName = name
+  },
+  { immediate: true }
+)
+
 watch(
   boardRoomId,
   async (roomId, previousRoomId) => {
+    const token = ++boardLoadToken
     cancelEditBoardName()
+
     if (previousRoomId) {
+      await store.flushRemotePageAutosaveNow()
       flushBoardPreview(previousRoomId)
       if (collab.state.value.roomId === previousRoomId) collab.disconnect()
     }
+
+    clearBoardPages()
+    store.resetRemotePageAutosaveState()
+
     if (!roomId) return
 
-    await loadBoardContentFromDB(roomId, boardName.value)
+    try {
+      const pages = await listBoardPages(roomId)
+      if (token !== boardLoadToken) return
+      setBoardPages(roomId, pages)
 
+      const initialPage = pages[0]
+      if (initialPage) {
+        await loadBoardPage(roomId, initialPage.id, {
+          fitViewport: true,
+          flushCurrent: false
+        })
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load pages'
+      toast.error(message)
+      return
+    }
+
+    if (token !== boardLoadToken) return
     if (collab.state.value.connected && collab.state.value.roomId === roomId) return
     collab.connect(roomId, { seedIfEmpty: true })
   },
@@ -268,7 +458,16 @@ onUnmounted(() => {
 <template>
   <div data-test-id="editor-root" class="flex h-screen w-screen flex-col">
     <SafariBanner />
-    <TabBar />
+    <TabBar
+      v-if="boardRoomId"
+      :pages="boardPages"
+      :active-page-id="activeBoardPageId"
+      @create-page="void handleCreatePage()"
+      @switch-page="void handleSwitchPage($event)"
+      @rename-page="void handleRenamePage($event.pageId, $event.name)"
+      @delete-page="void handleDeletePage($event)"
+      @duplicate-page="void handleDuplicatePage($event)"
+    />
     <div
       v-if="showChrome && boardRoomId"
       class="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-canvas/95 px-4 py-2"

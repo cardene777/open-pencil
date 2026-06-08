@@ -8,10 +8,28 @@ export const boards = sqliteTable('boards', {
   creatorAnonymousId: text('creator_anonymous_id').notNull(),
   creatorUserId: text('creator_user_id').references(() => users.id, { onDelete: 'set null' }),
   teamId: text('team_id').references(() => teams.id, { onDelete: 'set null' }),
-  content: text('content'),
   createdAt: integer('created_at', { mode: 'number' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'number' }).notNull()
 })
+
+export const pages = sqliteTable(
+  'pages',
+  {
+    id: text('id').primaryKey(),
+    boardId: text('board_id')
+      .notNull()
+      .references(() => boards.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    content: text('content'),
+    position: integer('position', { mode: 'number' }).notNull(),
+    createdAt: integer('created_at', { mode: 'number' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'number' }).notNull()
+  },
+  (table) => [
+    index('pages_board_id_idx').on(table.boardId),
+    index('pages_board_id_position_idx').on(table.boardId, table.position)
+  ]
+)
 
 export const invitations = sqliteTable(
   'invitations',

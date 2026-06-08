@@ -12,10 +12,12 @@ import {
   createNotificationStore,
   DEFAULT_NOTIFICATION_SWEEP_OLDER_THAN_MS
 } from './notificationStore.js'
+import { createPageStore } from './pagesStore.js'
 import { createAuthRoutes } from './routes/auth.js'
 import { createBoardRoutes } from './routes/boards.js'
 import { createInviteRoutes } from './routes/invite.js'
 import { createNotificationRoutes } from './routes/notifications.js'
+import { createPageRoutes } from './routes/pages.js'
 import { createTestingRoutes } from './routes/testing.js'
 import { createTeamRoutes } from './routes/teams.js'
 import { createInvitationStore } from './store.js'
@@ -26,6 +28,7 @@ import type {
   InvitationStore,
   NotificationRecord,
   NotificationStore,
+  PageStore,
   TeamStore
 } from './types.js'
 import {
@@ -44,6 +47,7 @@ export interface CreateApiAppOptions {
   secret: string
   store?: InvitationStore
   boardStore?: BoardStore
+  pageStore?: PageStore
   teamStore?: TeamStore
   notificationStore?: NotificationStore
   database?: ApiDatabase
@@ -74,6 +78,7 @@ export async function createApiApp(options: CreateApiAppOptions) {
     options.database ?? (await createMigratedApiDatabase(resolveApiDatabaseOptions(env)))
   const store = options.store ?? (await createInvitationStore({ database, now: options.now }))
   const boardStore = options.boardStore ?? (await createBoardStore({ database, now: options.now }))
+  const pageStore = options.pageStore ?? (await createPageStore({ database, now: options.now }))
   const teamStore = options.teamStore ?? (await createTeamStore({ database, now: options.now }))
   const notificationStore =
     options.notificationStore ??
@@ -156,6 +161,15 @@ export async function createApiApp(options: CreateApiAppOptions) {
 
   app.route(
     '/api',
+    createPageRoutes({
+      auth,
+      boardStore,
+      pageStore
+    })
+  )
+
+  app.route(
+    '/api',
     createTeamRoutes({
       auth,
       boardStore,
@@ -197,7 +211,17 @@ export async function createApiApp(options: CreateApiAppOptions) {
     })
   )
 
-  return { app, store, boardStore, teamStore, notificationStore, database, emailSender, auth }
+  return {
+    app,
+    store,
+    boardStore,
+    pageStore,
+    teamStore,
+    notificationStore,
+    database,
+    emailSender,
+    auth
+  }
 }
 
 export async function startApiServer(options: Partial<StartApiServerOptions> = {}) {

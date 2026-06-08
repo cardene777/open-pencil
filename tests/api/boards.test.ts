@@ -48,6 +48,36 @@ describe('board routes', () => {
     database.close()
   })
 
+  test('creates Sheet 1 automatically for a new board', async () => {
+    const { app, database } = await createTestApiApp({ secret: TEST_API_SECRET })
+    const createResponse = await app.request('/api/boards', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Budget board' })
+    })
+
+    expect(createResponse.status).toBe(201)
+    const anonymousId = createResponse.headers.get('X-Inkly-Anonymous-Id') ?? ''
+    const board = (await createResponse.json()) as { id: string }
+
+    const pagesResponse = await app.request(`/api/boards/${board.id}/pages`, {
+      headers: { 'X-Inkly-Anonymous-Id': anonymousId }
+    })
+
+    expect(pagesResponse.status).toBe(200)
+    expect(await pagesResponse.json()).toEqual({
+      pages: [
+        expect.objectContaining({
+          boardId: board.id,
+          name: 'Sheet 1',
+          position: 0,
+          content: null
+        })
+      ]
+    })
+    database.close()
+  })
+
   test('rejects delete and invitation listing for non-owners', async () => {
     const { app, database } = await createTestApiApp({ secret: TEST_API_SECRET })
     const ownerId = 'anon-owner'

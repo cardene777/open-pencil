@@ -74,7 +74,17 @@ export interface BoardRecord {
   collaborators: BoardCollaboratorRecord[]
 }
 
-export interface BoardContentRecord {
+export interface PageRecord {
+  id: string
+  boardId: string
+  name: string
+  content: string | null
+  position: number
+  createdAt: number
+  updatedAt: number
+}
+
+export interface PageContentRecord {
   content: string | null
   updatedAt: number
 }
@@ -100,17 +110,28 @@ export interface UpdateBoardInput {
 export interface BoardStore {
   createBoard(input: CreateBoardInput): Promise<BoardRecord>
   findBoard(id: string): Promise<BoardRecord | null>
-  getBoardContent(boardId: string): Promise<BoardContentRecord | null>
   listBoardsForAnonymous(anonymousId: string): Promise<BoardRecord[]>
   listBoardsForUser(userId: string): Promise<BoardRecord[]>
   listBoardsForInvitedUser(userId: string): Promise<BoardRecord[]>
   hasAcceptedInvitationForUser(boardId: string, userId: string): Promise<boolean>
   listBoardsForTeam(teamId: string): Promise<BoardRecord[]>
-  saveBoardContent(boardId: string, content: string): Promise<void>
   deleteBoard(id: string): Promise<BoardRecord | null>
   addCollaborator(boardId: string, input: AddBoardCollaboratorInput): Promise<BoardRecord | null>
   updateBoard(id: string, input: UpdateBoardInput): Promise<BoardRecord | null>
   clearTeamForBoards(teamId: string): Promise<number>
+}
+
+export interface PageStore {
+  listPagesForBoard(boardId: string): Promise<PageRecord[]>
+  findPage(pageId: string): Promise<PageRecord | null>
+  createPage(input: { boardId: string; name: string; position: number }): Promise<PageRecord>
+  updatePage(
+    pageId: string,
+    input: { name?: string; position?: number }
+  ): Promise<PageRecord | null>
+  deletePage(pageId: string): Promise<void>
+  getPageContent(pageId: string): Promise<PageContentRecord | null>
+  savePageContent(pageId: string, content: string): Promise<void>
 }
 
 export interface TeamRecord {

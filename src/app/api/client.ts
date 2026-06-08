@@ -30,7 +30,17 @@ export interface BoardTeamSummary {
   name: string
 }
 
-export interface BoardContentResponse {
+export interface Page {
+  id: string
+  boardId: string
+  name: string
+  content: string | null
+  position: number
+  createdAt: number
+  updatedAt: number
+}
+
+export interface PageContentResponse {
   content: string | null
   updatedAt: number
 }
@@ -209,9 +219,44 @@ export async function listBoards() {
   return response.boards
 }
 
-export async function fetchBoardContent(boardId: string): Promise<BoardContentResponse | null> {
-  const { response, data } = await requestJson<BoardContentResponse>(
-    BOARD_API_ENDPOINTS.content(boardId)
+export async function listBoardPages(boardId: string): Promise<Page[]> {
+  const response = await apiRequest<{ pages: Page[] }>(BOARD_API_ENDPOINTS.pages(boardId))
+  return response.pages
+}
+
+export async function createBoardPage(
+  boardId: string,
+  input: { name: string; position?: number }
+) {
+  return apiRequest<Page>(BOARD_API_ENDPOINTS.pages(boardId), {
+    method: 'POST',
+    body: JSON.stringify(input)
+  })
+}
+
+export async function updateBoardPage(
+  boardId: string,
+  pageId: string,
+  input: { name?: string; position?: number }
+) {
+  return apiRequest<Page>(BOARD_API_ENDPOINTS.page(boardId, pageId), {
+    method: 'PATCH',
+    body: JSON.stringify(input)
+  })
+}
+
+export async function deleteBoardPage(boardId: string, pageId: string): Promise<void> {
+  await apiRequest<{ deleted: boolean }>(BOARD_API_ENDPOINTS.page(boardId, pageId), {
+    method: 'DELETE'
+  })
+}
+
+export async function fetchPageContent(
+  boardId: string,
+  pageId: string
+): Promise<PageContentResponse | null> {
+  const { response, data } = await requestJson<PageContentResponse>(
+    BOARD_API_ENDPOINTS.pageContent(boardId, pageId)
   )
 
   if (response.status === 404) return null
@@ -220,11 +265,15 @@ export async function fetchBoardContent(boardId: string): Promise<BoardContentRe
     throw new Error(errorBody?.error?.message ?? `Request failed with status ${response.status}`)
   }
 
-  return data as BoardContentResponse
+  return data as PageContentResponse
 }
 
-export async function saveBoardContent(boardId: string, content: string): Promise<void> {
-  await apiRequest<{ saved: boolean }>(BOARD_API_ENDPOINTS.content(boardId), {
+export async function savePageContent(
+  boardId: string,
+  pageId: string,
+  content: string
+): Promise<void> {
+  await apiRequest<{ saved: boolean }>(BOARD_API_ENDPOINTS.pageContent(boardId, pageId), {
     method: 'PUT',
     body: JSON.stringify({ content })
   })

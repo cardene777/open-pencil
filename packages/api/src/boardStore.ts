@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, or } from 'drizzle-orm'
 
 import type { ApiDatabase } from './db/client.js'
 import { createMigratedApiDatabase } from './db/migrate.js'
-import { boards, collaborators, invitations, users } from './db/schema.js'
+import { boards, collaborators, invitations, pages, users } from './db/schema.js'
 import { hashInvitationEmail } from './token.js'
 import type {
   AddBoardCollaboratorInput,
@@ -153,6 +153,19 @@ export async function createBoardStore(options: CreateBoardStoreOptions = {}): P
             })
             .run()
         }
+
+        await tx
+          .insert(pages)
+          .values({
+            id: crypto.randomUUID(),
+            boardId: id,
+            name: 'Sheet 1',
+            content: null,
+            position: 0,
+            createdAt,
+            updatedAt: createdAt
+          })
+          .run()
       })
 
       const record = await store.findBoard(id)
@@ -162,23 +175,6 @@ export async function createBoardStore(options: CreateBoardStoreOptions = {}): P
     async findBoard(id: string) {
       const row = await database.db.select().from(boards).where(eq(boards.id, id)).get()
       return row ? cloneBoard(await mapBoard(row)) : null
-    },
-    async getBoardContent(boardId: string) {
-      const row = await database.db
-        .select({
-          content: boards.content,
-          updatedAt: boards.updatedAt
-        })
-        .from(boards)
-        .where(eq(boards.id, boardId))
-        .get()
-
-      return row
-        ? {
-            content: row.content,
-            updatedAt: row.updatedAt
-          }
-        : null
     },
     async listBoardsForAnonymous(anonymousId: string) {
       const boardRows = await database.db
@@ -286,16 +282,6 @@ export async function createBoardStore(options: CreateBoardStoreOptions = {}): P
         .all()
 
       return await mapBoardRows(database, boardRows)
-    },
-    async saveBoardContent(boardId: string, content: string) {
-      await database.db
-        .update(boards)
-        .set({
-          content,
-          updatedAt: now()
-        })
-        .where(eq(boards.id, boardId))
-        .run()
     },
     async deleteBoard(id: string) {
       const record = await store.findBoard(id)

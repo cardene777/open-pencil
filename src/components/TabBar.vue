@@ -1,71 +1,138 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { TabsList, TabsRoot, TabsTrigger } from 'reka-ui'
+import { watch } from 'vue'
+import { templateRef } from '@vueuse/core'
+import {
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuPortal,
+  ContextMenuRoot,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+  TabsList,
+  TabsRoot,
+  TabsTrigger
+} from 'reka-ui'
 
+import { type Page } from '@/app/api/client'
 import Tip from '@/components/ui/Tip.vue'
-import { useTabsStore, createTab } from '@/app/tabs'
-import { useI18n } from '@inkly/vue'
+import { useI18n, useInlineRename } from '@inkly/vue'
 
-const { dialogs } = useI18n()
+const props = defineProps<{
+  pages: Page[]
+  activePageId: string | null
+}>()
 
-const { tabs, activeTabId, switchTab, closeTab } = useTabsStore()
+const emit = defineEmits<{
+  createPage: []
+  switchPage: [pageId: string]
+  renamePage: [payload: { pageId: string; name: string }]
+  deletePage: [pageId: string]
+  duplicatePage: [pageId: string]
+}>()
 
-const modelValue = computed({
-  get: () => activeTabId.value,
-  set: (id: string) => switchTab(id)
+const renameInput = templateRef<HTMLInputElement>('renameInput')
+const rename = useInlineRename((pageId, name) => emit('renamePage', { pageId, name }))
+const { pages: pageMessages } = useI18n()
+
+watch(renameInput, (input) => {
+  if (input) void rename.focusInput(input)
 })
 
-function onMiddleClick(e: MouseEvent, tabId: string) {
-  if (e.button === 1) {
-    e.preventDefault()
-    closeTab(tabId)
-  }
+function startRename(page: Page) {
+  rename.start(page.id, page.name)
 }
 
-function onClose(e: MouseEvent, tabId: string) {
+function onSwitchPage(pageId: string) {
+  emit('switchPage', pageId)
+}
+
+function onClose(e: MouseEvent, pageId: string) {
   e.stopPropagation()
-  closeTab(tabId)
+  emit('deletePage', pageId)
 }
 </script>
 
 <template>
   <TabsRoot
-    v-if="tabs.length > 1"
-    v-model="modelValue"
+    v-if="pages.length > 0"
+    :model-value="activePageId ?? undefined"
     activation-mode="automatic"
     class="scrollbar-none flex h-9 shrink-0 items-end overflow-x-auto border-b border-border bg-canvas"
+    @update:model-value="onSwitchPage(String($event))"
   >
     <TabsList class="flex h-full items-end">
-      <TabsTrigger
-        v-for="tab in tabs"
-        :key="tab.id"
-        :value="tab.id"
-        data-test-id="tabbar-tab"
-        class="group/tab flex h-full max-w-48 min-w-0 cursor-pointer items-center gap-1.5 border-r border-border px-3 text-xs transition-colors outline-none select-none focus-visible:ring-1 focus-visible:ring-accent data-[state=active]:bg-panel data-[state=active]:text-surface data-[state=inactive]:text-muted data-[state=inactive]:hover:text-surface"
-        @mousedown="onMiddleClick($event, tab.id)"
-      >
-        <icon-lucide-file class="size-3 shrink-0 opacity-50" />
-        <span class="min-w-0 flex-1 truncate">{{ tab.name }}</span>
-        <Tip :label="dialogs.closeTab({ name: tab.name })">
-          <button
-            data-test-id="tabbar-close"
-            class="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded opacity-0 transition-opacity group-hover/tab:opacity-100 hover:bg-hover data-[state=active]:opacity-100"
-            :class="tab.isActive ? 'opacity-100' : ''"
-            :aria-label="dialogs.closeTab({ name: tab.name })"
-            tabindex="-1"
-            @click="onClose($event, tab.id)"
+      <ContextMenuRoot v-for="page in pages" :key="page.id" :modal="false">
+        <ContextMenuTrigger as-child>
+          <TabsTrigger
+            :value="page.id"
+            data-test-id="tabbar-page-tab"
+            class="group/page flex h-full max-w-52 min-w-0 cursor-pointer items-center gap-1.5 border-r border-border px-3 text-xs transition-colors outline-none select-none focus-visible:ring-1 focus-visible:ring-accent data-[state=active]:bg-panel data-[state=active]:text-surface data-[state=inactive]:text-muted data-[state=inactive]:hover:text-surface"
           >
-            <icon-lucide-x class="size-3" />
-          </button>
-        </Tip>
-      </TabsTrigger>
+            <icon-lucide-file-spreadsheet class="size-3 shrink-0 opacity-60" />
+            <input
+              v-if="rename.editingId.value === page.id"
+              ref="renameInput"
+              data-test-id="tabbar-page-input"
+              class="min-w-0 flex-1 rounded border border-accent bg-input px-1 py-0 text-xs text-surface outline-none"
+              :value="page.name"
+              @blur="rename.commit(page.id, $event)"
+              @click.stop
+              @keydown.stop="rename.onKeydown"
+            />
+            <span
+              v-else
+              class="min-w-0 flex-1 truncate"
+              @dblclick.stop="startRename(page)"
+            >
+              {{ page.name }}
+            </span>
+            <Tip :label="pageMessages.delete">
+              <button
+                data-test-id="tabbar-page-delete"
+                class="flex size-4 shrink-0 cursor-pointer items-center justify-center rounded opacity-0 transition-opacity group-hover/page:opacity-100 hover:bg-hover data-[state=active]:opacity-100"
+                :class="page.id === activePageId ? 'opacity-100' : ''"
+                :aria-label="pageMessages.delete"
+                tabindex="-1"
+                @click="onClose($event, page.id)"
+              >
+                <icon-lucide-x class="size-3" />
+              </button>
+            </Tip>
+          </TabsTrigger>
+        </ContextMenuTrigger>
+        <ContextMenuPortal>
+          <ContextMenuContent
+            class="z-50 min-w-36 rounded-md border border-border bg-panel p-1 shadow-lg"
+          >
+            <ContextMenuItem
+              class="flex cursor-pointer items-center rounded px-2 py-1.5 text-xs text-surface outline-none hover:bg-hover"
+              @select="startRename(page)"
+            >
+              {{ pageMessages.rename }}
+            </ContextMenuItem>
+            <ContextMenuItem
+              class="flex cursor-pointer items-center rounded px-2 py-1.5 text-xs text-surface outline-none hover:bg-hover"
+              @select="emit('duplicatePage', page.id)"
+            >
+              Duplicate
+            </ContextMenuItem>
+            <ContextMenuSeparator class="mx-1 my-1 h-px bg-border" />
+            <ContextMenuItem
+              class="flex cursor-pointer items-center rounded px-2 py-1.5 text-xs text-red-200 outline-none hover:bg-hover"
+              @select="emit('deletePage', page.id)"
+            >
+              {{ pageMessages.delete }}
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenuPortal>
+      </ContextMenuRoot>
     </TabsList>
-    <Tip :label="dialogs.newTab">
+    <Tip :label="pageMessages.newPage">
       <button
-        data-test-id="tabbar-new"
+        data-test-id="tabbar-page-new"
         class="flex size-9 shrink-0 cursor-pointer items-center justify-center text-muted transition-colors hover:text-surface"
-        :aria-label="dialogs.newTab"
-        @click="createTab()"
+        :aria-label="pageMessages.newPage"
+        @click="emit('createPage')"
       >
         <icon-lucide-plus class="size-3.5" />
       </button>
