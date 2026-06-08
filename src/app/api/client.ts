@@ -72,10 +72,16 @@ export interface VerifyInvitationResponse {
   invitation?: {
     id: string
     boardId: string
+    boardName: string
     role: InvitationRole
     expiresAt: number
   }
   reason?: string
+}
+
+export interface AcceptInvitationResponse {
+  boardId: string
+  role: InvitationRole
 }
 
 export interface BoardInvitationsResponse {
@@ -139,6 +145,13 @@ export function verifyInvitation(token: string) {
     method: 'POST',
     body: JSON.stringify({ token })
   }).then(({ data }) => (data ?? { valid: false, reason: 'malformed' }) as VerifyInvitationResponse)
+}
+
+export function acceptInvitation(token: string) {
+  return apiRequest<AcceptInvitationResponse>(BOARD_API_ENDPOINTS.acceptInvite, {
+    method: 'POST',
+    body: JSON.stringify({ token })
+  })
 }
 
 export function getAnonymousId() {

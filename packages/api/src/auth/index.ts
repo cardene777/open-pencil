@@ -1,12 +1,18 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { betterAuth } from 'better-auth'
-import { testUtils } from 'better-auth/plugins'
+import { customSession, testUtils } from 'better-auth/plugins'
 import { eq } from 'drizzle-orm'
 
 import type { ApiDatabase } from '../db/client.js'
 import { users } from '../db/schema.js'
 import * as schema from '../db/schema.js'
-import { INKLY_API_AUTH_BASE_PATH, resolveInklyAuthConfig } from './config.js'
+import type { InvitationEmailSender } from '../email/resend.js'
+import type { AccessLevel } from '../types.js'
+import {
+  INKLY_API_AUTH_BASE_PATH,
+  resolveAccessLevelForEmail,
+  resolveInklyAuthConfig
+} from './config.js'
 
 export interface InklyAuthSession {
   session: {
@@ -21,6 +27,7 @@ export interface InklyAuthSession {
     id: string
     name: string
     email: string
+    accessLevel: AccessLevel
     emailVerified: boolean
     image: string | null
     createdAt: string
@@ -46,6 +53,7 @@ export interface InklyAuth {
 
 export interface CreateInklyAuthOptions {
   database: ApiDatabase
+  emailSender?: InvitationEmailSender
   env?: NodeJS.ProcessEnv
   fallbackSecret: string
   logger?: Pick<Console, 'warn'>
@@ -88,8 +96,36 @@ interface BetterAuthTestContext {
   }
 }
 
+interface SessionUserInput {
+  id: string
+  name: string
+  email: string
+  accessLevel: AccessLevel
+  emailVerified: boolean
+  image?: string | null
+  createdAt: Date | string
+  updatedAt: Date | string
+}
+
 function setSessionPathname(url: URL, basePath: string) {
   url.pathname = `${basePath.replace(/\/+$/, '')}/get-session`
+}
+
+function toIsoString(value: Date | string) {
+  return value instanceof Date ? value.toISOString() : value
+}
+
+function mapSessionUser(user: SessionUserInput): InklyAuthSession['user'] {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    accessLevel: user.accessLevel,
+    emailVerified: user.emailVerified,
+    image: user.image ?? null,
+    createdAt: toIsoString(user.createdAt),
+    updatedAt: toIsoString(user.updatedAt)
+  }
 }
 
 function serializeTestCookie(
@@ -173,12 +209,73 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
     baseURL: config.baseURL,
     secret: config.secret,
     trustedOrigins: config.trustedOrigins,
+    user: {
+      additionalFields: {
+        accessLevel: {
+          type: ['full', 'invited-only'],
+          required: false,
+          defaultValue: 'invited-only',
+          input: false
+        }
+      }
+    },
     database: drizzleAdapter(options.database.db, {
       provider: 'sqlite',
       schema,
       usePlural: true
     }),
-    plugins: config.enableTestUtils ? [testUtils()] : undefined,
+    databaseHooks: {
+      user: {
+        create: {
+          async before(user) {
+            return {
+              data: {
+                ...user,
+                accessLevel: resolveAccessLevelForEmail(user.email, config.allowedEmailDomains)
+              }
+            }
+          }
+        }
+      }
+    },
+    emailAndPassword: {
+      enabled: true,
+      autoSignIn: true,
+      requireEmailVerification: false,
+      minPasswordLength: 8,
+      sendResetPassword: async ({ user, url }) => {
+        if (!options.emailSender) {
+          options.logger?.warn(
+            `[inkly-api] Password reset requested for ${user.email}, but no email sender is configured.`
+          )
+          return
+        }
+
+        await options.emailSender.sendPasswordReset({
+          to: user.email,
+          resetUrl: url,
+          userName: user.name
+        })
+      }
+    },
+    plugins: [
+      customSession(async ({ session, user }) => {
+        const persistedUser = await options.database.db
+          .select({ accessLevel: users.accessLevel })
+          .from(users)
+          .where(eq(users.id, session.userId))
+          .get()
+
+        return {
+          session,
+          user: {
+            ...user,
+            accessLevel: persistedUser?.accessLevel ?? 'invited-only'
+          }
+        }
+      }),
+      ...(config.enableTestUtils ? [testUtils()] : [])
+    ],
     socialProviders: config.google
       ? {
           google: {
@@ -251,15 +348,15 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
           createdAt: login.session.createdAt.toISOString(),
           updatedAt: login.session.updatedAt.toISOString()
         },
-        user: {
-          id: login.user.id,
-          name: login.user.name,
-          email: login.user.email,
-          emailVerified: login.user.emailVerified,
-          image: login.user.image ?? null,
-          createdAt: login.user.createdAt.toISOString(),
-          updatedAt: login.user.updatedAt.toISOString()
-        },
+        user: mapSessionUser({
+          ...login.user,
+          accessLevel:
+            (await options.database.db
+              .select({ accessLevel: users.accessLevel })
+              .from(users)
+              .where(eq(users.id, login.user.id))
+              .get())?.accessLevel ?? 'invited-only'
+        }),
         setCookieHeaders: login.cookies.map((cookie: (typeof login.cookies)[number]) =>
           serializeTestCookie(cookie, login.session.expiresAt.getTime())
         )

@@ -15,7 +15,9 @@ const router = createRouter({
     { path: '/account', component: () => import('./views/AccountView.vue') },
     { path: '/board/:id', component: () => import('./views/EditorView.vue') },
     { path: '/board/:id/settings', component: () => import('./views/BoardSettingsView.vue') },
+    { path: '/invite/accept', component: () => import('./views/InviteAcceptView.vue') },
     { path: '/invite/:token', component: () => import('./views/InviteRedirectView.vue') },
+    { path: '/reset-password', component: () => import('./views/ResetPasswordView.vue') },
     { path: '/demo', component: () => import('./views/EditorView.vue'), meta: { demo: true } },
     { path: '/share/:roomId', component: () => import('./views/EditorView.vue') }
   ]

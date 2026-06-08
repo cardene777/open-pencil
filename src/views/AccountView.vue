@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 import {
   AlertDialogAction,
@@ -121,6 +121,20 @@ async function confirmSignOut() {
             {{ auth.loginPending ? accountT.signInPending : accountT.signInButton }}
           </button>
         </div>
+
+        <div class="mt-5 rounded-2xl border border-white/8 bg-canvas/50 p-4">
+          <p class="text-sm font-medium text-surface">招待された外部協業者</p>
+          <p class="mt-1 text-sm text-muted">
+            初回登録は招待リンクから行い、以後の再ログインは email + password を使います。
+          </p>
+          <RouterLink
+            to="/invite/accept"
+            data-test-id="account-invite-login-link"
+            class="mt-3 inline-flex rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-surface transition-colors hover:bg-hover"
+          >
+            招待ログインを開く
+          </RouterLink>
+        </div>
       </section>
 
       <section
@@ -167,6 +181,15 @@ async function confirmSignOut() {
             {{ auth.logoutPending ? accountT.logoutPending : accountT.logoutButton }}
           </button>
         </div>
+
+        <RouterLink
+          v-if="auth.isInvitedOnly"
+          to="/reset-password"
+          data-test-id="account-reset-password-link"
+          class="mt-5 inline-flex rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-surface transition-colors hover:bg-hover"
+        >
+          パスワードを再設定
+        </RouterLink>
       </section>
     </div>
 

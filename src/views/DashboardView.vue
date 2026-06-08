@@ -225,6 +225,7 @@ const authDisplayName = computed(() => auth.user?.name?.trim() || auth.user?.ema
 const authInitials = computed(() => initials(authDisplayName.value))
 const showLoginBanner = computed(() => auth.initialized && !auth.isAuthenticated)
 const showAccountLink = computed(() => auth.isAuthenticated)
+const isInvitedOnly = computed(() => auth.accessLevel === 'invited-only')
 
 const recentBoards = computed(() => {
   const sorted = [...boards.value].sort((a, b) => b.updatedAt - a.updatedAt)
@@ -258,10 +259,12 @@ async function loadDashboardView() {
         return [] as Board[]
       }),
       auth.isAuthenticated
-        ? listTeams().catch((error) => {
-            console.warn('[dashboard]', 'listTeams failed', error)
-            return [] as TeamSummary[]
-          })
+        ? auth.accessLevel === 'invited-only'
+          ? Promise.resolve([] as TeamSummary[])
+          : listTeams().catch((error) => {
+              console.warn('[dashboard]', 'listTeams failed', error)
+              return [] as TeamSummary[]
+            })
         : Promise.resolve([] as TeamSummary[])
     ])
     boards.value = boardList
@@ -589,8 +592,16 @@ onMounted(async () => {
           <div>
             <h2 class="text-lg font-semibold text-surface">{{ dashboard.quickActions.heading }}</h2>
             <p class="text-sm text-muted">{{ dashboard.quickActions.subtitle }}</p>
+            <p
+              v-if="isInvitedOnly"
+              data-test-id="dashboard-invited-only-note"
+              class="mt-2 text-sm text-amber-200"
+            >
+              招待されたボードのみ表示されます
+            </p>
           </div>
           <button
+            v-if="!isInvitedOnly"
             type="button"
             data-test-id="dashboard-create-board"
             class="cursor-pointer rounded-xl bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
@@ -602,7 +613,12 @@ onMounted(async () => {
           </button>
         </div>
 
-        <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div
+          :class="[
+            'grid grid-cols-1 gap-3',
+            isInvitedOnly ? 'md:grid-cols-4' : 'md:grid-cols-3'
+          ]"
+        >
           <RouterLink
             to="/boards"
             data-test-id="dashboard-link-boards"
@@ -614,13 +630,26 @@ onMounted(async () => {
           </RouterLink>
 
           <RouterLink
-            to="/teams"
+            :to="isInvitedOnly ? '/account' : '/teams'"
             data-test-id="dashboard-link-teams"
             class="flex flex-col gap-1 rounded-xl border border-white/8 bg-canvas/55 p-4 text-sm text-surface transition-colors hover:bg-hover"
           >
             <icon-lucide-users class="size-5 text-accent" />
-            <span class="font-medium">{{ dashboard.quickActions.teams }}</span>
-            <span class="text-xs text-muted">{{ dashboard.quickActions.teamsHint }}</span>
+            <span class="font-medium">{{ isInvitedOnly ? 'アカウント' : dashboard.quickActions.teams }}</span>
+            <span class="text-xs text-muted">
+              {{ isInvitedOnly ? 'メールアドレスとセッション情報を確認' : dashboard.quickActions.teamsHint }}
+            </span>
+          </RouterLink>
+
+          <RouterLink
+            v-if="isInvitedOnly"
+            to="/reset-password"
+            data-test-id="dashboard-link-reset-password"
+            class="flex flex-col gap-1 rounded-xl border border-white/8 bg-canvas/55 p-4 text-sm text-surface transition-colors hover:bg-hover"
+          >
+            <icon-lucide-key-round class="size-5 text-accent" />
+            <span class="font-medium">パスワード再設定</span>
+            <span class="text-xs text-muted">外部協業者用の password を更新</span>
           </RouterLink>
 
           <RouterLink

@@ -21,6 +21,7 @@ export interface AuthSession {
     id: string
     name: string
     email: string
+    accessLevel: 'full' | 'invited-only'
     emailVerified: boolean
     image: string | null
     createdAt: string
@@ -35,6 +36,16 @@ interface SocialSignInResponse {
   user?: AuthSession['user']
 }
 
+interface EmailAuthResponse {
+  token?: string | null
+  user?: AuthSession['user']
+}
+
+interface PasswordResetResponse {
+  status: boolean
+  message?: string
+}
+
 export interface MigrateAnonymousResponse {
   migrated: boolean
   migratedBoardCount: number
@@ -47,7 +58,9 @@ function currentCallbackURL() {
 }
 
 function getErrorMessage(data: ApiErrorBody | null, fallback: string) {
-  return data?.error?.message?.trim() || fallback
+  const maybeMessage = (data as { message?: string } | null)?.message
+  const topLevelMessage = typeof maybeMessage === 'string' ? maybeMessage : ''
+  return data?.error?.message?.trim() || topLevelMessage.trim() || fallback
 }
 
 export async function getSession() {
@@ -90,6 +103,87 @@ export async function loginWithGoogle(callbackURL = currentCallbackURL()) {
   if (typeof window !== 'undefined') {
     window.location.assign(redirectUrl)
   }
+}
+
+export async function signInWithEmail(input: {
+  email: string
+  password: string
+  callbackURL?: string
+  rememberMe?: boolean
+}) {
+  const { response, data } = await requestJson<EmailAuthResponse>(`${AUTH_API_BASE}/sign-in/email`, {
+    method: 'POST',
+    body: JSON.stringify({
+      email: input.email,
+      password: input.password,
+      callbackURL: input.callbackURL,
+      rememberMe: input.rememberMe ?? true
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data as ApiErrorBody | null, 'Failed to sign in with email'))
+  }
+
+  return (data ?? null) as EmailAuthResponse | null
+}
+
+export async function signUpWithEmail(input: {
+  email: string
+  inviteToken: string
+  name: string
+  password: string
+  callbackURL?: string
+  rememberMe?: boolean
+}) {
+  const { response, data } = await requestJson<EmailAuthResponse>(`${AUTH_API_BASE}/sign-up/email`, {
+    method: 'POST',
+    body: JSON.stringify({
+      name: input.name,
+      email: input.email,
+      password: input.password,
+      callbackURL: input.callbackURL,
+      rememberMe: input.rememberMe ?? true,
+      inviteToken: input.inviteToken
+    })
+  })
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data as ApiErrorBody | null, 'Failed to create account'))
+  }
+
+  return (data ?? null) as EmailAuthResponse | null
+}
+
+export async function requestPasswordReset(input: { email: string; redirectTo: string }) {
+  const { response, data } = await requestJson<PasswordResetResponse>(
+    `${AUTH_API_BASE}/request-password-reset`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input)
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      getErrorMessage(data as ApiErrorBody | null, 'Failed to send password reset email')
+    )
+  }
+
+  return (data ?? { status: true }) as PasswordResetResponse
+}
+
+export async function resetPassword(input: { newPassword: string; token: string }) {
+  const { response, data } = await requestJson<PasswordResetResponse>(`${AUTH_API_BASE}/reset-password`, {
+    method: 'POST',
+    body: JSON.stringify(input)
+  })
+
+  if (!response.ok) {
+    throw new Error(getErrorMessage(data as ApiErrorBody | null, 'Failed to reset password'))
+  }
+
+  return (data ?? { status: true }) as PasswordResetResponse
 }
 
 export function logout() {

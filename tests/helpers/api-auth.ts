@@ -7,7 +7,8 @@ export const TEST_USER_HEADER = 'X-Test-User-Id'
 export function createSession(
   userId: string,
   name = `User ${userId}`,
-  email = `${userId}@example.com`
+  email = `${userId}@example.com`,
+  accessLevel: InklyAuthSession['user']['accessLevel'] = 'full'
 ): InklyAuthSession {
   return {
     session: {
@@ -22,6 +23,7 @@ export function createSession(
       id: userId,
       name,
       email,
+      accessLevel,
       emailVerified: true,
       image: null,
       createdAt: '2029-01-01T00:00:00.000Z',
@@ -67,6 +69,7 @@ export async function seedUsers(
         id: session.user.id,
         name: session.user.name,
         email: session.user.email,
+        accessLevel: session.user.accessLevel,
         emailVerified: session.user.emailVerified,
         image: session.user.image,
         createdAt: new Date(session.user.createdAt),

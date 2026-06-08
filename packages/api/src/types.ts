@@ -1,5 +1,9 @@
 export const INVITATION_ISSUER = 'inkly' as const
 
+export const ACCESS_LEVELS = ['full', 'invited-only'] as const
+
+export type AccessLevel = (typeof ACCESS_LEVELS)[number]
+
 export const INVITATION_ROLES = ['editor', 'viewer'] as const
 
 export type InvitationRole = (typeof INVITATION_ROLES)[number]
@@ -103,6 +107,8 @@ export interface BoardStore {
   getBoardContent(boardId: string): Promise<BoardContentRecord | null>
   listBoardsForAnonymous(anonymousId: string): Promise<BoardRecord[]>
   listBoardsForUser(userId: string): Promise<BoardRecord[]>
+  listBoardsForInvitedUser(userId: string): Promise<BoardRecord[]>
+  hasAcceptedInvitationForUser(boardId: string, userId: string): Promise<boolean>
   listBoardsForTeam(teamId: string): Promise<BoardRecord[]>
   saveBoardContent(boardId: string, content: string): Promise<void>
   deleteBoard(id: string): Promise<BoardRecord | null>
@@ -179,6 +185,11 @@ export interface MentionNotificationPayload {
   mentionedByDisplayName: string
   message: string
   url: string
+}
+
+export interface AcceptInvitationResponse {
+  boardId: string
+  role: InvitationRole
 }
 
 export type NotificationPayload =

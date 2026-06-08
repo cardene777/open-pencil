@@ -6,5 +6,6 @@ export const BOARD_API_ENDPOINTS = {
   invitation: (boardId: string, invitationId: string) =>
     `/api/boards/${boardId}/invitations/${invitationId}`,
   invite: '/api/invite',
-  verifyInvite: '/api/invite/verify'
+  verifyInvite: '/api/invite/verify',
+  acceptInvite: '/api/invite/accept'
 } as const

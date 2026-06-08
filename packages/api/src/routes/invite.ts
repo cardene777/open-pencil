@@ -13,6 +13,7 @@ import {
   verifyInvitationToken
 } from '../token.js'
 import {
+  type AcceptInvitationResponse,
   INVITATION_ISSUER,
   INVITATION_ROLES,
   type BoardStore,
@@ -30,6 +31,8 @@ const inviteRequestSchema = z.object({
 const verifyRequestSchema = z.object({
   token: z.string().trim().min(1)
 })
+
+const acceptRequestSchema = verifyRequestSchema
 
 interface ValidationErrorBody {
   error: {
@@ -154,7 +157,6 @@ export function createInviteRoutes(options: InviteRoutesOptions): Hono {
   })
 
   app.post('/invite/verify', async (c) => {
-    const anonymousId = resolveAnonymousId(c)
     const body = await c.req.json().catch(() => null)
     const parsed = verifyRequestSchema.safeParse(body)
     if (!parsed.success) {
@@ -194,7 +196,123 @@ export function createInviteRoutes(options: InviteRoutesOptions): Hono {
       )
     }
 
-    if (options.boardStore) {
+    const board = options.boardStore ? await options.boardStore.findBoard(invitation.boardId) : null
+
+    return c.json({
+      valid: true,
+      invitation: {
+        id: invitation.id,
+        boardId: invitation.boardId,
+        boardName: board?.name ?? 'Untitled board',
+        role: invitation.role,
+        expiresAt: invitation.expiresAt
+      }
+    })
+  })
+
+  app.post('/invite/accept', async (c) => {
+    const session = await getAuthSession(options.auth, c.req.raw)
+    if (!session) {
+      return c.json(
+        {
+          error: {
+            code: 'unauthorized',
+            message: 'Login required'
+          }
+        },
+        401
+      )
+    }
+
+    if (!options.boardStore) {
+      return c.json(
+        {
+          error: {
+            code: 'invite_accept_unavailable',
+            message: 'Invitation acceptance is not configured.'
+          }
+        },
+        500
+      )
+    }
+
+    const body = await c.req.json().catch(() => null)
+    const parsed = acceptRequestSchema.safeParse(body)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]?.message ?? 'Invalid request body'
+      return c.json(validationError(issue), 400)
+    }
+
+    const verification = await verifyInvitationToken(parsed.data.token, options.secret)
+    if (!verification.valid) {
+      return c.json(
+        {
+          error: {
+            code: 'invalid_invitation',
+            message: 'Invitation token is invalid or expired.'
+          }
+        },
+        401
+      )
+    }
+
+    const invitation = await options.store.findInvitation(verification.payload.sub)
+    if (!invitation || invitation.revoked || invitation.jti !== verification.payload.jti) {
+      return c.json(
+        {
+          error: {
+            code: 'invalid_invitation',
+            message: 'Invitation token is invalid or expired.'
+          }
+        },
+        401
+      )
+    }
+
+    if (invitation.expiresAt <= now()) {
+      return c.json(
+        {
+          error: {
+            code: 'invitation_expired',
+            message: 'Invitation token is invalid or expired.'
+          }
+        },
+        401
+      )
+    }
+
+    const sessionEmailHash = await hashInvitationEmail(session.user.email)
+    if (sessionEmailHash !== invitation.sentToEmailHash) {
+      return c.json(
+        {
+          error: {
+            code: 'invitation_email_mismatch',
+            message: 'This invitation does not match your signed-in email.'
+          }
+        },
+        403
+      )
+    }
+
+    const board = await options.boardStore.findBoard(invitation.boardId)
+    if (!board) {
+      return c.json(
+        {
+          error: {
+            code: 'board_not_found',
+            message: 'Board not found'
+          }
+        },
+        404
+      )
+    }
+
+    const existingAccess = await options.boardStore.hasAcceptedInvitationForUser(
+      invitation.boardId,
+      session.user.id
+    )
+    if (!existingAccess) {
+      const anonymousId = resolveAnonymousId(c)
       await options.boardStore.addCollaborator(invitation.boardId, {
         anonymousId,
         role: invitation.role,
@@ -202,15 +320,12 @@ export function createInviteRoutes(options: InviteRoutesOptions): Hono {
       })
     }
 
-    return c.json({
-      valid: true,
-      invitation: {
-        id: invitation.id,
-        boardId: invitation.boardId,
-        role: invitation.role,
-        expiresAt: invitation.expiresAt
-      }
-    })
+    const response: AcceptInvitationResponse = {
+      boardId: invitation.boardId,
+      role: invitation.role
+    }
+
+    return c.json(response)
   })
 
   return app

@@ -1,8 +1,9 @@
-import { asc, desc, eq, inArray, or } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, or } from 'drizzle-orm'
 
 import type { ApiDatabase } from './db/client.js'
 import { createMigratedApiDatabase } from './db/migrate.js'
-import { boards, collaborators } from './db/schema.js'
+import { boards, collaborators, invitations, users } from './db/schema.js'
+import { hashInvitationEmail } from './token.js'
 import type {
   AddBoardCollaboratorInput,
   BoardCollaboratorRecord,
@@ -217,6 +218,56 @@ export async function createBoardStore(options: CreateBoardStoreOptions = {}): P
         .all()
 
       return await mapBoardRows(database, boardRows)
+    },
+    async listBoardsForInvitedUser(userId: string) {
+      const user = await database.db
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.id, userId))
+        .get()
+
+      if (!user) return []
+
+      const emailHash = await hashInvitationEmail(user.email)
+      const boardRows = await database.db
+        .selectDistinct({
+          id: boards.id,
+          name: boards.name,
+          creatorAnonymousId: boards.creatorAnonymousId,
+          creatorUserId: boards.creatorUserId,
+          teamId: boards.teamId,
+          createdAt: boards.createdAt,
+          updatedAt: boards.updatedAt
+        })
+        .from(boards)
+        .innerJoin(collaborators, eq(boards.id, collaborators.boardId))
+        .innerJoin(invitations, eq(collaborators.invitationId, invitations.id))
+        .where(eq(invitations.sentToEmailHash, emailHash))
+        .orderBy(desc(boards.updatedAt))
+        .all()
+
+      return await mapBoardRows(database, boardRows)
+    },
+    async hasAcceptedInvitationForUser(boardId: string, userId: string) {
+      const user = await database.db
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.id, userId))
+        .get()
+
+      if (!user) return false
+
+      const emailHash = await hashInvitationEmail(user.email)
+      const invitation = await database.db
+        .select({ id: invitations.id })
+        .from(invitations)
+        .innerJoin(collaborators, eq(invitations.id, collaborators.invitationId))
+        .where(
+          and(eq(invitations.boardId, boardId), eq(invitations.sentToEmailHash, emailHash))
+        )
+        .get()
+
+      return !!invitation
     },
     async listBoardsForTeam(teamId: string) {
       const boardRows = await database.db

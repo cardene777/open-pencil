@@ -7,6 +7,11 @@ export interface InvitationEmailTemplateInput {
   role: InvitationRole
 }
 
+export interface PasswordResetEmailTemplateInput {
+  resetUrl: string
+  userName: string
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll('&', '&amp;')
@@ -36,5 +41,23 @@ export function renderInvitationEmail(input: InvitationEmailTemplateInput) {
       '</div>'
     ].join(''),
     inviterLabel
+  }
+}
+
+export function renderPasswordResetEmail(input: PasswordResetEmailTemplateInput) {
+  const userName = escapeHtml(input.userName.trim() || 'there')
+  const resetUrl = escapeHtml(input.resetUrl)
+
+  return {
+    subject: 'Reset your Inkly password',
+    html: [
+      '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', sans-serif; line-height: 1.5; color: #111827;">',
+      `<p>Hello ${userName},</p>`,
+      '<p>Use the link below to reset your Inkly password.</p>',
+      `<p><a href="${resetUrl}">Reset password</a></p>`,
+      `<p style="word-break: break-all;">${resetUrl}</p>`,
+      '<p>If you did not request this, you can ignore this email.</p>',
+      '</div>'
+    ].join('')
   }
 }

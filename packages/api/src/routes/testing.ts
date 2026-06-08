@@ -272,6 +272,7 @@ async function upsertUser(
       .set({
         name: input.name,
         email,
+        accessLevel: 'full',
         image: input.image ?? null,
         emailVerified: true,
         updatedAt: new Date(now)
@@ -294,6 +295,7 @@ async function upsertUser(
       id: userId,
       name: input.name,
       email,
+      accessLevel: 'full',
       image: input.image ?? null,
       emailVerified: true,
       createdAt: new Date(now),

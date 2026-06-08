@@ -7,6 +7,10 @@ import {
   loginWithGoogle,
   logout,
   migrateAnonymous,
+  requestPasswordReset,
+  resetPassword,
+  signInWithEmail,
+  signUpWithEmail,
   type AuthSession,
   type MigrateAnonymousResponse
 } from '@/app/auth/client'
@@ -22,7 +26,9 @@ export const useAuthStore = defineStore('auth', () => {
   let initPromise: Promise<void> | null = null
 
   const user = computed(() => session.value?.user ?? null)
+  const accessLevel = computed(() => session.value?.user.accessLevel ?? null)
   const isAuthenticated = computed(() => !!session.value?.user.id)
+  const isInvitedOnly = computed(() => accessLevel.value === 'invited-only')
 
   async function maybeMigrateAnonymousState() {
     const anonymousId = getAnonymousId()?.trim()
@@ -77,6 +83,46 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function signInWithPassword(input: {
+    email: string
+    password: string
+    callbackURL?: string
+  }) {
+    loginPending.value = true
+
+    try {
+      await signInWithEmail(input)
+      await refreshSession()
+    } finally {
+      loginPending.value = false
+    }
+  }
+
+  async function signUpWithPassword(input: {
+    email: string
+    inviteToken: string
+    name: string
+    password: string
+    callbackURL?: string
+  }) {
+    loginPending.value = true
+
+    try {
+      await signUpWithEmail(input)
+      await refreshSession()
+    } finally {
+      loginPending.value = false
+    }
+  }
+
+  function sendPasswordReset(input: { email: string; redirectTo: string }) {
+    return requestPasswordReset(input)
+  }
+
+  function submitPasswordReset(input: { newPassword: string; token: string }) {
+    return resetPassword(input)
+  }
+
   async function signOut() {
     logoutPending.value = true
 
@@ -93,16 +139,22 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     session,
     user,
+    accessLevel,
     initialized,
     loading,
     loginPending,
     logoutPending,
     migrating,
     isAuthenticated,
+    isInvitedOnly,
     lastMigration,
     init,
     refreshSession,
     signInWithGoogle,
+    signInWithPassword,
+    signUpWithPassword,
+    sendPasswordReset,
+    submitPasswordReset,
     signOut
   }
 })

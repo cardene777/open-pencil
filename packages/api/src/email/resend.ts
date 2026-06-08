@@ -1,7 +1,7 @@
 import { Resend } from 'resend'
 
 import type { InvitationRole } from '../types.js'
-import { renderInvitationEmail } from './template.js'
+import { renderInvitationEmail, renderPasswordResetEmail } from './template.js'
 
 const DEFAULT_FROM = 'Inkly <onboarding@resend.dev>'
 
@@ -13,8 +13,15 @@ export interface SendInvitationEmailInput {
   to: string
 }
 
+export interface SendPasswordResetEmailInput {
+  resetUrl: string
+  to: string
+  userName: string
+}
+
 export interface InvitationEmailSender {
   sendInvitation(input: SendInvitationEmailInput): Promise<void>
+  sendPasswordReset(input: SendPasswordResetEmailInput): Promise<void>
 }
 
 export interface CreateResendEmailSenderOptions {
@@ -43,6 +50,18 @@ export function createResendEmailSender(
             message.html
           ].join('\n')
         )
+      },
+      async sendPasswordReset(input) {
+        const message = renderPasswordResetEmail(input)
+        log(
+          [
+            '[inkly-api] Dry-run password reset email',
+            `to=${input.to}`,
+            `subject=${message.subject}`,
+            `url=${input.resetUrl}`,
+            message.html
+          ].join('\n')
+        )
       }
     }
   }
@@ -61,6 +80,19 @@ export function createResendEmailSender(
 
       if (result.error) {
         throw new Error(`Failed to send invitation email: ${result.error.message}`)
+      }
+    },
+    async sendPasswordReset(input) {
+      const message = renderPasswordResetEmail(input)
+      const result = await resend.emails.send({
+        from,
+        to: input.to,
+        subject: message.subject,
+        html: message.html
+      })
+
+      if (result.error) {
+        throw new Error(`Failed to send password reset email: ${result.error.message}`)
       }
     }
   }

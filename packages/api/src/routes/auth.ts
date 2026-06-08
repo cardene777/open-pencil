@@ -1,10 +1,14 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { eq } from 'drizzle-orm'
 
 import { INKLY_ANONYMOUS_ID_HEADER } from '../anonymousId.js'
+import { isAllowedEmailDomain } from '../auth/config.js'
 import { getAuthSession, type InklyAuth } from '../auth/index.js'
+import { invitations } from '../db/schema.js'
 import { migrateAnonymousOwnership } from '../auth/migrate.js'
 import type { ApiDatabase } from '../db/client.js'
+import { hashInvitationEmail, verifyInvitationToken } from '../token.js'
 
 const testLoginSchema = z.object({
   email: z.string().trim().email().optional(),
@@ -18,9 +22,16 @@ const testLoginRedirectSchema = testLoginSchema.extend({
 
 export interface AuthRoutesOptions {
   auth: InklyAuth
+  allowedEmailDomains: string[]
   database: ApiDatabase
   now?: () => number
+  secret: string
 }
+
+const emailSignUpSchema = z.object({
+  email: z.string().trim().email(),
+  inviteToken: z.string().trim().min(1)
+})
 
 function unauthorizedResponse(headers?: HeadersInit) {
   return new Response(
@@ -69,8 +80,106 @@ function notFoundTestLoginResponse() {
 
 export function createAuthRoutes(options: AuthRoutesOptions): Hono {
   const app = new Hono()
+  const now = options.now ?? Date.now
 
   app.get('/session', (c) => proxySession(options.auth, c.req.raw))
+
+  app.post('/sign-up/email', async (c) => {
+    const rawBody = await c.req.raw.text()
+    let body: unknown = {}
+
+    if (rawBody) {
+      try {
+        body = JSON.parse(rawBody) as unknown
+      } catch {
+        body = null
+      }
+    }
+
+    const parsed = emailSignUpSchema.safeParse(body)
+
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]?.message ?? 'Invalid request body'
+      return c.json(
+        {
+          error: {
+            code: 'invalid_request_body',
+            message: issue
+          }
+        },
+        400
+      )
+    }
+
+    if (isAllowedEmailDomain(parsed.data.email, options.allowedEmailDomains)) {
+      return c.json(
+        {
+          error: {
+            code: 'google_login_required',
+            message: 'Internal members must use Google login.'
+          }
+        },
+        403
+      )
+    }
+
+    const verification = await verifyInvitationToken(parsed.data.inviteToken, options.secret)
+    if (!verification.valid) {
+      return c.json(
+        {
+          error: {
+            code: 'invalid_invitation',
+            message: 'Invitation token is invalid or expired.'
+          }
+        },
+        401
+      )
+    }
+
+    const invitation = await options.database.db
+      .select()
+      .from(invitations)
+      .where(eq(invitations.id, verification.payload.sub))
+      .get()
+
+    if (
+      !invitation ||
+      invitation.revoked ||
+      invitation.jti !== verification.payload.jti ||
+      invitation.expiresAt <= now()
+    ) {
+      return c.json(
+        {
+          error: {
+            code: 'invalid_invitation',
+            message: 'Invitation token is invalid or expired.'
+          }
+        },
+        401
+      )
+    }
+
+    const emailHash = await hashInvitationEmail(parsed.data.email)
+    if (emailHash !== verification.payload.email_hash) {
+      return c.json(
+        {
+          error: {
+            code: 'invitation_email_mismatch',
+            message: 'This invitation does not match that email address.'
+          }
+        },
+        403
+      )
+    }
+
+    return options.auth.handler(
+      new Request(c.req.raw.url, {
+        method: c.req.raw.method,
+        headers: c.req.raw.headers,
+        body: rawBody
+      })
+    )
+  })
 
   app.post('/migrate-anonymous', async (c) => {
     const session = await getAuthSession(options.auth, c.req.raw)

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 
 import { TEST_API_SECRET, createTestApiApp } from '../helpers/api.js'
+import { TEST_USER_HEADER, createHeaderAuth, createSession, seedUsers } from '../helpers/api-auth.js'
 
 describe('board routes', () => {
   test('creates, lists, and deletes boards by anonymous owner', async () => {
@@ -74,13 +75,25 @@ describe('board routes', () => {
   })
 
   test('lists invitations and accepted collaborators for the board owner', async () => {
-    const { app, database } = await createTestApiApp({ secret: TEST_API_SECRET })
-    const ownerId = 'anon-owner'
+    const ownerSession = createSession('owner-123', 'Owner User', 'owner@jfet.co.jp', 'full')
+    const invitedSession = createSession(
+      'guest-123',
+      'Guest User',
+      'guest@gmail.com',
+      'invited-only'
+    )
+    const auth = createHeaderAuth([ownerSession, invitedSession])
+    const { app, database } = await createTestApiApp({
+      auth,
+      secret: TEST_API_SECRET
+    })
+    await seedUsers(database, [ownerSession, invitedSession])
+
     const createBoardResponse = await app.request('/api/boards', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'X-Inkly-Anonymous-Id': ownerId
+        [TEST_USER_HEADER]: ownerSession.user.id
       },
       body: JSON.stringify({ name: 'Design system' })
     })
@@ -90,10 +103,10 @@ describe('board routes', () => {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'X-Inkly-Anonymous-Id': ownerId
+        [TEST_USER_HEADER]: ownerSession.user.id
       },
       body: JSON.stringify({
-        email: 'guest@example.com',
+        email: invitedSession.user.email,
         boardId: board.id,
         role: 'editor'
       })
@@ -101,18 +114,19 @@ describe('board routes', () => {
     expect(inviteResponse.status).toBe(201)
     const invite = (await inviteResponse.json()) as { invitationId: string; token: string }
 
-    const verifyResponse = await app.request('/api/invite/verify', {
+    const acceptResponse = await app.request('/api/invite/accept', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
+        [TEST_USER_HEADER]: invitedSession.user.id,
         'X-Inkly-Anonymous-Id': 'anon-guest'
       },
       body: JSON.stringify({ token: invite.token })
     })
-    expect(verifyResponse.status).toBe(200)
+    expect(acceptResponse.status).toBe(200)
 
     const invitationsResponse = await app.request(`/api/boards/${board.id}/invitations`, {
-      headers: { 'X-Inkly-Anonymous-Id': ownerId }
+      headers: { [TEST_USER_HEADER]: ownerSession.user.id }
     })
     expect(invitationsResponse.status).toBe(200)
 
@@ -120,7 +134,6 @@ describe('board routes', () => {
       board: expect.objectContaining({
         id: board.id,
         collaborators: expect.arrayContaining([
-          expect.objectContaining({ anonymousId: ownerId, role: 'owner' }),
           expect.objectContaining({
             anonymousId: 'anon-guest',
             role: 'editor',
@@ -130,6 +143,101 @@ describe('board routes', () => {
       }),
       invitations: [expect.objectContaining({ id: invite.invitationId, boardId: board.id })]
     })
+    database.close()
+  })
+
+  test('lists only invited boards and rejects board creation for invited-only users', async () => {
+    const ownerSession = createSession('owner-123', 'Owner User', 'owner@jfet.co.jp', 'full')
+    const invitedSession = createSession(
+      'guest-123',
+      'Guest User',
+      'guest@gmail.com',
+      'invited-only'
+    )
+    const strangerSession = createSession(
+      'stranger-123',
+      'Stranger User',
+      'stranger@gmail.com',
+      'invited-only'
+    )
+    const auth = createHeaderAuth([ownerSession, invitedSession, strangerSession])
+    const { app, database } = await createTestApiApp({
+      auth,
+      secret: TEST_API_SECRET
+    })
+    await seedUsers(database, [ownerSession, invitedSession, strangerSession])
+
+    const createBoardResponse = await app.request('/api/boards', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [TEST_USER_HEADER]: ownerSession.user.id
+      },
+      body: JSON.stringify({ name: 'Shared board' })
+    })
+    expect(createBoardResponse.status).toBe(201)
+    const board = (await createBoardResponse.json()) as { id: string }
+
+    const inviteResponse = await app.request('/api/invite', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [TEST_USER_HEADER]: ownerSession.user.id
+      },
+      body: JSON.stringify({
+        email: invitedSession.user.email,
+        boardId: board.id,
+        role: 'editor'
+      })
+    })
+    expect(inviteResponse.status).toBe(201)
+    const invite = (await inviteResponse.json()) as { token: string }
+
+    const acceptResponse = await app.request('/api/invite/accept', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [TEST_USER_HEADER]: invitedSession.user.id,
+        'X-Inkly-Anonymous-Id': 'anon-invited'
+      },
+      body: JSON.stringify({ token: invite.token })
+    })
+    expect(acceptResponse.status).toBe(200)
+
+    const invitedListResponse = await app.request('/api/boards', {
+      headers: {
+        [TEST_USER_HEADER]: invitedSession.user.id
+      }
+    })
+    expect(invitedListResponse.status).toBe(200)
+    expect(await invitedListResponse.json()).toEqual({
+      boards: [expect.objectContaining({ id: board.id, name: 'Shared board' })]
+    })
+
+    const strangerListResponse = await app.request('/api/boards', {
+      headers: {
+        [TEST_USER_HEADER]: strangerSession.user.id
+      }
+    })
+    expect(strangerListResponse.status).toBe(200)
+    expect(await strangerListResponse.json()).toEqual({ boards: [] })
+
+    const invitedCreateResponse = await app.request('/api/boards', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        [TEST_USER_HEADER]: invitedSession.user.id
+      },
+      body: JSON.stringify({ name: 'Blocked board' })
+    })
+    expect(invitedCreateResponse.status).toBe(403)
+    expect(await invitedCreateResponse.json()).toEqual({
+      error: {
+        code: 'forbidden_invited_only_cannot_create',
+        message: 'Invited-only users cannot create boards.'
+      }
+    })
+
     database.close()
   })
 })

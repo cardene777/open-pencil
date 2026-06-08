@@ -1,6 +1,6 @@
 import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
-import type { BoardCollaboratorRecord, InvitationRole, TeamMemberRole } from '../types.js'
+import type { AccessLevel, BoardCollaboratorRecord, InvitationRole, TeamMemberRole } from '../types.js'
 
 export const boards = sqliteTable('boards', {
   id: text('id').primaryKey(),
@@ -72,6 +72,7 @@ export const users = sqliteTable(
     id: text('id').primaryKey(),
     name: text('name').notNull(),
     email: text('email').notNull(),
+    accessLevel: text('access_level').$type<AccessLevel>().notNull().default('invited-only'),
     emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
     image: text('image'),
     createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),

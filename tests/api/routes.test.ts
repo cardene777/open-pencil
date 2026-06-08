@@ -44,6 +44,7 @@ describe('invite routes', () => {
       invitation: {
         id: inviteBody.invitationId,
         boardId: 'board-123',
+        boardName: 'Untitled board',
         role: 'editor',
         expiresAt: inviteBody.expiresAt
       }

@@ -54,11 +54,11 @@ function unauthorizedResponse() {
   )
 }
 
-function forbiddenResponse(message: string) {
+function forbiddenResponse(message: string, code = 'forbidden') {
   return Response.json(
     {
       error: {
-        code: 'forbidden',
+        code,
         message
       }
     },
@@ -113,12 +113,26 @@ function mergeBoards(personalBoards: BoardRecord[], teamBoards: BoardRecord[]) {
 export function createBoardRoutes(options: BoardRoutesOptions): Hono {
   const app = new Hono()
 
+  async function canAccessBoard(board: BoardRecord, request: Request, anonymousId: string) {
+    const actor = await resolveRequestActor(options.auth, request, () => anonymousId)
+    if (isBoardCollaborator(board, actor)) return true
+
+    if (!actor.userId) return false
+
+    return await options.boardStore.hasAcceptedInvitationForUser(board.id, actor.userId)
+  }
+
   app.get('/boards', async (c) => {
     const session = await getAuthSession(options.auth, c.req.raw)
 
     if (!session) {
       const anonymousId = resolveAnonymousId(c)
       const boards = await options.boardStore.listBoardsForAnonymous(anonymousId)
+      return c.json({ boards: await attachTeamSummaries(boards, options.teamStore) })
+    }
+
+    if (session.user.accessLevel === 'invited-only') {
+      const boards = await options.boardStore.listBoardsForInvitedUser(session.user.id)
       return c.json({ boards: await attachTeamSummaries(boards, options.teamStore) })
     }
 
@@ -145,6 +159,13 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
 
     const session = await getAuthSession(options.auth, c.req.raw)
     const teamId = parsed.data.teamId?.trim() || null
+
+    if (session?.user.accessLevel === 'invited-only') {
+      return forbiddenResponse(
+        'Invited-only users cannot create boards.',
+        'forbidden_invited_only_cannot_create'
+      )
+    }
 
     if (teamId) {
       if (!session) return unauthorizedResponse()
@@ -237,8 +258,8 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
     const board = await options.boardStore.findBoard(c.req.param('id'))
     if (!board) return notFoundResponse('board_not_found', 'Board not found')
 
-    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
-    if (!isBoardCollaborator(board, actor)) {
+    const anonymousId = resolveAnonymousId(c)
+    if (!(await canAccessBoard(board, c.req.raw, anonymousId))) {
       return forbiddenResponse('Only board collaborators can view board content')
     }
 
@@ -258,8 +279,8 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
     const board = await options.boardStore.findBoard(c.req.param('id'))
     if (!board) return notFoundResponse('board_not_found', 'Board not found')
 
-    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
-    if (!isBoardCollaborator(board, actor)) {
+    const anonymousId = resolveAnonymousId(c)
+    if (!(await canAccessBoard(board, c.req.raw, anonymousId))) {
       return forbiddenResponse('Only board collaborators can update board content')
     }
 
