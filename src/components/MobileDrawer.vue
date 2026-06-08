@@ -11,7 +11,6 @@ import ChatPanel from './ChatPanel.vue'
 import CodePanel from './CodePanel.vue'
 import DesignPanel from './DesignPanel.vue'
 import LayerTree from './LayerTree.vue'
-import PagesPanel from './PagesPanel.vue'
 import {
   DRAWER_SPRING_DAMPING,
   DRAWER_SPRING_STIFFNESS,
@@ -171,8 +170,6 @@ const drawerTransition = {
       <div data-test-id="mobile-drawer-content" class="min-h-0 flex-1 overflow-y-auto">
         <TabsContent value="layers" class="mt-0 h-full data-[state=inactive]:hidden">
           <div data-test-id="mobile-drawer-layers" class="flex h-full flex-col">
-            <PagesPanel />
-            <div class="border-t border-border" />
             <header class="shrink-0 px-3 py-2 text-[11px] tracking-wider text-muted uppercase">
               Layers
             </header>
