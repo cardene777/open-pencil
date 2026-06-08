@@ -3,9 +3,7 @@ import { createPinia } from 'pinia'
 import { createApp } from 'vue'
 
 import './app.css'
-import { decodeBoardContentBytes, fetchBoardContent } from '@/app/api/client'
 import { useAuthStore } from '@/app/auth/store'
-import { resolveBoardIdFromLocation, resolveBoardNameFromLocation } from '@/app/boards/location'
 import { preloadFonts } from '@/app/editor/fonts'
 import { startPerfTraceReporter } from '@/app/perf-trace/reporter'
 import { IS_TAURI } from '@/constants'
@@ -104,28 +102,4 @@ if (!IS_TAURI) {
   void import('virtual:pwa-register').then(({ registerSW }) => {
     registerSW({ immediate: true })
   })
-
-  // Board route なら DB から content を取得して open。
-  // それ以外 (Landing / Dashboard) では何も復元せず空のまま。
-  void (async () => {
-    try {
-      const boardId =
-        typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
-      if (!boardId) return
-
-      const boardName =
-        typeof window !== 'undefined' ? resolveBoardNameFromLocation(window.location) : null
-      const remoteContent = await fetchBoardContent(boardId)
-      if (!remoteContent?.content) return
-
-      const bytes = decodeBoardContentBytes(remoteContent.content)
-      const fileName = `${boardName ?? 'Untitled board'}.fig`
-      const tabsMod = await import('@/app/tabs')
-      await tabsMod.openFileInNewTab(
-        new File([bytes], fileName, { type: 'application/octet-stream' })
-      )
-    } catch (err) {
-      console.warn('[main] failed to restore board content from DB:', err)
-    }
-  })()
 }

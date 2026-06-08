@@ -17,7 +17,8 @@ import { isTauri } from '@/app/tauri/env'
 import { appMenuShortcut } from '@/app/shell/menu/shortcut'
 import { createDemoShapes } from '@/app/demo/document'
 import { useEditorStore } from '@/app/editor/active-store'
-import { createTab, activeTab, getActiveStore, tabCount } from '@/app/tabs'
+import { activeTab, createTab, getActiveStore, openFileInNewTab, resetAllTabs, tabCount } from '@/app/tabs'
+import { decodeBoardContentBytes, fetchBoardContent } from '@/app/api/client'
 
 import CollabPanel from '@/components/CollabPanel/CollabPanel.vue'
 import EditorCanvas from '@/components/EditorCanvas.vue'
@@ -35,8 +36,17 @@ const route = useRoute()
 const params = useUrlSearchParams('history')
 const showChrome = !('no-chrome' in params)
 
+// board route で EditorView が mount された時、 既存 tab の残骸を完全破棄して
+// 新規 tab を作成する。 これにより前 board の SceneGraph が次 board に漏れない。
+// /board/:id route なら DB fetch 経路 (watch(boardRoomId)) で content を load する。
+// /editor route (board 紐付かず) なら空のままで OK。
+const isBoardRoute = typeof route.params.id === 'string' && route.params.id.length > 0
 const createdInitialTab = tabCount() === 0
-const firstTab = createdInitialTab ? createTab() : (activeTab.value ?? createTab())
+const firstTab = isBoardRoute
+  ? resetAllTabs()
+  : createdInitialTab
+    ? createTab()
+    : (activeTab.value ?? createTab())
 const store = useEditorStore()
 const { dialogs } = useI18n()
 const { isMobile } = useViewportKind()
@@ -129,14 +139,29 @@ watch(
   { immediate: true }
 )
 
+async function loadBoardContentFromDB(boardId: string, name: string | null): Promise<void> {
+  try {
+    const remoteContent = await fetchBoardContent(boardId)
+    if (!remoteContent?.content) return
+    const bytes = decodeBoardContentBytes(remoteContent.content)
+    const fileName = `${name ?? 'Untitled board'}.fig`
+    await openFileInNewTab(new File([bytes], fileName, { type: 'application/octet-stream' }))
+  } catch (err) {
+    console.warn('[EditorView] failed to load board content from DB:', err)
+  }
+}
+
 watch(
   boardRoomId,
-  (roomId, previousRoomId) => {
+  async (roomId, previousRoomId) => {
     if (previousRoomId) {
       flushBoardPreview(previousRoomId)
       if (collab.state.value.roomId === previousRoomId) collab.disconnect()
     }
     if (!roomId) return
+
+    await loadBoardContentFromDB(roomId, boardName.value)
+
     if (collab.state.value.connected && collab.state.value.roomId === roomId) return
     collab.connect(roomId, { seedIfEmpty: true })
   },

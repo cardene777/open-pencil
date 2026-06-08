@@ -108,6 +108,15 @@ export function switchTab(tabId: string) {
   activateTab(tab)
 }
 
+export function resetAllTabs(): Tab {
+  for (const tab of tabsRef.value) {
+    tab.store.dispose()
+  }
+  tabsRef.value = []
+  activeTabId.value = ''
+  return createTab()
+}
+
 export function closeTab(tabId: string) {
   const idx = tabsRef.value.findIndex((t) => t.id === tabId)
   if (idx === -1) return
@@ -206,6 +215,7 @@ export function useTabsStore() {
     closeTab,
     openFileInNewTab,
     getActiveStore,
-    tabCount
+    tabCount,
+    resetAllTabs
   }
 }
