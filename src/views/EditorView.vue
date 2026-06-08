@@ -44,6 +44,7 @@ import { toast } from '@/app/shell/ui'
 import { isTauri } from '@/app/tauri/env'
 import { activeTab, createTab, getActiveStore, resetAllTabs, tabCount } from '@/app/tabs'
 
+import AppMenuBar from '@/components/AppMenuBar.vue'
 import AutosaveStatus from '@/components/AutosaveStatus.vue'
 import CollabPanel from '@/components/CollabPanel/CollabPanel.vue'
 import EditorCanvas from '@/components/EditorCanvas.vue'
@@ -514,6 +515,7 @@ onUnmounted(() => {
       @delete-page="void handleDeletePage($event)"
       @duplicate-page="void handleDuplicatePage($event)"
     />
+    <AppMenuBar v-if="showChrome && boardRoomId" />
 
     <!-- Desktop layout -->
     <SplitterGroup
