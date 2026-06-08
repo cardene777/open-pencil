@@ -151,7 +151,6 @@ export function clearAnonymousId() {
 
 export function createBoardEditorLocation(board: Board) {
   const query: Record<string, string> = {
-    board: board.id,
     name: board.name
   }
 
@@ -160,7 +159,7 @@ export function createBoardEditorLocation(board: Board) {
   }
 
   return {
-    path: '/',
+    path: `/board/${board.id}`,
     query
   }
 }
