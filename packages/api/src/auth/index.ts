@@ -170,6 +170,7 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
 
   const auth = betterAuth({
     basePath: config.basePath,
+    baseURL: config.baseURL,
     secret: config.secret,
     trustedOrigins: config.trustedOrigins,
     database: drizzleAdapter(options.database.db, {

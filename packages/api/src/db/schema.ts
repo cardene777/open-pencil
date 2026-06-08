@@ -153,3 +153,19 @@ export const accounts = sqliteTable(
   },
   (table) => [index('accounts_user_id_idx').on(table.userId)]
 )
+
+export const verifications = sqliteTable(
+  'verifications',
+  {
+    id: text('id').primaryKey(),
+    identifier: text('identifier').notNull(),
+    value: text('value').notNull(),
+    expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' }),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+  },
+  (table) => [
+    index('verifications_identifier_idx').on(table.identifier),
+    index('verifications_expires_at_idx').on(table.expiresAt)
+  ]
+)
