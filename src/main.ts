@@ -38,47 +38,42 @@ if (!IS_TAURI) {
     registerSW({ immediate: true })
   })
 
-  // Restore the last opened document so a reload does not force the user
-  // to drag the file back in. Board routes prefer DB content first and
-  // keep IndexedDB as the fast local fallback.
+  // 過去の IndexedDB cache 残骸を起動時に消去 (DB 同期に一本化したため不要)。
   void (async () => {
+    if (typeof indexedDB === 'undefined') return
     try {
-      const [{ loadCachedPen, fileFromCachedPen, savePenToCache }, tabsMod] = await Promise.all([
-        import('@/app/document/io/pen-cache'),
-        import('@/app/tabs')
-      ])
-      const boardId =
-        typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
-      const boardName =
-        typeof window !== 'undefined' ? resolveBoardNameFromLocation(window.location) : null
-
-      if (boardId) {
-        try {
-          const remoteContent = await fetchBoardContent(boardId)
-          if (remoteContent?.content) {
-            const bytes = decodeBoardContentBytes(remoteContent.content)
-            const fileName = `${boardName ?? 'Untitled board'}.fig`
-            await savePenToCache(fileName, 'application/octet-stream', bytes, boardId)
-            await tabsMod.openFileInNewTab(
-              new File([bytes], fileName, { type: 'application/octet-stream' }),
-              undefined,
-              undefined,
-              { skipPersistCache: true }
-            )
-            return
-          }
-        } catch (err) {
-          console.warn('[main] failed to restore board content from DB:', err)
-        }
-      }
-
-      const cached = await loadCachedPen(boardId)
-      if (!cached) return
-      await tabsMod.openFileInNewTab(fileFromCachedPen(cached), undefined, undefined, {
-        skipPersistCache: true
+      await new Promise<void>((resolve) => {
+        const req = indexedDB.deleteDatabase('inkly-document-cache')
+        req.onsuccess = () => resolve()
+        req.onerror = () => resolve()
+        req.onblocked = () => resolve()
       })
     } catch (err) {
-      console.warn('[main] failed to restore cached document:', err)
+      console.warn('[main] failed to delete legacy pen-cache:', err)
+    }
+  })()
+
+  // Board route なら DB から content を取得して open。
+  // それ以外 (Landing / Dashboard) では何も復元せず空のまま。
+  void (async () => {
+    try {
+      const boardId =
+        typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
+      if (!boardId) return
+
+      const boardName =
+        typeof window !== 'undefined' ? resolveBoardNameFromLocation(window.location) : null
+      const remoteContent = await fetchBoardContent(boardId)
+      if (!remoteContent?.content) return
+
+      const bytes = decodeBoardContentBytes(remoteContent.content)
+      const fileName = `${boardName ?? 'Untitled board'}.fig`
+      const tabsMod = await import('@/app/tabs')
+      await tabsMod.openFileInNewTab(
+        new File([bytes], fileName, { type: 'application/octet-stream' })
+      )
+    } catch (err) {
+      console.warn('[main] failed to restore board content from DB:', err)
     }
   })()
 }

@@ -12,13 +12,11 @@ import {
   fingerprint,
   fingerprintEquals
 } from '@/app/document/autosave/bytes-hash'
-import { createThrottleScheduler } from '@/app/document/autosave/throttle-scheduler'
 import {
   documentNameFromFigPath,
   downloadNameFromPath,
   figDownloadName
 } from '@/app/document/io/names'
-import { savePenToCache } from '@/app/document/io/pen-cache'
 import { createSaveActions } from '@/app/document/io/save'
 import { createDocumentSourceState } from '@/app/document/io/source-state'
 
@@ -92,8 +90,7 @@ export function createDocumentSourceActions({
     saveCurrentDocument: async () => writeFile(await buildFigFile())
   })
 
-  let lastCachedVersion = state.sceneVersion
-  let lastCachedFingerprint: BytesFingerprint | null = null
+  let lastRemoteVersion = state.sceneVersion
   let lastRemoteSavedFingerprint: BytesFingerprint | null = null
   let savedResetTimer: ReturnType<typeof setTimeout> | null = null
   let remoteAutosaveTimer: ReturnType<typeof setTimeout> | null = null
@@ -107,11 +104,16 @@ export function createDocumentSourceActions({
   async function flushRemoteBoardAutosave(version: number): Promise<void> {
     const boardId =
       typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
-    if (!boardId) return
+    if (!boardId) {
+      state.autosaveStatus = 'idle'
+      return
+    }
 
     await new Promise<void>((resolve) => runOnIdle(resolve))
     if (version !== state.sceneVersion) return
 
+    const endTotal = perfTracer.mark('autosave:total', 'IO', { version })
+    state.autosaveStatus = 'saving'
     try {
       const bytes = await perfTracer.measureAsync(
         'autosave:encode:board',
@@ -125,19 +127,31 @@ export function createDocumentSourceActions({
         () => fingerprint(bytes),
         { version, bytes: bytes.byteLength }
       )
-      if (fingerprintEquals(lastRemoteSavedFingerprint, nextFingerprint)) return
+      if (fingerprintEquals(lastRemoteSavedFingerprint, nextFingerprint)) {
+        lastRemoteVersion = version
+        state.autosaveStatus = 'saved'
+        if (savedResetTimer) clearTimeout(savedResetTimer)
+        savedResetTimer = setTimeout(() => {
+          state.autosaveStatus = 'idle'
+        }, 2000)
+        return
+      }
       if (version !== state.sceneVersion) return
 
       const content = encodeBoardContentBytes(bytes)
-      void saveBoardContent(boardId, content)
-        .then(() => {
-          lastRemoteSavedFingerprint = nextFingerprint
-        })
-        .catch((error) => {
-          console.warn('Board DB autosave failed:', error)
-        })
+      await saveBoardContent(boardId, content)
+      lastRemoteSavedFingerprint = nextFingerprint
+      lastRemoteVersion = version
+      state.autosaveStatus = 'saved'
+      if (savedResetTimer) clearTimeout(savedResetTimer)
+      savedResetTimer = setTimeout(() => {
+        state.autosaveStatus = 'idle'
+      }, 2000)
     } catch (error) {
-      console.warn('Board DB autosave preparation failed:', error)
+      console.warn('Board DB autosave failed:', error)
+      state.autosaveStatus = 'idle'
+    } finally {
+      endTotal()
     }
   }
 
@@ -153,66 +167,10 @@ export function createDocumentSourceActions({
     }, REMOTE_AUTOSAVE_DEBOUNCE_MS)
   }
 
-  async function runAutosave(version: number): Promise<void> {
-    if (version === lastCachedVersion) return
-    await new Promise<void>((resolve) => runOnIdle(resolve))
-    if (version === lastCachedVersion) return
-    const endTotal = perfTracer.mark('autosave:total', 'IO', { version })
-    state.autosaveStatus = 'saving'
-    try {
-      const bytes = await perfTracer.measureAsync('autosave:encode', 'IO', () => buildFigFile(), {
-        version
-      })
-      const nextFingerprint = perfTracer.measure(
-        'autosave:fingerprint',
-        'IO',
-        () => fingerprint(bytes),
-        { version, bytes: bytes.byteLength }
-      )
-      if (fingerprintEquals(lastCachedFingerprint, nextFingerprint)) {
-        lastCachedVersion = version
-        state.autosaveStatus = 'saved'
-        if (savedResetTimer) clearTimeout(savedResetTimer)
-        savedResetTimer = setTimeout(() => {
-          state.autosaveStatus = 'idle'
-        }, 2000)
-        return
-      }
-      const cacheName = getDownloadName() ?? `${state.documentName}.fig`
-      const boardId =
-        typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
-      await perfTracer.measureAsync(
-        'autosave:write',
-        'IO',
-        () => savePenToCache(cacheName, 'application/octet-stream', bytes, boardId),
-        { version, bytes: bytes.byteLength }
-      )
-      lastCachedFingerprint = nextFingerprint
-      lastCachedVersion = version
-      state.autosaveStatus = 'saved'
-      if (savedResetTimer) clearTimeout(savedResetTimer)
-      savedResetTimer = setTimeout(() => {
-        state.autosaveStatus = 'idle'
-      }, 2000)
-    } catch (e) {
-      console.warn('IndexedDB autosave failed:', e)
-      state.autosaveStatus = 'idle'
-    } finally {
-      endTotal()
-    }
-  }
-
-  const autosaveScheduler = createThrottleScheduler<number>(runAutosave, {
-    debounceMs: 3000,
-    minIntervalMs: 5000,
-    maxDelayMs: 30000
-  })
-
-  const stopIndexedDBAutosave = watch(
+  const stopRemoteAutosave = watch(
     () => state.sceneVersion,
     (version) => {
-      if (version === lastCachedVersion) return
-      autosaveScheduler.schedule(version)
+      if (version === lastRemoteVersion) return
       scheduleRemoteBoardAutosave(version)
     }
   )
@@ -250,9 +208,9 @@ export function createDocumentSourceActions({
   function disposeDocumentIO() {
     stopWatchingFile()
     disposeAutosave()
-    stopIndexedDBAutosave()
-    autosaveScheduler.cancel()
+    stopRemoteAutosave()
     if (remoteAutosaveTimer) clearTimeout(remoteAutosaveTimer)
+    if (savedResetTimer) clearTimeout(savedResetTimer)
   }
 
   return {

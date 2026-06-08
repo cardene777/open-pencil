@@ -6,7 +6,6 @@ import { computeAllLayouts } from '@inkly/core/layout'
 import type { SceneGraph } from '@inkly/core/scene-graph'
 import { fontManager } from '@inkly/core/text/fonts'
 
-import { resolveBoardIdFromLocation } from '@/app/boards/location'
 import { setInklyStore } from '@/app/browser-bridge'
 import { setActiveEditorStore } from '@/app/editor/active-store'
 import { createEditorStore } from '@/app/editor/session'
@@ -140,8 +139,7 @@ function yieldToUI(): Promise<void> {
 export async function openFileInNewTab(
   file: File,
   handle?: FileSystemFileHandle,
-  path?: string,
-  options?: { skipPersistCache?: boolean }
+  path?: string
 ): Promise<void> {
   const current = activeTab.value
   const isUntouched =
@@ -152,22 +150,6 @@ export async function openFileInNewTab(
   store.state.documentName = documentName
   store.state.loading = true
   await yieldToUI()
-
-  // Persist a copy of the freshly-loaded document so a page reload can
-  // restore the same scene without forcing the user to drag the file back in.
-  // We skip this when the file itself was just restored from cache to avoid
-  // a redundant round-trip back into IndexedDB.
-  if (!options?.skipPersistCache) {
-    try {
-      const bytes = new Uint8Array(await file.arrayBuffer())
-      const { savePenToCache } = await import('@/app/document/io/pen-cache')
-      const boardId =
-        typeof window !== 'undefined' ? resolveBoardIdFromLocation(window.location) : null
-      void savePenToCache(file.name, file.type || 'application/octet-stream', bytes, boardId)
-    } catch (err) {
-      console.warn('[tabs] failed to persist document cache:', err)
-    }
-  }
 
   try {
     const isFig = file.name.toLowerCase().endsWith('.fig')

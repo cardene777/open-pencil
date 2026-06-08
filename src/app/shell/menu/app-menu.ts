@@ -71,11 +71,15 @@ export function useAppMenu() {
       void import('@/app/shell/menu/clear-cache-dialog').then(async (dlg) => {
         const confirmed = await dlg.requestClearCacheConfirmation()
         if (!confirmed) return
-        const [cacheMod, tabsMod] = await Promise.all([
-          import('@/app/document/io/pen-cache'),
-          import('@/app/tabs')
-        ])
-        await cacheMod.clearAllCachedPens()
+        if (typeof indexedDB !== 'undefined') {
+          await new Promise<void>((resolve) => {
+            const req = indexedDB.deleteDatabase('inkly-document-cache')
+            req.onsuccess = () => resolve()
+            req.onerror = () => resolve()
+            req.onblocked = () => resolve()
+          })
+        }
+        const tabsMod = await import('@/app/tabs')
         tabsMod.createTab()
       })
     },
