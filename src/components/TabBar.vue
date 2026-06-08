@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nextTick, ref } from 'vue'
 import {
   ContextMenuContent,
   ContextMenuItem,
@@ -13,7 +14,7 @@ import {
 
 import { type Page } from '@/app/api/client'
 import Tip from '@/components/ui/Tip.vue'
-import { useI18n, useInlineRename } from '@inkly/vue'
+import { useI18n } from '@inkly/vue'
 
 const props = defineProps<{
   pages: Page[]
@@ -28,23 +29,53 @@ const emit = defineEmits<{
   duplicatePage: [pageId: string]
 }>()
 
-const rename = useInlineRename((pageId, name) => emit('renamePage', { pageId, name }))
 const { pages: pageMessages } = useI18n()
 
-// v-for 内 ref はそのまま渡すと array になりうるため、 mount された input を
-// その場で focus する callback ref に統一する。
-// 直前の dblclick / context menu の mouseup が outside-click として誤検知されて
-// 即 blur されないよう requestAnimationFrame で 1 frame 待ってから focus する。
-function setRenameInput(el: unknown) {
-  if (el instanceof HTMLInputElement) {
-    requestAnimationFrame(() => {
-      if (rename.editingId.value !== null) void rename.focusInput(el)
-    })
-  }
+// 自前の inline rename state — TabsTrigger / ContextMenu の focus 奪取と
+// useInlineRename の onClickOutside が競合するため、 vueuse に頼らず最小実装にする。
+const editingPageId = ref<string | null>(null)
+const editingValue = ref('')
+let originalName = ''
+
+async function startRename(page: Page) {
+  editingPageId.value = page.id
+  editingValue.value = page.name
+  originalName = page.name
+  await nextTick()
 }
 
-function startRename(page: Page) {
-  rename.start(page.id, page.name)
+function setRenameInput(el: unknown) {
+  if (!(el instanceof HTMLInputElement)) return
+  if (editingPageId.value === null) return
+  requestAnimationFrame(() => {
+    el.focus()
+    el.select()
+  })
+}
+
+function commitRename(pageId: string) {
+  if (editingPageId.value !== pageId) return
+  const value = editingValue.value.trim()
+  if (value && value !== originalName) {
+    emit('renamePage', { pageId, name: value })
+  }
+  editingPageId.value = null
+  editingValue.value = ''
+}
+
+function cancelRename() {
+  editingPageId.value = null
+  editingValue.value = ''
+}
+
+function onRenameKeydown(e: KeyboardEvent, pageId: string) {
+  if (e.code === 'Enter') {
+    e.preventDefault()
+    commitRename(pageId)
+  } else if (e.code === 'Escape') {
+    e.preventDefault()
+    cancelRename()
+  }
 }
 
 function onSwitchPage(pageId: string) {
@@ -74,22 +105,22 @@ function onClose(e: MouseEvent, pageId: string) {
           >
             <icon-lucide-file-spreadsheet class="size-3 shrink-0 opacity-60" />
             <input
-              v-if="rename.editingId.value === page.id"
+              v-if="editingPageId === page.id"
               :ref="setRenameInput"
+              v-model="editingValue"
               data-test-id="tabbar-page-input"
               class="min-w-0 flex-1 rounded border border-accent bg-input px-1 py-0 text-xs text-surface outline-none"
-              :value="page.name"
-              @blur="rename.commit(page.id, $event)"
+              @blur="commitRename(page.id)"
               @mousedown.stop
               @click.stop
               @dblclick.stop
               @pointerdown.stop
-              @keydown.stop="rename.onKeydown"
+              @keydown.stop="onRenameKeydown($event, page.id)"
             />
             <span
               v-else
               class="min-w-0 flex-1 truncate"
-              @dblclick.stop="startRename(page)"
+              @dblclick.stop="void startRename(page)"
             >
               {{ page.name }}
             </span>
@@ -113,7 +144,7 @@ function onClose(e: MouseEvent, pageId: string) {
           >
             <ContextMenuItem
               class="flex cursor-pointer items-center rounded px-2 py-1.5 text-xs text-surface outline-none hover:bg-hover"
-              @select="startRename(page)"
+              @select="void startRename(page)"
             >
               {{ pageMessages.rename }}
             </ContextMenuItem>
