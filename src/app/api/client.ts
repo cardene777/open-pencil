@@ -237,7 +237,7 @@ export function createBoard(input: { name: string; teamId?: string | null } | st
   })
 }
 
-export function updateBoard(boardId: string, input: { teamId?: string | null }) {
+export function updateBoard(boardId: string, input: { name?: string; teamId?: string | null }) {
   return apiRequest<Board>(BOARD_API_ENDPOINTS.board(boardId), {
     method: 'PATCH',
     body: JSON.stringify(input)

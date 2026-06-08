@@ -74,6 +74,80 @@ describe('board routes', () => {
     database.close()
   })
 
+  test('updates board name for anonymous owner', async () => {
+    const { app, database } = await createTestApiApp({ secret: TEST_API_SECRET })
+    const anonymousId = 'anon-owner'
+    const createResponse = await app.request('/api/boards', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'X-Inkly-Anonymous-Id': anonymousId
+      },
+      body: JSON.stringify({ name: 'Old board name' })
+    })
+    expect(createResponse.status).toBe(201)
+    const createdBoard = (await createResponse.json()) as { id: string }
+
+    const updateResponse = await app.request(`/api/boards/${createdBoard.id}`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        'X-Inkly-Anonymous-Id': anonymousId
+      },
+      body: JSON.stringify({ name: 'New board name' })
+    })
+
+    expect(updateResponse.status).toBe(200)
+    expect(await updateResponse.json()).toEqual(
+      expect.objectContaining({
+        id: createdBoard.id,
+        name: 'New board name'
+      })
+    )
+
+    const listResponse = await app.request('/api/boards', {
+      headers: { 'X-Inkly-Anonymous-Id': anonymousId }
+    })
+    expect(listResponse.status).toBe(200)
+    expect(await listResponse.json()).toEqual({
+      boards: [expect.objectContaining({ id: createdBoard.id, name: 'New board name' })]
+    })
+    database.close()
+  })
+
+  test('rejects invalid board name updates', async () => {
+    const { app, database } = await createTestApiApp({ secret: TEST_API_SECRET })
+    const anonymousId = 'anon-owner'
+    const createResponse = await app.request('/api/boards', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'X-Inkly-Anonymous-Id': anonymousId
+      },
+      body: JSON.stringify({ name: 'Valid board' })
+    })
+    expect(createResponse.status).toBe(201)
+    const createdBoard = (await createResponse.json()) as { id: string }
+
+    const updateResponse = await app.request(`/api/boards/${createdBoard.id}`, {
+      method: 'PATCH',
+      headers: {
+        'content-type': 'application/json',
+        'X-Inkly-Anonymous-Id': anonymousId
+      },
+      body: JSON.stringify({ name: '   ' })
+    })
+
+    expect(updateResponse.status).toBe(400)
+    expect(await updateResponse.json()).toEqual({
+      error: {
+        code: 'invalid_request_body',
+        message: 'Too small: expected string to have >=1 characters'
+      }
+    })
+    database.close()
+  })
+
   test('lists invitations and accepted collaborators for the board owner', async () => {
     const ownerSession = createSession('owner-123', 'Owner User', 'owner@jfet.co.jp', 'google')
     const invitedSession = createSession('guest-123', 'Guest User', 'guest@gmail.com', 'credential')

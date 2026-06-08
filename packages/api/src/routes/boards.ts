@@ -12,6 +12,7 @@ const createBoardSchema = z.object({
 })
 
 const updateBoardSchema = z.object({
+  name: z.string().trim().min(1).max(120).optional(),
   teamId: z.string().trim().min(1).nullable().optional()
 })
 
@@ -235,7 +236,10 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
       }
     }
 
-    const updated = await options.boardStore.updateBoard(board.id, { teamId: nextTeamId })
+    const updated = await options.boardStore.updateBoard(board.id, {
+      name: parsed.data.name,
+      teamId: nextTeamId
+    })
     if (!updated) return notFoundResponse('board_not_found', 'Board not found')
 
     const team = updated.teamId ? await options.teamStore.findTeam(updated.teamId) : null

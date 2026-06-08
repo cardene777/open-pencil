@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 
@@ -32,8 +32,10 @@ import {
   createBoard,
   createBoardEditorLocation,
   listBoards,
+  updateBoard,
   type Board
 } from '@/app/api/client'
+import { validateBoardNameInput } from '@/app/boards/name'
 import { listTeams, type TeamSummary } from '@/app/api/teams'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import LoginBanner from '@/components/LoginBanner.vue'
@@ -54,6 +56,10 @@ const previews = ref<Record<string, string>>({})
 const pinnedIds = ref<Set<string>>(new Set())
 const layout = ref<DashboardSectionConfig[]>(DEFAULT_DASHBOARD_LAYOUT.slice())
 const customizing = ref(false)
+type DashboardBoardScope = 'pinned' | 'recent'
+const editingBoard = ref<{ boardId: string; scope: DashboardBoardScope } | null>(null)
+const editingBoardName = ref('')
+const savingBoardId = ref<string | null>(null)
 const layoutMap = computed(() => {
   const map = new Map<DashboardSectionId, DashboardSectionConfig>()
   for (const section of layout.value) {
@@ -302,6 +308,75 @@ async function startGoogleLogin() {
 
 function openBoard(board: Board) {
   router.push(createBoardEditorLocation(board))
+}
+
+function handleBoardCardClick(board: Board) {
+  if (editingBoard.value) return
+  openBoard(board)
+}
+
+function isEditingBoard(boardId: string, scope: DashboardBoardScope) {
+  return editingBoard.value?.boardId === boardId && editingBoard.value?.scope === scope
+}
+
+function boardNameInputTestId(boardId: string, scope: DashboardBoardScope) {
+  return scope === 'pinned'
+    ? `dashboard-board-name-input-${boardId}`
+    : `dashboard-recent-board-name-input-${boardId}`
+}
+
+function applyBoardUpdate(updatedBoard: Board) {
+  boards.value = boards.value.map((board) => (board.id === updatedBoard.id ? updatedBoard : board))
+}
+
+async function startBoardRename(board: Board, scope: DashboardBoardScope, event: Event) {
+  event.stopPropagation()
+  if (savingBoardId.value) return
+  editingBoard.value = { boardId: board.id, scope }
+  editingBoardName.value = board.name
+  await nextTick()
+  const input = document.querySelector<HTMLInputElement>(
+    `[data-test-id="${boardNameInputTestId(board.id, scope)}"]`
+  )
+  input?.focus()
+  input?.select()
+}
+
+function cancelBoardRename(event?: Event) {
+  event?.stopPropagation()
+  if (savingBoardId.value) return
+  editingBoard.value = null
+  editingBoardName.value = ''
+}
+
+async function saveBoardRename(board: Board, event?: Event) {
+  event?.stopPropagation()
+  if (!editingBoard.value || savingBoardId.value === board.id) return
+
+  const validation = validateBoardNameInput(editingBoardName.value)
+  if (!validation.ok) {
+    toast.error(validation.message)
+    return
+  }
+
+  if (validation.value === board.name) {
+    cancelBoardRename()
+    return
+  }
+
+  savingBoardId.value = board.id
+  try {
+    const updatedBoard = await updateBoard(board.id, { name: validation.value })
+    applyBoardUpdate(updatedBoard)
+    cancelBoardRename()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to rename board'
+    toast.error(message)
+  } finally {
+    if (savingBoardId.value === board.id) {
+      savingBoardId.value = null
+    }
+  }
 }
 
 function handleTogglePin(boardId: string, event: Event) {
@@ -686,8 +761,18 @@ onMounted(async () => {
             :key="board.id"
             :data-test-id="`dashboard-pinned-board-${board.id}`"
             class="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-canvas/55 transition-colors hover:bg-hover"
-            @click="openBoard(board)"
+            @click="handleBoardCardClick(board)"
           >
+            <button
+              type="button"
+              :data-test-id="`dashboard-rename-${board.id}`"
+              aria-label="Rename board"
+              class="absolute left-2 top-2 z-10 rounded-full bg-canvas/70 p-1 text-muted opacity-0 transition-all hover:bg-canvas hover:text-surface group-hover:opacity-100"
+              :disabled="savingBoardId === board.id"
+              @click="(event) => void startBoardRename(board, 'pinned', event)"
+            >
+              <icon-lucide-pencil class="size-3.5" />
+            </button>
             <button
               type="button"
               :data-test-id="`dashboard-pin-toggle-${board.id}`"
@@ -712,7 +797,20 @@ onMounted(async () => {
               </div>
             </div>
             <div class="flex flex-col gap-1 p-3">
-              <p class="line-clamp-1 text-sm font-medium text-surface">{{ board.name }}</p>
+              <input
+                v-if="isEditingBoard(board.id, 'pinned')"
+                v-model="editingBoardName"
+                :data-test-id="boardNameInputTestId(board.id, 'pinned')"
+                type="text"
+                maxlength="120"
+                class="rounded border border-accent bg-input px-2 py-1 text-sm font-medium text-surface outline-none"
+                :disabled="savingBoardId === board.id"
+                @click.stop
+                @blur="(event) => void saveBoardRename(board, event)"
+                @keydown.enter.prevent="void saveBoardRename(board, $event)"
+                @keydown.esc.prevent="cancelBoardRename($event)"
+              />
+              <p v-else class="line-clamp-1 text-sm font-medium text-surface">{{ board.name }}</p>
               <p class="flex items-center gap-1 text-[11px] text-muted">
                 <icon-lucide-clock class="size-3" />
                 {{ formatRelativeUpdate(board.updatedAt) }}
@@ -766,8 +864,18 @@ onMounted(async () => {
             :key="board.id"
             :data-test-id="`dashboard-recent-board-${board.id}`"
             class="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/8 bg-canvas/55 transition-colors hover:bg-hover"
-            @click="openBoard(board)"
+            @click="handleBoardCardClick(board)"
           >
+            <button
+              type="button"
+              :data-test-id="`dashboard-recent-rename-${board.id}`"
+              aria-label="Rename board"
+              class="absolute left-2 top-2 z-10 rounded-full bg-canvas/70 p-1 text-muted opacity-0 transition-all hover:bg-canvas hover:text-surface group-hover:opacity-100"
+              :disabled="savingBoardId === board.id"
+              @click="(event) => void startBoardRename(board, 'recent', event)"
+            >
+              <icon-lucide-pencil class="size-3.5" />
+            </button>
             <button
               type="button"
               :data-test-id="`dashboard-recent-pin-${board.id}`"
@@ -797,7 +905,20 @@ onMounted(async () => {
               </div>
             </div>
             <div class="flex flex-col gap-1 p-3">
-              <p class="line-clamp-1 text-sm font-medium text-surface">{{ board.name }}</p>
+              <input
+                v-if="isEditingBoard(board.id, 'recent')"
+                v-model="editingBoardName"
+                :data-test-id="boardNameInputTestId(board.id, 'recent')"
+                type="text"
+                maxlength="120"
+                class="rounded border border-accent bg-input px-2 py-1 text-sm font-medium text-surface outline-none"
+                :disabled="savingBoardId === board.id"
+                @click.stop
+                @blur="(event) => void saveBoardRename(board, event)"
+                @keydown.enter.prevent="void saveBoardRename(board, $event)"
+                @keydown.esc.prevent="cancelBoardRename($event)"
+              />
+              <p v-else class="line-clamp-1 text-sm font-medium text-surface">{{ board.name }}</p>
               <p class="flex items-center gap-1 text-[11px] text-muted">
                 <icon-lucide-clock class="size-3" />
                 {{ formatRelativeUpdate(board.updatedAt) }}

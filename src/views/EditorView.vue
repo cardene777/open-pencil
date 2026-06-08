@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, onUnmounted, provide, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useEventListener, useUrlSearchParams } from '@vueuse/core'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 import { SplitterGroup, SplitterPanel, SplitterResizeHandle } from 'reka-ui'
 
 import { useViewportKind, formatShortcut, useI18n } from '@inkly/vue'
+import { toast } from '@/app/shell/ui'
 import { useKeyboard } from '@/app/shell/keyboard/use'
 import { loadEditorLayout, saveEditorLayout } from '@/app/shell/layout-storage'
 import { openFileFromPath, useMenu } from '@/app/shell/menu/use'
 import { writeBoardPreview } from '@/app/boards/preview'
+import { validateBoardNameInput } from '@/app/boards/name'
 import { useCollab, COLLAB_KEY } from '@/app/collab/use'
 import { connectAutomation } from '@/app/automation/bridge/server'
 import { spawnMCPIfNeeded } from '@/app/automation/mcp/spawn'
@@ -18,7 +20,7 @@ import { appMenuShortcut } from '@/app/shell/menu/shortcut'
 import { createDemoShapes } from '@/app/demo/document'
 import { useEditorStore } from '@/app/editor/active-store'
 import { activeTab, createTab, getActiveStore, openFileInNewTab, resetAllTabs, tabCount } from '@/app/tabs'
-import { decodeBoardContentBytes, fetchBoardContent } from '@/app/api/client'
+import { decodeBoardContentBytes, fetchBoardContent, updateBoard } from '@/app/api/client'
 
 import CollabPanel from '@/components/CollabPanel/CollabPanel.vue'
 import EditorCanvas from '@/components/EditorCanvas.vue'
@@ -33,6 +35,7 @@ import Tip from '@/components/ui/Tip.vue'
 import Toolbar from '@/components/Toolbar/Toolbar.vue'
 
 const route = useRoute()
+const router = useRouter()
 const params = useUrlSearchParams('history')
 const showChrome = !('no-chrome' in params)
 
@@ -78,6 +81,10 @@ const boardTeamName = computed(() =>
     ? route.query.teamName
     : null
 )
+const isEditingBoardName = ref(false)
+const editingBoardName = ref('')
+const editingBoardNameInput = ref<HTMLInputElement | null>(null)
+const savingBoardName = ref(false)
 let previewWriteTimer: ReturnType<typeof setTimeout> | null = null
 
 function flushBoardPreview(boardId: string) {
@@ -151,9 +158,60 @@ async function loadBoardContentFromDB(boardId: string, name: string | null): Pro
   }
 }
 
+async function startEditBoardName() {
+  if (!boardRoomId.value || savingBoardName.value) return
+  isEditingBoardName.value = true
+  editingBoardName.value = store.state.documentName
+  await nextTick()
+  editingBoardNameInput.value?.focus()
+  editingBoardNameInput.value?.select()
+}
+
+function cancelEditBoardName() {
+  if (savingBoardName.value) return
+  isEditingBoardName.value = false
+  editingBoardName.value = ''
+}
+
+async function saveBoardName() {
+  if (!boardRoomId.value || savingBoardName.value) return
+
+  const validation = validateBoardNameInput(editingBoardName.value)
+  if (!validation.ok) {
+    toast.error(validation.message)
+    return
+  }
+
+  if (validation.value === store.state.documentName) {
+    cancelEditBoardName()
+    return
+  }
+
+  savingBoardName.value = true
+  try {
+    const updatedBoard = await updateBoard(boardRoomId.value, { name: validation.value })
+    store.state.documentName = updatedBoard.name
+    isEditingBoardName.value = false
+    editingBoardName.value = ''
+    await router.replace({
+      path: route.path,
+      query: {
+        ...route.query,
+        name: updatedBoard.name
+      }
+    })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to rename board'
+    toast.error(message)
+  } finally {
+    savingBoardName.value = false
+  }
+}
+
 watch(
   boardRoomId,
   async (roomId, previousRoomId) => {
+    cancelEditBoardName()
     if (previousRoomId) {
       flushBoardPreview(previousRoomId)
       if (collab.state.value.roomId === previousRoomId) collab.disconnect()
@@ -226,7 +284,25 @@ onUnmounted(() => {
           <span>ダッシュボード</span>
         </RouterLink>
         <span class="text-muted">/</span>
-        <span data-test-id="editor-document-name" class="truncate text-sm font-medium text-surface">
+        <input
+          v-if="isEditingBoardName"
+          ref="editingBoardNameInput"
+          v-model="editingBoardName"
+          data-test-id="editor-document-name-input"
+          type="text"
+          maxlength="120"
+          class="min-w-0 rounded border border-accent bg-input px-2 py-1 text-sm font-medium text-surface outline-none"
+          :disabled="savingBoardName"
+          @blur="void saveBoardName()"
+          @keydown.enter.prevent="void saveBoardName()"
+          @keydown.esc.prevent="cancelEditBoardName()"
+        />
+        <span
+          v-else
+          data-test-id="editor-document-name"
+          class="truncate rounded px-1 text-sm font-medium text-surface transition-colors hover:bg-hover/50"
+          @click="void startEditBoardName()"
+        >
           {{ store.state.documentName }}
         </span>
         <span
