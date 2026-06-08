@@ -31,9 +31,9 @@ export function isBoardCollaborator(board: BoardRecord, actor: RequestActor) {
 export async function resolveRequestActor(
   auth: InklyAuth,
   request: Request,
-  resolveAnonymous: () => string
+  resolveAnonymous: () => string | null
 ): Promise<RequestActor> {
-  const anonymousId = resolveAnonymous()
+  const anonymousId = resolveAnonymous()?.trim() || null
   const session = await getAuthSession(auth, request)
   if (session) {
     return {

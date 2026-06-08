@@ -2,6 +2,8 @@ import * as awarenessProtocol from 'y-protocols/awareness'
 import type { Awareness } from 'y-protocols/awareness'
 import * as Y from 'yjs'
 
+import { syncAnonymousIdCookie } from '@/app/api/client'
+
 type SignalingIncomingMessage =
   | {
       type: 'welcome'
@@ -115,6 +117,7 @@ export function connectWebRtcProvider({
   ydoc,
   awareness
 }: ProviderOptions): WebRtcProviderConnection {
+  syncAnonymousIdCookie()
   const socket = new WebSocket(createSignalingUrl(roomId))
   const peers = new Map<string, PeerConnectionEntry>()
   let disposed = false
@@ -159,7 +162,10 @@ export function connectWebRtcProvider({
     }
   }
 
-  async function handleDataMessage(peer: PeerConnectionEntry, message: Blob | ArrayBuffer | string) {
+  async function handleDataMessage(
+    peer: PeerConnectionEntry,
+    message: Blob | ArrayBuffer | string
+  ) {
     const frame = await toUint8Array(message)
     const type = frame[0]
     const payload = frame.subarray(1)

@@ -6,12 +6,10 @@ import * as Y from 'yjs'
 
 import { colorFromIdentity } from '@/app/collab/cursor-color'
 import type { CollabState } from '@/app/collab/types'
-import {
-  connectWebRtcProvider,
-  type WebRtcProviderConnection
-} from '@/app/collab/webrtc-provider'
+import { connectWebRtcProvider, type WebRtcProviderConnection } from '@/app/collab/webrtc-provider'
 import { bindCollabGraphEvents, registerYjsObservers } from '@/app/collab/yjs-sync'
 import type { EditorStore } from '@/app/editor/active-store'
+import { toast } from '@/app/shell/ui'
 
 export type CollabRuntime = {
   ydoc: Y.Doc | null
@@ -205,14 +203,29 @@ export function connectCollabSession({
     whenSynced?: Promise<unknown>
   }
   const persistenceReady = persistence.whenSynced ?? Promise.resolve()
-  void Promise.all([provider.ready, persistenceReady]).then(([info]) => {
-    if (!runtime.ydoc || !runtime.ynodes) return
-    if (seedIfEmpty && info.peerCount === 0 && runtime.ynodes.size === 0) {
-      for (const node of store.graph.getAllNodes()) {
-        syncNodeToYjs(node.id)
+  void Promise.all([provider.ready, persistenceReady])
+    .then(([info]) => {
+      if (!runtime.ydoc || !runtime.ynodes) return
+      if (seedIfEmpty && info.peerCount === 0 && runtime.ynodes.size === 0) {
+        for (const node of store.graph.getAllNodes()) {
+          syncNodeToYjs(node.id)
+        }
       }
-    }
-  })
+    })
+    .catch((error: unknown) => {
+      if (runtime.provider !== provider) return
+      const message =
+        error instanceof Error && error.message
+          ? error.message
+          : 'Collaboration unavailable for this board'
+      toast.error(
+        message === 'Signaling connection failed' ||
+          message === 'Signaling connection closed before ready'
+          ? 'Collaboration unavailable for this board'
+          : message
+      )
+      disconnect()
+    })
 
   runtime.stopZoomWatch = watchAwarenessZoom(store, () => runtime.awareness)
 

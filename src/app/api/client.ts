@@ -5,6 +5,7 @@ export type TeamMemberRole = 'owner' | 'editor' | 'viewer'
 
 const ANONYMOUS_ID_STORAGE_KEY = 'inkly.anonymous-id'
 export const ANONYMOUS_ID_HEADER = 'X-Inkly-Anonymous-Id'
+export const ANONYMOUS_ID_COOKIE = 'inkly_anonymous_id'
 
 export interface BoardCollaborator {
   anonymousId: string
@@ -104,13 +105,35 @@ function readAnonymousId(): string | null {
   return window.localStorage.getItem(ANONYMOUS_ID_STORAGE_KEY)
 }
 
+function writeAnonymousIdCookie(anonymousId: string | null) {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return
+
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  if (!anonymousId) {
+    document.cookie = `${ANONYMOUS_ID_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`
+    return
+  }
+
+  document.cookie = `${ANONYMOUS_ID_COOKIE}=${encodeURIComponent(anonymousId)}; Path=/; SameSite=Lax${secure}`
+}
+
 function writeAnonymousId(anonymousId: string | null) {
-  if (typeof window === 'undefined' || !anonymousId) return
-  window.localStorage.setItem(ANONYMOUS_ID_STORAGE_KEY, anonymousId)
+  if (typeof window === 'undefined') return
+  if (anonymousId) {
+    window.localStorage.setItem(ANONYMOUS_ID_STORAGE_KEY, anonymousId)
+  } else {
+    window.localStorage.removeItem(ANONYMOUS_ID_STORAGE_KEY)
+  }
+  writeAnonymousIdCookie(anonymousId)
+}
+
+export function syncAnonymousIdCookie() {
+  writeAnonymousIdCookie(readAnonymousId())
 }
 
 function buildHeaders(init: RequestInit): Headers {
   const headers = new Headers(init.headers)
+  syncAnonymousIdCookie()
   const anonymousId = readAnonymousId()
   if (anonymousId) {
     headers.set(ANONYMOUS_ID_HEADER, anonymousId)
@@ -174,8 +197,7 @@ export function setAnonymousId(anonymousId: string) {
 }
 
 export function clearAnonymousId() {
-  if (typeof window === 'undefined') return
-  window.localStorage.removeItem(ANONYMOUS_ID_STORAGE_KEY)
+  writeAnonymousId(null)
 }
 
 export function encodeBoardContentBytes(bytes: Uint8Array): string {
@@ -224,10 +246,7 @@ export async function listBoardPages(boardId: string): Promise<Page[]> {
   return response.pages
 }
 
-export async function createBoardPage(
-  boardId: string,
-  input: { name: string; position?: number }
-) {
+export async function createBoardPage(boardId: string, input: { name: string; position?: number }) {
   return apiRequest<Page>(BOARD_API_ENDPOINTS.pages(boardId), {
     method: 'POST',
     body: JSON.stringify(input)

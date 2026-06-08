@@ -1,8 +1,8 @@
 import type { ServerWebSocket } from 'bun'
-
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 
+import { resolveAnonymousIdFromRequest } from './anonymousId.js'
 import { createInklyAuth, type InklyAuth } from './auth/index.js'
 import { createBoardStore } from './boardStore.js'
 import { resolveApiDatabaseOptions, type ApiDatabase } from './db/client.js'
@@ -18,8 +18,8 @@ import { createBoardRoutes } from './routes/boards.js'
 import { createInviteRoutes } from './routes/invite.js'
 import { createNotificationRoutes } from './routes/notifications.js'
 import { createPageRoutes } from './routes/pages.js'
-import { createTestingRoutes } from './routes/testing.js'
 import { createTeamRoutes } from './routes/teams.js'
+import { createTestingRoutes } from './routes/testing.js'
 import { createInvitationStore } from './store.js'
 import { createTeamStore } from './teamStore.js'
 import { resolveJwtSecret } from './token.js'
@@ -107,11 +107,11 @@ export async function createApiApp(options: CreateApiAppOptions) {
   // CORS: client (vite dev http://localhost:1420) からの cookie 付き fetch を許可する
   // (better-auth は cookie session を使うため credentials: 'include' を server 側でも accept する必要)
   // 許可 origin は INKLY_API_TRUSTED_ORIGINS env (auth/config.ts と同 SSOT) を使う
-  const trustedOrigins = (env.INKLY_API_TRUSTED_ORIGINS?.trim()
+  const trustedOrigins = env.INKLY_API_TRUSTED_ORIGINS?.trim()
     ? env.INKLY_API_TRUSTED_ORIGINS.split(',')
         .map((o) => o.trim())
         .filter((o) => o.length > 0)
-    : ['http://localhost:1420', 'http://127.0.0.1:1420'])
+    : ['http://localhost:1420', 'http://127.0.0.1:1420']
   app.use(
     '/api/*',
     cors({
@@ -246,7 +246,12 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
         onNotificationCreated?.(notification)
       }
     })
-  const signaling = createSignalingServer()
+  const signaling = createSignalingServer({
+    log: (message) => process.stderr.write(`${message}\n`),
+    auth,
+    boardStore,
+    resolveAnonymousId: (request) => resolveAnonymousIdFromRequest(request)
+  })
   const notifications = createNotificationWebSocketServer(auth)
   onNotificationCreated = (notification) => {
     notifications.pushNotification(notification)
@@ -270,7 +275,7 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
       hostname: host,
       port,
       async fetch(request, server) {
-        const signalingResponse = signaling.handleRequest(request, server)
+        const signalingResponse = await signaling.handleRequest(request, server)
         if (signalingResponse !== null) return signalingResponse
         const notificationsResponse = await notifications.handleRequest(request, server)
         if (notificationsResponse !== null) return notificationsResponse
@@ -278,7 +283,7 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
       },
       websocket: {
         open(socket: ServerWebSocket<SignalingPeerData | NotificationSocketData>) {
-          if ('roomId' in socket.data) {
+          if ('boardId' in socket.data) {
             signaling.websocket.open?.(socket as ServerWebSocket<SignalingPeerData>)
             return
           }
@@ -286,12 +291,12 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
           notifications.open(socket as ServerWebSocket<NotificationSocketData>)
         },
         message(socket: ServerWebSocket<SignalingPeerData | NotificationSocketData>, message) {
-          if ('roomId' in socket.data) {
+          if ('boardId' in socket.data) {
             signaling.websocket.message?.(socket as ServerWebSocket<SignalingPeerData>, message)
           }
         },
         close(socket: ServerWebSocket<SignalingPeerData | NotificationSocketData>, code, reason) {
-          if ('roomId' in socket.data) {
+          if ('boardId' in socket.data) {
             signaling.websocket.close?.(socket as ServerWebSocket<SignalingPeerData>, code, reason)
             return
           }
@@ -322,9 +327,7 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
   }
 
   if (!server) {
-    throw lastError instanceof Error
-      ? lastError
-      : new Error('Failed to bind an ephemeral API port')
+    throw lastError instanceof Error ? lastError : new Error('Failed to bind an ephemeral API port')
   }
 
   process.stderr.write(`Inkly API server listening on http://${host}:${port}\n`)

@@ -33,6 +33,11 @@ export function createDevServerOptions(host: string | undefined): ServerOptions 
         }
       : undefined,
     proxy: {
+      '/api/ws': {
+        target: 'http://127.0.0.1:3001',
+        changeOrigin: false,
+        ws: true
+      },
       '/api': {
         target: 'http://127.0.0.1:3001',
         changeOrigin: true,

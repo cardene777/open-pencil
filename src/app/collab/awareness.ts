@@ -28,9 +28,11 @@ export function buildRemotePeers(
     if (clientId === localClientId) return
     const user = peerState.user as { name?: string; color?: Color } | undefined
     if (!user) return
+    const name = user.name?.trim()
+    if (!name || name === 'Anonymous') return
     peers.push({
       clientId,
-      name: user.name || 'Anonymous',
+      name,
       color: user.color || PEER_COLORS[clientId % PEER_COLORS.length],
       cursor: peerState.cursor as RemotePeer['cursor'],
       selection: peerState.selection as string[]

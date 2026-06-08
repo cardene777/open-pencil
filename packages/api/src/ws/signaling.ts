@@ -1,10 +1,16 @@
 import type { Server, ServerWebSocket } from 'bun'
 
+import { isBoardCollaborator, resolveRequestActor } from '../auth/actor.js'
+import type { InklyAuth } from '../auth/index.js'
+import type { BoardStore } from '../types.js'
+
 const SIGNALING_PATH = '/api/ws/signaling'
 
 export type SignalingPeerData = {
-  roomId: string
+  boardId: string
   peerId: string
+  userId: string | null
+  anonymousId: string | null
 }
 
 type SignalingForwardMessage =
@@ -50,8 +56,18 @@ type SignalingServerMessage =
 
 type SignalingSocket = ServerWebSocket<SignalingPeerData>
 
+export interface SignalingServerOptions {
+  log?: (message: string) => void
+  auth: InklyAuth
+  boardStore: BoardStore
+  resolveAnonymousId: (request: Request) => string | null
+}
+
 export interface SignalingServer {
-  handleRequest: (request: Request, server: Server<SignalingPeerData>) => Response | undefined | null
+  handleRequest: (
+    request: Request,
+    server: Server<SignalingPeerData>
+  ) => Promise<Response | undefined | null>
   websocket: Bun.WebSocketHandler<SignalingPeerData>
 }
 
@@ -80,22 +96,21 @@ function parseForwardMessage(raw: string): SignalingForwardMessage | null {
   }
 }
 
-function roomPeers(rooms: Map<string, Map<string, SignalingSocket>>, roomId: string) {
-  let peers = rooms.get(roomId)
+function roomPeers(rooms: Map<string, Map<string, SignalingSocket>>, boardId: string) {
+  let peers = rooms.get(boardId)
   if (!peers) {
     peers = new Map()
-    rooms.set(roomId, peers)
+    rooms.set(boardId, peers)
   }
   return peers
 }
 
-export function createSignalingServer(
-  log: (message: string) => void = (message) => process.stderr.write(`${message}\n`)
-): SignalingServer {
+export function createSignalingServer(options: SignalingServerOptions): SignalingServer {
+  const log = options.log ?? ((message) => process.stderr.write(`${message}\n`))
   const rooms = new Map<string, Map<string, SignalingSocket>>()
 
-  function broadcast(roomId: string, message: SignalingServerMessage, exceptPeerId?: string) {
-    const peers = rooms.get(roomId)
+  function broadcast(boardId: string, message: SignalingServerMessage, exceptPeerId?: string) {
+    const peers = rooms.get(boardId)
     if (!peers) return
     for (const [peerId, socket] of peers) {
       if (peerId === exceptPeerId) continue
@@ -104,12 +119,12 @@ export function createSignalingServer(
   }
 
   return {
-    handleRequest(request, server) {
+    async handleRequest(request, server) {
       const url = new URL(request.url)
       if (url.pathname !== SIGNALING_PATH) return null
 
-      const roomId = url.searchParams.get('room')?.trim()
-      if (!roomId) {
+      const boardId = url.searchParams.get('room')?.trim()
+      if (!boardId) {
         return json(
           {
             error: {
@@ -121,9 +136,42 @@ export function createSignalingServer(
         )
       }
 
+      const board = await options.boardStore.findBoard(boardId)
+      if (!board) {
+        return json(
+          {
+            error: {
+              code: 'board_not_found',
+              message: 'Board not found'
+            }
+          },
+          404
+        )
+      }
+
+      const actor = await resolveRequestActor(options.auth, request, () =>
+        options.resolveAnonymousId(request)
+      )
+      if (!isBoardCollaborator(board, actor)) {
+        return json(
+          {
+            error: {
+              code: 'forbidden',
+              message: 'Board collaboration access denied'
+            }
+          },
+          403
+        )
+      }
+
       const peerId = crypto.randomUUID()
       const upgraded = server.upgrade(request, {
-        data: { roomId, peerId }
+        data: {
+          boardId: board.id,
+          peerId,
+          userId: actor.userId,
+          anonymousId: actor.anonymousId
+        }
       })
 
       if (upgraded) return undefined
@@ -140,8 +188,8 @@ export function createSignalingServer(
     },
     websocket: {
       open(socket) {
-        const { roomId, peerId } = socket.data
-        const peers = roomPeers(rooms, roomId)
+        const { boardId, peerId } = socket.data
+        const peers = roomPeers(rooms, boardId)
         const existingPeerIds = [...peers.keys()]
         peers.set(peerId, socket)
 
@@ -150,9 +198,11 @@ export function createSignalingServer(
           peerId,
           peers: existingPeerIds
         })
-        broadcast(roomId, { type: 'peer-joined', peerId }, peerId)
+        broadcast(boardId, { type: 'peer-joined', peerId }, peerId)
 
-        log(`[inkly-api] signaling connected room=${roomId} peer=${peerId} peers=${peers.size}`)
+        log(
+          `[inkly-api] signaling connected board=${boardId} peer=${peerId} user=${socket.data.userId ?? '-'} anonymous=${socket.data.anonymousId ?? '-'} peers=${peers.size}`
+        )
       },
       message(socket, message) {
         if (typeof message !== 'string') {
@@ -166,7 +216,7 @@ export function createSignalingServer(
           return
         }
 
-        const peers = rooms.get(socket.data.roomId)
+        const peers = rooms.get(socket.data.boardId)
         const target = peers?.get(parsed.targetPeerId)
         if (!target) {
           send(socket, { type: 'error', message: 'Target peer not found' })
@@ -180,15 +230,17 @@ export function createSignalingServer(
         })
       },
       close(socket) {
-        const { roomId, peerId } = socket.data
-        const peers = rooms.get(roomId)
+        const { boardId, peerId } = socket.data
+        const peers = rooms.get(boardId)
         if (!peers) return
 
         peers.delete(peerId)
-        if (peers.size === 0) rooms.delete(roomId)
-        else broadcast(roomId, { type: 'peer-left', peerId }, peerId)
+        if (peers.size === 0) rooms.delete(boardId)
+        else broadcast(boardId, { type: 'peer-left', peerId }, peerId)
 
-        log(`[inkly-api] signaling disconnected room=${roomId} peer=${peerId} peers=${peers.size}`)
+        log(
+          `[inkly-api] signaling disconnected board=${boardId} peer=${peerId} user=${socket.data.userId ?? '-'} anonymous=${socket.data.anonymousId ?? '-'} peers=${peers.size}`
+        )
       }
     }
   }
