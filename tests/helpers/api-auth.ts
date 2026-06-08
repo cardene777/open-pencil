@@ -1,5 +1,5 @@
 import type { InklyAuth, InklyAuthSession } from '../../packages/api/src/auth/index.js'
-import { users } from '../../packages/api/src/db/schema.js'
+import { accounts, users } from '../../packages/api/src/db/schema.js'
 import type { createTestApiApp } from './api.js'
 
 export const TEST_USER_HEADER = 'X-Test-User-Id'
@@ -8,7 +8,7 @@ export function createSession(
   userId: string,
   name = `User ${userId}`,
   email = `${userId}@example.com`,
-  accessLevel: InklyAuthSession['user']['accessLevel'] = 'full'
+  providerId: InklyAuthSession['user']['providerId'] = 'google'
 ): InklyAuthSession {
   return {
     session: {
@@ -23,7 +23,7 @@ export function createSession(
       id: userId,
       name,
       email,
-      accessLevel,
+      providerId,
       emailVerified: true,
       image: null,
       createdAt: '2029-01-01T00:00:00.000Z',
@@ -69,12 +69,25 @@ export async function seedUsers(
         id: session.user.id,
         name: session.user.name,
         email: session.user.email,
-        accessLevel: session.user.accessLevel,
         emailVerified: session.user.emailVerified,
         image: session.user.image,
         createdAt: new Date(session.user.createdAt),
         updatedAt: new Date(session.user.updatedAt)
       })
       .run()
+
+    if (session.user.providerId) {
+      await database.db
+        .insert(accounts)
+        .values({
+          id: crypto.randomUUID(),
+          accountId: session.user.email,
+          providerId: session.user.providerId,
+          userId: session.user.id,
+          createdAt: new Date(session.user.createdAt),
+          updatedAt: new Date(session.user.updatedAt)
+        })
+        .run()
+    }
   }
 }

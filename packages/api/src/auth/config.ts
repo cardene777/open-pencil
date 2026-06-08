@@ -10,7 +10,6 @@ export interface InklyAuthConfig {
   baseURL: string
   secret: string
   google: GoogleOAuthConfig | null
-  allowedEmailDomains: string[]
   enableTestUtils: boolean
   trustedOrigins: string[]
   warnings: string[]
@@ -34,32 +33,6 @@ function readEnvFlag(value: string | undefined): boolean {
   return normalized === '1' || normalized === 'true' || normalized === 'yes'
 }
 
-function readCsvEnv(value: string | undefined): string[] {
-  const trimmed = value?.trim()
-  if (!trimmed) return []
-
-  return trimmed
-    .split(',')
-    .map((item) => item.trim().toLowerCase())
-    .filter((item) => item.length > 0)
-}
-
-export function isAllowedEmailDomain(email: string, allowedEmailDomains: string[]) {
-  const normalizedEmail = email.trim().toLowerCase()
-  return allowedEmailDomains.some((domain) => normalizedEmail.endsWith(`@${domain}`))
-}
-
-export function resolveAccessLevelForEmail(
-  email: string,
-  allowedEmailDomains: string[]
-): 'full' | 'invited-only' {
-  if (allowedEmailDomains.length === 0) {
-    return 'full'
-  }
-
-  return isAllowedEmailDomain(email, allowedEmailDomains) ? 'full' : 'invited-only'
-}
-
 export function resolveInklyAuthConfig(options: ResolveInklyAuthConfigOptions): InklyAuthConfig {
   const env = options.env ?? process.env
   const warnings: string[] = []
@@ -68,7 +41,6 @@ export function resolveInklyAuthConfig(options: ResolveInklyAuthConfigOptions): 
   const googleClientSecret = readEnv(env.INKLY_API_GOOGLE_CLIENT_SECRET)
   const enableTestUtils = readEnvFlag(env.INKLY_API_AUTH_ENABLE_TEST_UTILS)
   const trustedOriginsEnv = readEnv(env.INKLY_API_TRUSTED_ORIGINS)
-  const allowedEmailDomains = readCsvEnv(env.INKLY_API_ALLOWED_EMAIL_DOMAINS)
   const trustedOrigins = trustedOriginsEnv
     ? trustedOriginsEnv
         .split(',')
@@ -105,7 +77,6 @@ export function resolveInklyAuthConfig(options: ResolveInklyAuthConfigOptions): 
     baseURL,
     secret: authSecret ?? options.fallbackSecret,
     google,
-    allowedEmailDomains,
     enableTestUtils,
     trustedOrigins,
     warnings

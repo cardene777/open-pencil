@@ -272,13 +272,32 @@ async function upsertUser(
       .set({
         name: input.name,
         email,
-        accessLevel: 'full',
         image: input.image ?? null,
         emailVerified: true,
         updatedAt: new Date(now)
       })
       .where(eq(users.id, existing.id))
       .run()
+
+    const existingAccount = await database.db
+      .select({ id: accounts.id })
+      .from(accounts)
+      .where(and(eq(accounts.userId, existing.id), eq(accounts.providerId, 'google')))
+      .get()
+
+    if (!existingAccount) {
+      await database.db
+        .insert(accounts)
+        .values({
+          id: crypto.randomUUID(),
+          accountId: email,
+          providerId: 'google',
+          userId: existing.id,
+          createdAt: new Date(now),
+          updatedAt: new Date(now)
+        })
+        .run()
+    }
 
     return {
       id: existing.id,
@@ -295,9 +314,20 @@ async function upsertUser(
       id: userId,
       name: input.name,
       email,
-      accessLevel: 'full',
       image: input.image ?? null,
       emailVerified: true,
+      createdAt: new Date(now),
+      updatedAt: new Date(now)
+    })
+    .run()
+
+  await database.db
+    .insert(accounts)
+    .values({
+      id: crypto.randomUUID(),
+      accountId: email,
+      providerId: 'google',
+      userId,
       createdAt: new Date(now),
       updatedAt: new Date(now)
     })

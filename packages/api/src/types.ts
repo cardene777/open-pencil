@@ -1,9 +1,5 @@
 export const INVITATION_ISSUER = 'inkly' as const
 
-export const ACCESS_LEVELS = ['full', 'invited-only'] as const
-
-export type AccessLevel = (typeof ACCESS_LEVELS)[number]
-
 export const INVITATION_ROLES = ['editor', 'viewer'] as const
 
 export type InvitationRole = (typeof INVITATION_ROLES)[number]

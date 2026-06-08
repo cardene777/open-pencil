@@ -3,7 +3,6 @@ import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 
 import { INKLY_ANONYMOUS_ID_HEADER } from '../anonymousId.js'
-import { isAllowedEmailDomain } from '../auth/config.js'
 import { getAuthSession, type InklyAuth } from '../auth/index.js'
 import { invitations } from '../db/schema.js'
 import { migrateAnonymousOwnership } from '../auth/migrate.js'
@@ -22,7 +21,6 @@ const testLoginRedirectSchema = testLoginSchema.extend({
 
 export interface AuthRoutesOptions {
   auth: InklyAuth
-  allowedEmailDomains: string[]
   database: ApiDatabase
   now?: () => number
   secret: string
@@ -30,8 +28,24 @@ export interface AuthRoutesOptions {
 
 const emailSignUpSchema = z.object({
   email: z.string().trim().email(),
-  inviteToken: z.string().trim().min(1)
+  invitationToken: z.string().trim().min(1).optional(),
+  inviteToken: z.string().trim().min(1).optional()
 })
+
+function resolveInvitationToken(
+  body: z.infer<typeof emailSignUpSchema>,
+  requestUrl: string
+) {
+  const query = new URL(requestUrl).searchParams
+
+  return (
+    body.invitationToken ??
+    body.inviteToken ??
+    query.get('invitationToken')?.trim() ??
+    query.get('inviteToken')?.trim() ??
+    ''
+  )
+}
 
 function unauthorizedResponse(headers?: HeadersInit) {
   return new Response(
@@ -111,19 +125,21 @@ export function createAuthRoutes(options: AuthRoutesOptions): Hono {
       )
     }
 
-    if (isAllowedEmailDomain(parsed.data.email, options.allowedEmailDomains)) {
+    const invitationToken = resolveInvitationToken(parsed.data, c.req.url)
+
+    if (!invitationToken) {
       return c.json(
         {
           error: {
-            code: 'google_login_required',
-            message: 'Internal members must use Google login.'
+            code: 'missing_invitation_token',
+            message: 'Invitation token is required for email sign-up.'
           }
         },
-        403
+        400
       )
     }
 
-    const verification = await verifyInvitationToken(parsed.data.inviteToken, options.secret)
+    const verification = await verifyInvitationToken(invitationToken, options.secret)
     if (!verification.valid) {
       return c.json(
         {
@@ -160,7 +176,10 @@ export function createAuthRoutes(options: AuthRoutesOptions): Hono {
     }
 
     const emailHash = await hashInvitationEmail(parsed.data.email)
-    if (emailHash !== verification.payload.email_hash) {
+    if (
+      emailHash !== verification.payload.email_hash ||
+      emailHash !== invitation.sentToEmailHash
+    ) {
       return c.json(
         {
           error: {
@@ -168,7 +187,7 @@ export function createAuthRoutes(options: AuthRoutesOptions): Hono {
             message: 'This invitation does not match that email address.'
           }
         },
-        403
+        400
       )
     }
 

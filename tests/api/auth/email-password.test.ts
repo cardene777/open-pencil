@@ -18,10 +18,7 @@ function authHeaders(extra: HeadersInit = {}, cookie = ''): HeadersInit {
 describe('email and password auth', () => {
   test('rejects email sign-up without an invite token', async () => {
     const { app, database } = await createTestApiApp({
-      secret: TEST_API_SECRET,
-      env: {
-        INKLY_API_ALLOWED_EMAIL_DOMAINS: 'jfet.co.jp'
-      }
+      secret: TEST_API_SECRET
     })
 
     const response = await app.request('http://127.0.0.1:3001/api/auth/sign-up/email', {
@@ -37,8 +34,8 @@ describe('email and password auth', () => {
     expect(response.status).toBe(400)
     expect(await response.json()).toEqual({
       error: {
-        code: 'invalid_request_body',
-        message: 'Invalid input: expected string, received undefined'
+        code: 'missing_invitation_token',
+        message: 'Invitation token is required for email sign-up.'
       }
     })
     database.close()
@@ -46,10 +43,7 @@ describe('email and password auth', () => {
 
   test('signs up with email, accepts the invite, and can sign in later with the same password', async () => {
     const { app, database } = await createTestApiApp({
-      secret: TEST_API_SECRET,
-      env: {
-        INKLY_API_ALLOWED_EMAIL_DOMAINS: 'jfet.co.jp'
-      }
+      secret: TEST_API_SECRET
     })
 
     const createBoardResponse = await app.request('/api/boards', {
@@ -83,7 +77,7 @@ describe('email and password auth', () => {
         name: 'Guest User',
         email: 'guest@example.com',
         password: 'password1234',
-        inviteToken: invite.token
+        invitationToken: invite.token
       })
     })
     expect(signUpResponse.status).toBe(200)

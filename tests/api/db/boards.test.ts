@@ -78,13 +78,13 @@ describe('db-backed board store', () => {
       'user-invited',
       'Invited User',
       'guest@gmail.com',
-      'invited-only'
+      'credential'
     )
     const otherSession = createSession(
       'user-other',
       'Other User',
       'other@gmail.com',
-      'invited-only'
+      'credential'
     )
     await seedUsers(database, [invitedSession, otherSession])
 

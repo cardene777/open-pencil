@@ -2,7 +2,6 @@ import type { ServerWebSocket } from 'bun'
 
 import { Hono } from 'hono'
 
-import { resolveInklyAuthConfig } from './auth/config.js'
 import { createInklyAuth, type InklyAuth } from './auth/index.js'
 import { createBoardStore } from './boardStore.js'
 import { resolveApiDatabaseOptions, type ApiDatabase } from './db/client.js'
@@ -88,10 +87,6 @@ export async function createApiApp(options: CreateApiAppOptions) {
       apiKey: env.INKLY_API_RESEND_KEY,
       logger: console.log
     })
-  const authConfig = resolveInklyAuthConfig({
-    env,
-    fallbackSecret: options.secret
-  })
   const auth =
     options.auth ??
     createInklyAuth({
@@ -179,8 +174,7 @@ export async function createApiApp(options: CreateApiAppOptions) {
       auth,
       database,
       now: options.now,
-      secret: options.secret,
-      allowedEmailDomains: authConfig.allowedEmailDomains
+      secret: options.secret
     })
   )
 

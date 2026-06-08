@@ -1,18 +1,13 @@
 import { drizzleAdapter } from '@better-auth/drizzle-adapter'
 import { betterAuth } from 'better-auth'
 import { customSession, testUtils } from 'better-auth/plugins'
-import { eq } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 
 import type { ApiDatabase } from '../db/client.js'
-import { users } from '../db/schema.js'
+import { accounts, users } from '../db/schema.js'
 import * as schema from '../db/schema.js'
 import type { InvitationEmailSender } from '../email/resend.js'
-import type { AccessLevel } from '../types.js'
-import {
-  INKLY_API_AUTH_BASE_PATH,
-  resolveAccessLevelForEmail,
-  resolveInklyAuthConfig
-} from './config.js'
+import { INKLY_API_AUTH_BASE_PATH, resolveInklyAuthConfig } from './config.js'
 
 export interface InklyAuthSession {
   session: {
@@ -27,7 +22,7 @@ export interface InklyAuthSession {
     id: string
     name: string
     email: string
-    accessLevel: AccessLevel
+    providerId: string | null
     emailVerified: boolean
     image: string | null
     createdAt: string
@@ -100,7 +95,7 @@ interface SessionUserInput {
   id: string
   name: string
   email: string
-  accessLevel: AccessLevel
+  providerId: string | null
   emailVerified: boolean
   image?: string | null
   createdAt: Date | string
@@ -120,12 +115,55 @@ function mapSessionUser(user: SessionUserInput): InklyAuthSession['user'] {
     id: user.id,
     name: user.name,
     email: user.email,
-    accessLevel: user.accessLevel,
+    providerId: user.providerId,
     emailVerified: user.emailVerified,
     image: user.image ?? null,
     createdAt: toIsoString(user.createdAt),
     updatedAt: toIsoString(user.updatedAt)
   }
+}
+
+async function resolveUserProviderId(database: ApiDatabase, userId: string) {
+  const account = await database.db
+    .select({ providerId: accounts.providerId })
+    .from(accounts)
+    .where(eq(accounts.userId, userId))
+    .orderBy(asc(accounts.createdAt))
+    .get()
+
+  return account?.providerId ?? null
+}
+
+async function ensureUserAccount(
+  database: ApiDatabase,
+  input: {
+    userId: string
+    email: string
+    providerId: string
+  }
+) {
+  const existingAccount = await database.db
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(eq(accounts.userId, input.userId))
+    .orderBy(asc(accounts.createdAt))
+    .get()
+
+  if (existingAccount) return
+
+  const timestamp = new Date()
+
+  await database.db
+    .insert(accounts)
+    .values({
+      id: crypto.randomUUID(),
+      accountId: input.email,
+      providerId: input.providerId,
+      userId: input.userId,
+      createdAt: timestamp,
+      updatedAt: timestamp
+    })
+    .run()
 }
 
 function serializeTestCookie(
@@ -209,35 +247,11 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
     baseURL: config.baseURL,
     secret: config.secret,
     trustedOrigins: config.trustedOrigins,
-    user: {
-      additionalFields: {
-        accessLevel: {
-          type: ['full', 'invited-only'],
-          required: false,
-          defaultValue: 'invited-only',
-          input: false
-        }
-      }
-    },
     database: drizzleAdapter(options.database.db, {
       provider: 'sqlite',
       schema,
       usePlural: true
     }),
-    databaseHooks: {
-      user: {
-        create: {
-          async before(user) {
-            return {
-              data: {
-                ...user,
-                accessLevel: resolveAccessLevelForEmail(user.email, config.allowedEmailDomains)
-              }
-            }
-          }
-        }
-      }
-    },
     emailAndPassword: {
       enabled: true,
       autoSignIn: true,
@@ -260,17 +274,13 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
     },
     plugins: [
       customSession(async ({ session, user }) => {
-        const persistedUser = await options.database.db
-          .select({ accessLevel: users.accessLevel })
-          .from(users)
-          .where(eq(users.id, session.userId))
-          .get()
+        const providerId = await resolveUserProviderId(options.database, session.userId)
 
         return {
           session,
           user: {
             ...user,
-            accessLevel: persistedUser?.accessLevel ?? 'invited-only'
+            providerId
           }
         }
       }),
@@ -336,8 +346,14 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
             image
           })
         ))
+      await ensureUserAccount(options.database, {
+        userId: savedUser.id,
+        email,
+        providerId: 'google'
+      })
 
       const login = await context.test.login({ userId: savedUser.id })
+      const providerId = await resolveUserProviderId(options.database, login.user.id)
 
       return {
         session: {
@@ -350,12 +366,7 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
         },
         user: mapSessionUser({
           ...login.user,
-          accessLevel:
-            (await options.database.db
-              .select({ accessLevel: users.accessLevel })
-              .from(users)
-              .where(eq(users.id, login.user.id))
-              .get())?.accessLevel ?? 'invited-only'
+          providerId
         }),
         setCookieHeaders: login.cookies.map((cookie: (typeof login.cookies)[number]) =>
           serializeTestCookie(cookie, login.session.expiresAt.getTime())

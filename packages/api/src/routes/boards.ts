@@ -110,6 +110,10 @@ function mergeBoards(personalBoards: BoardRecord[], teamBoards: BoardRecord[]) {
   return [...merged.values()].sort((left, right) => right.updatedAt - left.updatedAt)
 }
 
+function isExternalUser(providerId: string | null | undefined) {
+  return providerId !== 'google'
+}
+
 export function createBoardRoutes(options: BoardRoutesOptions): Hono {
   const app = new Hono()
 
@@ -131,7 +135,7 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
       return c.json({ boards: await attachTeamSummaries(boards, options.teamStore) })
     }
 
-    if (session.user.accessLevel === 'invited-only') {
+    if (isExternalUser(session.user.providerId)) {
       const boards = await options.boardStore.listBoardsForInvitedUser(session.user.id)
       return c.json({ boards: await attachTeamSummaries(boards, options.teamStore) })
     }
@@ -160,10 +164,10 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
     const session = await getAuthSession(options.auth, c.req.raw)
     const teamId = parsed.data.teamId?.trim() || null
 
-    if (session?.user.accessLevel === 'invited-only') {
+    if (session && isExternalUser(session.user.providerId)) {
       return forbiddenResponse(
-        'Invited-only users cannot create boards.',
-        'forbidden_invited_only_cannot_create'
+        'External users cannot create boards.',
+        'forbidden_external_user_cannot_create'
       )
     }
 

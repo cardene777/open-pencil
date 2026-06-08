@@ -183,7 +183,7 @@ async function confirmSignOut() {
         </div>
 
         <RouterLink
-          v-if="auth.isInvitedOnly"
+          v-if="auth.isExternalUser"
           to="/reset-password"
           data-test-id="account-reset-password-link"
           class="mt-5 inline-flex rounded-xl border border-white/10 px-4 py-2 text-sm font-medium text-surface transition-colors hover:bg-hover"

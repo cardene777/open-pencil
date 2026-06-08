@@ -26,9 +26,11 @@ export const useAuthStore = defineStore('auth', () => {
   let initPromise: Promise<void> | null = null
 
   const user = computed(() => session.value?.user ?? null)
-  const accessLevel = computed(() => session.value?.user.accessLevel ?? null)
+  const providerId = computed(() => session.value?.user.providerId ?? null)
   const isAuthenticated = computed(() => !!session.value?.user.id)
-  const isInvitedOnly = computed(() => accessLevel.value === 'invited-only')
+  const isExternalUser = computed(
+    () => providerId.value !== null && providerId.value !== 'google'
+  )
 
   async function maybeMigrateAnonymousState() {
     const anonymousId = getAnonymousId()?.trim()
@@ -100,7 +102,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function signUpWithPassword(input: {
     email: string
-    inviteToken: string
+    invitationToken: string
     name: string
     password: string
     callbackURL?: string
@@ -139,14 +141,14 @@ export const useAuthStore = defineStore('auth', () => {
   return {
     session,
     user,
-    accessLevel,
+    providerId,
     initialized,
     loading,
     loginPending,
     logoutPending,
     migrating,
     isAuthenticated,
-    isInvitedOnly,
+    isExternalUser,
     lastMigration,
     init,
     refreshSession,

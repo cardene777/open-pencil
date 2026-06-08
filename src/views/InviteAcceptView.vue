@@ -156,7 +156,7 @@ async function handleEmailSignUp() {
       name: signUpName.value.trim(),
       email: signUpEmail.value.trim(),
       password: signUpPassword.value,
-      inviteToken: inviteToken.value,
+      invitationToken: inviteToken.value,
       callbackURL: currentCallbackURL()
     })
     await openAcceptedBoard()

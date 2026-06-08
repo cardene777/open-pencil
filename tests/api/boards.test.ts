@@ -75,13 +75,8 @@ describe('board routes', () => {
   })
 
   test('lists invitations and accepted collaborators for the board owner', async () => {
-    const ownerSession = createSession('owner-123', 'Owner User', 'owner@jfet.co.jp', 'full')
-    const invitedSession = createSession(
-      'guest-123',
-      'Guest User',
-      'guest@gmail.com',
-      'invited-only'
-    )
+    const ownerSession = createSession('owner-123', 'Owner User', 'owner@jfet.co.jp', 'google')
+    const invitedSession = createSession('guest-123', 'Guest User', 'guest@gmail.com', 'credential')
     const auth = createHeaderAuth([ownerSession, invitedSession])
     const { app, database } = await createTestApiApp({
       auth,
@@ -147,18 +142,13 @@ describe('board routes', () => {
   })
 
   test('lists only invited boards and rejects board creation for invited-only users', async () => {
-    const ownerSession = createSession('owner-123', 'Owner User', 'owner@jfet.co.jp', 'full')
-    const invitedSession = createSession(
-      'guest-123',
-      'Guest User',
-      'guest@gmail.com',
-      'invited-only'
-    )
+    const ownerSession = createSession('owner-123', 'Owner User', 'owner@jfet.co.jp', 'google')
+    const invitedSession = createSession('guest-123', 'Guest User', 'guest@gmail.com', 'credential')
     const strangerSession = createSession(
       'stranger-123',
       'Stranger User',
       'stranger@gmail.com',
-      'invited-only'
+      'credential'
     )
     const auth = createHeaderAuth([ownerSession, invitedSession, strangerSession])
     const { app, database } = await createTestApiApp({
@@ -233,8 +223,8 @@ describe('board routes', () => {
     expect(invitedCreateResponse.status).toBe(403)
     expect(await invitedCreateResponse.json()).toEqual({
       error: {
-        code: 'forbidden_invited_only_cannot_create',
-        message: 'Invited-only users cannot create boards.'
+        code: 'forbidden_external_user_cannot_create',
+        message: 'External users cannot create boards.'
       }
     })
 

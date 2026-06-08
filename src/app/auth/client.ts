@@ -21,7 +21,7 @@ export interface AuthSession {
     id: string
     name: string
     email: string
-    accessLevel: 'full' | 'invited-only'
+    providerId: string | null
     emailVerified: boolean
     image: string | null
     createdAt: string
@@ -130,7 +130,7 @@ export async function signInWithEmail(input: {
 
 export async function signUpWithEmail(input: {
   email: string
-  inviteToken: string
+  invitationToken: string
   name: string
   password: string
   callbackURL?: string
@@ -144,7 +144,7 @@ export async function signUpWithEmail(input: {
       password: input.password,
       callbackURL: input.callbackURL,
       rememberMe: input.rememberMe ?? true,
-      inviteToken: input.inviteToken
+      invitationToken: input.invitationToken
     })
   })
 

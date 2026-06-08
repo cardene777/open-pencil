@@ -18,7 +18,7 @@ function createSession(userId = 'user-123'): InklyAuthSession {
       id: userId,
       name: 'Migrated User',
       email: `${userId}@example.com`,
-      accessLevel: 'full',
+      providerId: 'google',
       emailVerified: true,
       image: null,
       createdAt: '2029-01-01T00:00:00.000Z',
@@ -44,14 +44,13 @@ async function seedUser(
 ) {
   await database.db
     .insert(users)
-    .values({
-      id: session.user.id,
-      name: session.user.name,
-      email: session.user.email,
-      accessLevel: session.user.accessLevel,
-      emailVerified: session.user.emailVerified,
-      image: session.user.image,
-      createdAt: new Date(session.user.createdAt),
+      .values({
+        id: session.user.id,
+        name: session.user.name,
+        email: session.user.email,
+        emailVerified: session.user.emailVerified,
+        image: session.user.image,
+        createdAt: new Date(session.user.createdAt),
       updatedAt: new Date(session.user.updatedAt)
     })
     .run()
