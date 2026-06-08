@@ -52,9 +52,14 @@ useMenu()
 const collab = useCollab(getActiveStore)
 provide(COLLAB_KEY, collab)
 
-const boardRoomId = computed(() =>
-  typeof route.query.board === 'string' && route.query.board.length > 0 ? route.query.board : null
-)
+const boardRoomId = computed(() => {
+  // /board/:id route の :id を優先、 無ければ ?board= クエリ (旧形式 backward compat)
+  const paramId = route.params.id
+  if (typeof paramId === 'string' && paramId.length > 0) return paramId
+  return typeof route.query.board === 'string' && route.query.board.length > 0
+    ? route.query.board
+    : null
+})
 const boardName = computed(() =>
   typeof route.query.name === 'string' && route.query.name.length > 0 ? route.query.name : null
 )
