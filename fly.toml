@@ -1,13 +1,16 @@
 # Pencil Editor — Fly.io deploy config
 #
-# 初回:
+# 初回 (詳細な手順は DEPLOY.md を参照):
 #   fly auth login
 #   fly launch --no-deploy --copy-config --name pencil-editor
 #   fly secrets set \
 #     INKLY_API_AUTH_SECRET=$(openssl rand -hex 32) \
 #     INKLY_API_JWT_SECRET=$(openssl rand -hex 32) \
 #     TURSO_DATABASE_URL=libsql://your-db.turso.io \
-#     TURSO_AUTH_TOKEN=eyJ...
+#     TURSO_AUTH_TOKEN=eyJ... \
+#     INKLY_API_RESEND_KEY=re_xxxxxxxx \
+#     INKLY_API_GOOGLE_CLIENT_ID=...apps.googleusercontent.com \
+#     INKLY_API_GOOGLE_CLIENT_SECRET=GOCSPX-...
 #   fly deploy
 #
 # 以降:
