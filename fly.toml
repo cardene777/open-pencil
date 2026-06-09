@@ -11,6 +11,8 @@ primary_region = 'nrt'
 
 [env]
   PORT = '3001'
+  INKLY_API_HOST = '0.0.0.0'
+  INKLY_API_STATIC_ROOT = './dist'
 
 [http_service]
   internal_port = 3001
@@ -23,7 +25,7 @@ primary_region = 'nrt'
   [[http_service.checks]]
     interval = '30s'
     timeout = '10s'
-    grace_period = '30s'
+    grace_period = '60s'
     method = 'get'
     path = '/'
 
