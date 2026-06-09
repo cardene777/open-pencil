@@ -68,3 +68,7 @@ scripts/debug-*.ts
 scripts/export-svg.ts
 scripts/render-to-svg.ts
 scripts/test-pen-render.ts
+
+# Generated design files (use design/prompts/ templates to regenerate)
+design/*.fig
+design/*.pen
