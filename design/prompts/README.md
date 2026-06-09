@@ -26,13 +26,25 @@
 
 ## テンプレ
 
+### 単発画面テンプレ
+
 | ファイル | 用途 |
 |---|---|
 | `01-landing-page.md` | マーケティング LP / プロダクト紹介ページ |
 | `02-dashboard.md` | 管理画面 / 分析ダッシュボード |
-| `03-mobile-app.md` | iOS / Android app 画面 |
+| `03-mobile-app.md` | iOS / Android app 画面 (1 画面) |
 | `04-slides.md` | プレゼン資料 (1920x1080) |
 | `05-settings.md` | アプリ内設定画面 |
+
+### アプリケーション全体テンプレ (multi-screen、 1 プロンプトで 12-24 画面生成)
+
+| ファイル | 用途 | 画面数 |
+|---|---|---|
+| `10-saas-app-full.md` | SaaS web アプリ全体 (Marketing + Auth + Onboarding + Core + Settings + States + Components) | 22 |
+| `11-fintech-app-full.md` | Fintech アプリ全体 (Marketing + Auth + KYC + Onboarding + Core + Settings + States) | 24 |
+| `12-ecommerce-app-full.md` | E-commerce 全体 (Storefront + Cart + Account + Admin + States) | 20 |
+| `13-mobile-app-full.md` | Mobile app 全体 (Onboarding + Auth + Core + Create + Settings) | 18 |
+| `14-marketing-site-full.md` | Corporate / Marketing site 全体 (Home + Product + Pricing + About + Blog + Docs + Conversion) | 12 |
 
 ## 共通の上手な指示テクニック
 
