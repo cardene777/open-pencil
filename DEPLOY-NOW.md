@@ -13,8 +13,9 @@
 | Turso login | ✅ `jfet-cardene` でログイン済 |
 | Turso DB `pencil-editor` | ✅ **既存** (1.2 MB データ in)、 新規作成不要 |
 | Resend API key | ❌ 未取得 ← Step 2 で対応 |
-| Fly app `pencil-editor` | ❌ 未作成 ← Step 3 で対応 |
-| Fly secrets | ❌ 未設定 ← Step 4 で対応 |
+| `.env.prod` | ❌ 未作成 ← Step 6 で対応 |
+| Fly app `pencil-editor` | ❌ 未作成 ← `scripts/deploy.sh` が自動で促す |
+| Fly secrets | ❌ 未設定 ← `scripts/deploy.sh` が一括投入 |
 
 ## Step 1: Fly login (ユーザー操作)
 
@@ -75,7 +76,10 @@ echo "INKLY_API_JWT_SECRET=$(openssl rand -hex 32)"
 
 出力された 2 つの値をメモる。
 
-## Step 5: Fly app 作成 (まだデプロイしない)
+## Step 5: Fly app 作成 (省略可、 deploy.sh が自動で促す)
+
+`scripts/deploy.sh` を実行すると Fly app が未作成の場合に自動で `fly launch` の実行を促す。
+事前に手動で作成しておきたい場合のみ以下を実行:
 
 ```bash
 cd /Users/cardene/Desktop/projects/pencil-editor
@@ -91,34 +95,53 @@ fly launch --no-deploy --copy-config --name pencil-editor
 | Would you like to set up Upstash Redis? | **No** |
 | Would you like to deploy now? | **No** |
 
-完了したら次へ。
+## Step 6: .env.prod 作成 + 一発デプロイ
 
-## Step 6: secrets 一括設定
+メモした値を `.env.prod` に書いて `scripts/deploy.sh` を実行する。
+secrets 投入とデプロイを 1 コマンドで一気通貫。
 
-メモした値を以下に当てはめて 1 コマンドで設定:
-
-```bash
-fly secrets set \
-  INKLY_API_AUTH_SECRET="<Step 4 で生成した 1 個目>" \
-  INKLY_API_JWT_SECRET="<Step 4 で生成した 2 個目>" \
-  TURSO_DATABASE_URL="libsql://pencil-editor-jfet-cardene.aws-ap-northeast-1.turso.io" \
-  TURSO_AUTH_TOKEN="<Step 3 でメモした eyJ...>" \
-  INKLY_API_RESEND_KEY="<Step 2 でメモした re_...>"
-```
-
-確認:
+### 6-1. .env.prod 作成
 
 ```bash
-fly secrets list
+cd /Users/cardene/Desktop/projects/pencil-editor
+
+# テンプレを .env.prod にコピー
+cp .env.prod.example .env.prod
+
+# エディタで開いて値を埋める
+$EDITOR .env.prod
 ```
 
-5 個の secret が並べばOK (DIGEST は表示されるが値は出ない)。
-
-## Step 7: デプロイ実行
+`.env.prod` の中身 (Step 2-4 でメモした値を貼る):
 
 ```bash
-fly deploy
+# 必須
+INKLY_API_AUTH_SECRET=<Step 4 で生成した 1 個目>
+INKLY_API_JWT_SECRET=<Step 4 で生成した 2 個目>
+TURSO_DATABASE_URL=libsql://pencil-editor-jfet-cardene.aws-ap-northeast-1.turso.io
+TURSO_AUTH_TOKEN=<Step 3 でメモした eyJ...>
+
+# 任意
+INKLY_API_RESEND_KEY=<Step 2 でメモした re_...>
+# INKLY_API_GOOGLE_CLIENT_ID=
+# INKLY_API_GOOGLE_CLIENT_SECRET=
 ```
+
+`.env.prod` は `.gitignore` 済 (commit されない)。
+
+### 6-2. デプロイ実行
+
+```bash
+bash scripts/deploy.sh
+```
+
+スクリプトの流れ:
+1. `.env.prod` を読込 + 必須変数チェック (空ならエラー)
+2. 任意変数の状況を表示 (設定済 / 未設定)
+3. Fly app 存在チェック (無ければ `fly launch` 提案)
+4. `y` 入力で続行
+5. `fly secrets import --stage < .env.prod` で一括投入
+6. `fly deploy` 実行
 
 待つ:
 - Docker build: 5-10 分 (`bun install` + `vite build`)
@@ -132,7 +155,7 @@ fly deploy
 Visit your newly deployed app at https://pencil-editor.fly.dev/
 ```
 
-## Step 8: 動作確認
+## Step 7: 動作確認
 
 ```bash
 fly open  # ブラウザで開く
