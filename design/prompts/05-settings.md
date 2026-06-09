@@ -1,155 +1,108 @@
-# 05: Settings 画面プロンプトテンプレ
+# 05: Settings 画面
 
-アプリ内の設定 / プロフィール / アカウント管理画面用。 公式 design-system reference の Card slot / Form layout / Button hierarchy に従う。
+アプリ内設定 / プロフィール / アカウント管理画面用。
 
-## 最強サンプル
-
-```
-/pencil-design
-
-design/settings-account.fig + .pen に書き出して。
-
-【タイプ】Web App Settings (アカウント設定)
-
-【製品】
-- 名前: Beacon Analytics (上記 dashboard と同じ製品)
-- このページ目的: 「ユーザーが自分の情報を 30 秒で更新できる」
-- primary purpose (公式 #1): プロフィール編集と保存
-
-【画面サイズ】1440 × 900 (デスクトップ)、 ただし content 中央 max 880px
-
-【トーン・美学】(dashboard と統一)
-- bg #FAFBFD / surface white / accent #4F46E5
-- text primary #1A1F36 / secondary #4B5563 / tertiary #9CA3AF
-- danger #EF4444 / success #10B981
-- フォント Inter (全体)
-- card radius 12 / button radius 8 / input radius 8
-- subtle shadow
-
-【レイアウト】
-
-横方向: 左 sidebar (240) + main content (fill_container)
-main 内: 中央 max 880px 寄せ、 上 padding 48 横 32
-
-main 縦構成:
-1. Page Header (高さ 80)
-2. Settings sub-nav (横並び tab)
-3. Profile Section Card
-4. Account Settings Section Card
-5. Security Section Card
-6. Danger Zone Card
-
-【Sidebar】(dashboard と同じ、 ただし "Settings" が active)
-
-【Page Header (高さ 80)】
-- 左: title "Settings" (24px Bold) + sub "Manage your account and preferences" (14px secondary)
-- 右: 「Save changes」 primary button (filled #4F46E5、 disabled 状態で grey、 enabled 時 highlighted)
-
-【Settings sub-nav】(横並び tab、 高さ 48、 border-bottom 1 #E5E7EB)
-- 5 tab、 active state は accent color underline + bold
-- "Profile" (active) / "Account" / "Security" / "Notifications" / "Billing"
-
-【3. Profile Section (Card)】
-- header slot: title "Profile" (16px Bold) + sub "This information will be displayed publicly" (13px secondary)
-- content slot (gap 20、 padding 24):
-
-  3.1 Avatar row (横並び、 alignItems center、 gap 24)
-  - 左: avatar 96x96 円、 bg gradient + initials "JD" (32px Bold white center)
-  - 右 vertical:
-    - "Upload new photo" secondary button (outline、 padding 8 16、 radius 8)
-    - 下に "JPG, GIF or PNG. Max 2MB." (12px tertiary)
-
-  3.2 Form fields (vertical layout、 gap 16)
-  - row 1 (horizontal、 gap 16): "First name" input + "Last name" input (各 width fill_container)
-  - "Email address" input (full width、 disabled bg #F3F4F6) + 下に "Email cannot be changed. Contact support." (12px tertiary)
-  - "Username" input + 下に "beacon.app/u/" prefix がない場合は文字内に表示
-  - "Bio" textarea (高さ 96、 placeholder "Tell us about yourself...")
-  - "Company" + "Job title" 2 col 横並び
-  - "Time zone" select (placeholder "Asia/Tokyo")
-
-  3.3 Visibility section (gap 12)
-  - section title "Profile visibility" (14px Bold)
-  - radio group 3 件 (各 高さ auto、 padding 12、 radius 8、 hover bg #F9FAFB):
-    - "Public — visible to everyone"
-    - "Team only — visible to your organization" (selected)
-    - "Private — only you can see this"
-
-【4. Account Settings Section (Card)】
-- header: "Account preferences" + sub
-- content fields:
-  - Language (select、 default "English (US)")
-  - Date format (select、 "MM/DD/YYYY")
-  - Number format (radio: "1,234.56" / "1.234,56" / "1 234,56")
-  - Theme (radio with preview): "Light" / "Dark" / "System" (大型 thumbnail 96x60 各、 横並び、 selected ring 2 accent)
-
-【5. Security Section (Card)】
-- header: "Security" + sub "Protect your account and connected services"
-- content (gap 16):
-
-  5.1 Password row (horizontal、 space_between)
-  - 左: vertical (gap 4)
-    - "Password" (14px Bold)
-    - "Last changed 2 weeks ago" (13px secondary)
-  - 右: "Change password" secondary button
-
-  5.2 2FA row (同上構造)
-  - "Two-factor authentication" + "Authenticator app — active" + success badge
-  - "Manage" button
-
-  5.3 Active sessions row
-  - "Active sessions" + "3 devices currently signed in"
-  - "View all" link button
-
-  5.4 API tokens row
-  - "Personal access tokens" + "Used for CLI and integrations"
-  - "Create new token" primary outline button
-
-【6. Danger Zone Card】(border 1 #FEE2E2 (red-100)、 bg #FEF2F2 (red-50)、 padding 24、 radius 12)
-- header: "Danger zone" (16px Bold #B91C1C (red-700)) + sub "These actions are permanent and cannot be undone." (13px #B91C1C 80%)
-- gap 16:
-  - "Export all data" row + "Request export" outline red button
-  - "Transfer ownership" row + "Transfer" outline red button
-  - "Delete account" row + "Delete account..." filled red button (#DC2626)
-
-【公式 design-system reference の遵守】
-- 13. Spacing reference table 通り (page padding 32 / card padding 24 / form gap 16 / button group gap 12)
-- 14. Button hierarchy:
-  - "Save changes" (primary、 page header 右上)
-  - "Change password" 等 (secondary outline)
-  - "Delete account" (destructive)
-- 15. Design Tokens: 全 color と radius を token (`$--accent` 等) で binding (今回 inkly では hex 直書きで OK、 ただし concept として token 思想を反映)
-
-【公式 16 原則の遵守 (web-app reference)】
-- #1 Purpose First → 「プロフィール編集 + 保存」が dominant
-- #6 System Status Visibility → "Last changed 2 weeks ago" / "3 devices signed in" / "Authenticator app — active" 等で system state を常時可視化
-- #7 Action Hierarchy → primary 1 つ (Save) / secondary 多数 / destructive 別領域 (Danger Zone)
-- #14 Constraint Over Decoration → 装飾 0、 全要素が action / info / hierarchy を支える
-
-【完了時】
-- 全体 PNG → /tmp/settings-account.png
-- Danger Zone 単独 → /tmp/sa-danger.png (red 系の境界明確化確認)
-- .fig + .pen 両方
-```
-
-## 短縮版
+## Required (ユーザーが書く)
 
 ```
 /pencil-design
 
 【出力】design/<name>.fig + .pen
-【タイプ】Web App Settings
-【製品】<name> ── 既存 design system <他画面> と統一
-【目的】<画面 primary purpose>
-【サイズ】1440 x fit_content、 main content max 880 中央寄せ
-【トーン】既存と同じ <accent #YYY、 token 体系>
-【sidebar】既存と同じ、 Settings が active
-【page header】title "Settings" + sub + primary "Save changes"
-【sub-nav】tab 5 件 (<list>)
-【セクション (上→下)】
-  - Profile (avatar + form 6-8 field + visibility radio)
-  - Account preferences (language / format / theme picker)
-  - Security (password / 2FA / sessions / API token、 各 row 構造)
-  - Danger Zone (red border + 3 destructive action)
-【数値】spacing reference table 通り、 card padding 24 / form gap 16
-【完了時】.fig + .pen + section PNG
+
+【製品】
+- 名前と 1 文の説明:
+- 業種・カテゴリ:
+- 既存 dashboard / app と同じ design system か (Yes / No):
+
+【画面の種類】(必要なものだけ列挙、 1 file に複数 tab でも可)
+- Profile (個人情報)
+- Account (環境設定)
+- Security (パスワード / 2FA / セッション / API)
+- Notifications (通知設定)
+- Billing (請求 / プラン)
+- Members / Team (組織管理)
+- Integrations (外部連携)
+- Danger Zone (アカウント削除等、 必要なら)
+
+【含めたい要素】(画面ごとに、 名前だけ)
+- 例 Profile: 名前 / email / アバター / bio / 役職 / タイムゾーン
+- 例 Security: パスワード変更 / 2FA / アクティブ session / API token
+```
+
+## Optional
+
+```
+【ブランド】
+- 既存 dashboard と統一 (同じカラー / radius / spacing):
+- メインカラー (新規時のみ):
+
+【特有要素】
+- 「企業向けで SAML SSO 設定必須」
+- 「Danger zone は別 tab に隔離」
+- 「Team 招待は招待リンク方式」等
+```
+
+## AI が公式 reference から自動補完
+
+- spacing reference table (form gap 16 / card padding 24 / button group gap 12、 `design-system.md` 由来)
+- button hierarchy (primary Save / secondary Cancel / destructive Delete account)
+- card slot composition (header / content / actions slots)
+- form layout (1 col / 2 col 横並びの使い分け)
+- input + label + helper text の高さ統一
+- radio / checkbox / toggle / select の使い分け
+- danger zone の border / bg / 色 (red 系)
+- success / error state messaging
+- 全コピー文 (Save / Cancel / Last changed N days ago / N devices signed in 等)
+- accessibility 配慮 (label 必須 / focus state / contrast)
+
+## サンプル
+
+```
+/pencil-design
+
+【出力】design/settings-beacon.fig + .pen
+
+【製品】
+- 名前と 1 文の説明: Beacon ── EC 運営者向け Analytics SaaS
+- 業種・カテゴリ: SaaS / Analytics
+- 既存 dashboard と同じ design system か: Yes (design/dashboard-shop.fig を参照)
+
+【画面の種類】
+- Profile
+- Account
+- Security
+- Notifications
+- Billing
+- Members
+
+【含めたい要素】
+- Profile: アバター / 名前 / email / username / 役職 / bio / タイムゾーン / 言語
+- Account: 表示言語 / 日付形式 / 通貨 / theme (light/dark/system)
+- Security: パスワード変更 / 2FA (TOTP) / アクティブ session 一覧 / API token 管理
+- Notifications: メール通知 ON/OFF (種類別)
+- Billing: 現プラン / 使用量 / カード / 請求書履歴
+- Members: メンバー一覧 / 招待 / ロール / 保留中招待
+
+【ブランド】
+- 既存 dashboard と統一 (indigo + 黒文字)
+```
+
+## さらに短い指示
+
+```
+/pencil-design
+
+design/settings-beacon.fig + .pen。
+Beacon Analytics の設定画面、 既存 dashboard と同じ design system。
+tab で Profile / Account / Security / Notifications / Billing / Members の 6 画面。
+Save changes は右上 primary、 Danger zone は Account tab 内に隔離。
+```
+
+## 修正指示
+
+```
+Security tab に backup code セクション追加
+Billing の請求書履歴を 6 行から 12 行に
+Members tab の招待 UI を email 直接打ち込みに、 招待リンクと併用
+Notifications を toggle ベースから checkbox ベースに変更
 ```

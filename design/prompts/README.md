@@ -1,28 +1,32 @@
 # pencil-design プロンプト集
 
-`/pencil-design` skill を使って高品質なデザインを生成するための **プロンプトテンプレ集**。
+`/pencil-design` skill を使ってデザインを生成するための **プロンプトテンプレ集**。
 
-## skill 呼び出し方
+## 設計思想
+
+ユーザーは **What** (何を / 誰のために / どんな機能) を書き、 AI は **How** (px / hex / コピー文 / レイアウト) を公式 reference (`~/.claude/skills/pencil-design/references/`) から自動補完します。
+
+```
+ユーザー入力 (5-7 項目)            AI 自動補完 (skill が公式から)
+────────────────────────────       ─────────────────────────────
+- 製品名 + 1 文                    - ピクセル数値
+- 業種                             - カラーパレット
+- 対象ユーザー                     - 全コピー文
+- トーン (3-5 語)                  - typography scale
+- 必要画面リスト                   - spacing / radius
+                                   - icon 選択
+                                   - layout pattern
+```
+
+ピクセル数値や hex color、 コピー文の細部までユーザーが書く必要はありません。 「ミニマル / ダーク / アクセント緑」 のような **方向性だけ伝えれば AI が補完** します。
+
+## skill 呼び出し
 
 ```
 /pencil-design <指示文>
 ```
 
-- 明示 slash command で skill を強制起動
-- 自然文 (「LP を作って」等) でも description の trigger word で自動起動するが、 確実に発動させたいなら slash 形式を推奨
-
-## 指示の 6 要素
-
-「結構細かいデザイン指示」を出すには以下を漏れなく埋める。
-
-| # | 要素 | 例 |
-|---|---|---|
-| 1 | 出力 | `design/landing.fig` / `design/dashboard.pen` |
-| 2 | タイプ | LP / web-app dashboard / mobile-app / slides / 設定画面 |
-| 3 | 製品・主題 | "open-source デザインツール pencil-editor の公式 LP" |
-| 4 | トーン・美学 | "brutalist minimalism、 ダークモード、 アクセント緑 #B3D056" |
-| 5 | セクション構成 | "Hero → Features (3 cards) → Pricing → Footer" |
-| 6 | 各セクション詳細 | "Hero に大型 headline 80px Bold、 sub 18px、 CTA 2 つ" |
+明示 slash command が確実。 自然文 (「LP 作って」等) でも description trigger で発動するが、 確実にしたいなら slash 形式推奨。
 
 ## テンプレ
 
@@ -32,54 +36,72 @@
 |---|---|
 | `01-landing-page.md` | マーケティング LP / プロダクト紹介ページ |
 | `02-dashboard.md` | 管理画面 / 分析ダッシュボード |
-| `03-mobile-app.md` | iOS / Android app 画面 (1 画面) |
+| `03-mobile-app.md` | iOS / Android app 1 画面 |
 | `04-slides.md` | プレゼン資料 (1920x1080) |
 | `05-settings.md` | アプリ内設定画面 |
 
-### アプリケーション全体テンプレ (multi-screen、 1 プロンプトで 12-24 画面生成)
+### アプリケーション全体テンプレ (multi-screen)
 
 | ファイル | 用途 | 画面数 |
 |---|---|---|
-| `10-saas-app-full.md` | SaaS web アプリ全体 (Marketing + Auth + Onboarding + Core + Settings + States + Components) | 22 |
-| `11-fintech-app-full.md` | Fintech アプリ全体 (Marketing + Auth + KYC + Onboarding + Core + Settings + States) | 24 |
-| `12-ecommerce-app-full.md` | E-commerce 全体 (Storefront + Cart + Account + Admin + States) | 20 |
-| `13-mobile-app-full.md` | Mobile app 全体 (Onboarding + Auth + Core + Create + Settings) | 18 |
-| `14-marketing-site-full.md` | Corporate / Marketing site 全体 (Home + Product + Pricing + About + Blog + Docs + Conversion) | 12 |
+| `10-saas-app-full.md` | SaaS web アプリ全体 | 12-22 |
+| `11-fintech-app-full.md` | Fintech アプリ全体 | 14-24 |
+| `12-ecommerce-app-full.md` | E-commerce 全体 | 12-20 |
+| `13-mobile-app-full.md` | Mobile app 全体 | 10-18 |
+| `14-marketing-site-full.md` | Corporate / Marketing site 全体 | 8-12 |
 
-## 共通の上手な指示テクニック
+## 各テンプレの構造
 
-### Do (推奨)
-
-- 色は **hex で具体的に** (`#B3D056` のように)
-- フォントは **family + weight + size 明記** (`Inter Bold 72px`)
-- 数値は **px / 倍率で具体的に** (`padding 32px` / `gap 16px`)
-- セクションごとに **コピー文を全文書く** (Hero headline / subhead / CTA label まで)
-- 「複数 variation を試して」「3 案出して」と複数案を促す
-
-### Don't (避ける)
-
-- 「適切に」「いい感じに」「モダンに」だけ
-- 数値を「ちょうどよく」「大きめ」「小さめ」と抽象的にする
-- セクション名だけで中身を書かない
-- 「Figma 風」「Apple 風」だけで具体度ゼロ
-
-## 段階的指示の流れ
-
-1. **テンプレを開く** (例: `01-landing-page.md`)
-2. **6 要素を全て埋める** (空欄を残さない)
-3. **`/pencil-design <埋めた指示>`** で起動
-4. 出力された画像を確認
-5. 修正が必要なら **「Hero の headline を 90px に、 background を #050811 に」** のように差分指示
-6. 完成したら .pen / .fig 両方で保存指示
-
-## 関連 references (skill 内)
-
-| reference | 含まれる SSOT |
+| section | 役割 |
 |---|---|
-| `references/landing-page.md` | 公式 LP system prompt (Brief Hard Gate / Transformation Mapping / Hero rules / Anti-Slop) |
-| `references/web-app.md` | web app 16 原則 |
-| `references/mobile-app.md` | mobile 数値 spec (Status Bar 62 / Pill 36 等) |
-| `references/slides.md` | slides typography / layout-01〜06 contract |
-| `references/design-system.md` | component composition / spacing reference / button hierarchy |
-| `references/figma-plugin-api-quirks.md` | sizing 罠 (★★★★★ 重要) |
-| `references/inkly-cli-cookbook.md` | CLI 使用例 + `.pen` 変換器 |
+| Required | ユーザーが必ず書く欄 (5-7 項目) |
+| Optional | 書きたい人だけ書く欄 (色 / フォント / 既存 DS 等) |
+| AI 補完 | skill が公式 reference から自動で埋める内容のリスト |
+| サンプル | Required を埋めた現実的な指示例 (短い、 真似しやすい) |
+
+## 共通の指示テクニック
+
+### Do (これだけで十分)
+
+- 製品名と 1 文の説明
+- 業種 (SaaS / Fintech / EC / Mobile / etc)
+- 対象ユーザー (1 文、 例 「中小企業の HR」)
+- トーン (3-5 語、 例 「ミニマル / ダーク / 信頼感」)
+- 必要画面と各画面の主機能 (1-2 文ずつ)
+
+### 書かなくていい
+
+- ピクセル数値 (62 / 36 / 24 等) — 公式 reference 由来で AI が決める
+- hex color (#XXX) — トーンとブランドカラー任意指定で AI が決める
+- コピー文 (英文 / 日本語) — 業種と画面用途から AI が生成
+- フォント family — トーンに合わせて AI が選ぶ
+- radius / shadow / spacing — design-system reference 通り
+
+### Optional で書くと効くもの
+
+- ブランドカラー 1-2 色 (「アクセントは緑系」程度でも OK)
+- 「ログインに SSO 必須」のような **機能制約**
+- 既存 design system file path (あるなら token 流用)
+- 言語 (日本語 UI なら明記、 default 英語)
+
+### 修正指示の出し方 (生成後)
+
+```
+Hero の文字サイズもっと大きく
+Sidebar をもっとミニマルに
+Pricing を 3 tier から 2 tier に
+```
+
+差分は **「対象 + 方向性」だけ** で OK。 数値はやはり AI に委ねる。
+
+## skill が参照する公式 reference (補完元 SSOT)
+
+| reference | 補完される内容 |
+|---|---|
+| `landing-page.md` | LP 構成・Hero rule・Anti-Slop |
+| `web-app.md` | 16 原則 (Purpose First / Hierarchy 等) |
+| `mobile-app.md` | Status Bar 62px / Tab Bar 36 等の数値 spec |
+| `slides.md` | typography scale / layout-01〜06 |
+| `design-system.md` | spacing table / button hierarchy / token |
+| `figma-plugin-api-quirks.md` | inkly CLI 実装時の罠回避 |
+| `inkly-cli-cookbook.md` | bun + CLI 使い方 |
