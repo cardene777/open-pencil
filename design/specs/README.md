@@ -75,3 +75,18 @@ pencil-spec skill が以下のテンプレを内蔵:
 | `template-single-settings.md` | Settings 単独 |
 
 pencil-spec が対話的に該当テンプレを選択して埋める。
+
+## サンプルプロンプト集
+
+`/pencil-spec` を試してみたい場合は、 [sample-prompts.md](./sample-prompts.md) に業種別のサンプル依頼文 (19 件) を用意した。
+
+| 例 | 概要 |
+|---|---|
+| # 14 newsletter LP | 5 分で完結する小規模体験、 LP 1 枚 |
+| # 16 EC ダッシュボード | 1 画面の dashboard、 デザインの密度感を見たい人向け |
+| # 1 HR SaaS 全体 | 22 画面の大型仕様書、 全体感を見たい人向け |
+| # 4 Fintech 全体 | KYC / 2FA / 規制対応込みの 24 画面 |
+| # 18 機能紹介 slides | typography 中心の 10 slide pitch |
+
+依頼文を 1 行コピーして claude に貼り付けるだけで仕様書生成が始まる。
+
