@@ -79,7 +79,7 @@ for var in INKLY_API_RESEND_KEY INKLY_API_GOOGLE_CLIENT_ID INKLY_API_GOOGLE_CLIE
 done
 
 # === Step 2: Fly app 存在チェック ===
-APP_NAME=$(grep -E '^app\s*=' "$REPO_ROOT/fly.toml" | head -1 | sed -E 's/^app\s*=\s*"([^"]+)".*/\1/')
+APP_NAME=$(grep -E '^app[[:space:]]*=' "$REPO_ROOT/fly.toml" | head -1 | sed -E 's/^app[[:space:]]*=[[:space:]]*["'\'']([^"'\'']+)["'\''].*/\1/')
 if [ -z "$APP_NAME" ]; then
   echo "❌ fly.toml から app 名が読み取れない"
   exit 1
