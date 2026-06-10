@@ -209,6 +209,13 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
           google: {
             clientId: config.google.clientId,
             clientSecret: config.google.clientSecret,
+            // Cookie ベースの state 検証を skip し DB ベースの state mismatch check
+            // (verifications.identifier 照合) だけで CSRF 防御する。 Fly proxy + Bun の
+            // 組み合わせで __Secure- cookie が一部経路で消える問題に対する暫定回避策。
+            // CSRF 防御は URL state + DB lookup で実質担保される (state は ID として
+            // 推測困難、 DB lookup 失敗で reject される)。
+            // @ts-expect-error better-auth 1.6 の社内 OAuth options
+            skipStateCookieCheck: true,
             // Google OAuth の profile レスポンスから picture URL を image にマッピング
             mapProfileToUser: (profile) => ({
               name: profile.name,
