@@ -179,10 +179,33 @@ export function createAuthRoutes(options: AuthRoutesOptions): Hono {
     // 公開 origin を再構築して request を作り直す。
     const forwardedHost = c.req.header('x-forwarded-host') ?? c.req.header('host')
     const forwardedProto = c.req.header('x-forwarded-proto') ?? 'https'
+    const original = new URL(c.req.url)
+
+    // OAuth callback の真因特定のため詳細ログ (state_security_mismatch 解消後に削除)
+    if (original.pathname.includes('/callback/') || original.pathname.includes('/sign-in/social')) {
+      const cookieHeader = c.req.header('cookie') ?? ''
+      const stateCookies = cookieHeader
+        .split(';')
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.toLowerCase().includes('better-auth') || entry.toLowerCase().includes('state'))
+      // eslint-disable-next-line no-console
+      console.log('[oauth-debug]', JSON.stringify({
+        path: original.pathname,
+        search_keys: [...original.searchParams.keys()],
+        forwardedHost,
+        forwardedProto,
+        host_header: c.req.header('host'),
+        origin_header: c.req.header('origin'),
+        referer_header: c.req.header('referer'),
+        has_cookie_header: cookieHeader.length > 0,
+        state_cookies: stateCookies.map((c) => c.split('=')[0]),
+        cookie_count: cookieHeader ? cookieHeader.split(';').length : 0
+      }))
+    }
+
     if (!forwardedHost) {
       return options.auth.handler(c.req.raw)
     }
-    const original = new URL(c.req.url)
     const rewritten = new URL(original.pathname + original.search, `${forwardedProto}://${forwardedHost}`)
     const rewrittenRequest = new Request(rewritten, {
       method: c.req.raw.method,
