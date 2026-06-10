@@ -70,7 +70,22 @@ function notFoundTestLoginResponse() {
 export function createAuthRoutes(options: AuthRoutesOptions): Hono {
   const app = new Hono()
 
-  app.get('/session', (c) => proxySession(options.auth, c.req.raw))
+  app.get('/session', async (c) => {
+    const result = await proxySession(options.auth, c.req.raw)
+    const cookieHeader = c.req.header('cookie') ?? ''
+    const cookieNames = cookieHeader
+      .split(';')
+      .map((entry) => entry.trim().split('=')[0])
+      .filter(Boolean)
+    // eslint-disable-next-line no-console
+    console.log('[session-debug]', JSON.stringify({
+      status: result.status,
+      has_cookie: cookieHeader.length > 0,
+      cookie_names: cookieNames,
+      forwardedHost: c.req.header('x-forwarded-host') ?? c.req.header('host')
+    }))
+    return result
+  })
 
   app.post('/migrate-anonymous', async (c) => {
     const session = await getAuthSession(options.auth, c.req.raw)
