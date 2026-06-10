@@ -70,22 +70,7 @@ function notFoundTestLoginResponse() {
 export function createAuthRoutes(options: AuthRoutesOptions): Hono {
   const app = new Hono()
 
-  app.get('/session', async (c) => {
-    const result = await proxySession(options.auth, c.req.raw)
-    const cookieHeader = c.req.header('cookie') ?? ''
-    const cookieNames = cookieHeader
-      .split(';')
-      .map((entry) => entry.trim().split('=')[0])
-      .filter(Boolean)
-    // eslint-disable-next-line no-console
-    console.log('[session-debug]', JSON.stringify({
-      status: result.status,
-      has_cookie: cookieHeader.length > 0,
-      cookie_names: cookieNames,
-      forwardedHost: c.req.header('x-forwarded-host') ?? c.req.header('host')
-    }))
-    return result
-  })
+  app.get('/session', (c) => proxySession(options.auth, c.req.raw))
 
   app.post('/migrate-anonymous', async (c) => {
     const session = await getAuthSession(options.auth, c.req.raw)
@@ -194,33 +179,11 @@ export function createAuthRoutes(options: AuthRoutesOptions): Hono {
     // 公開 origin を再構築して request を作り直す。
     const forwardedHost = c.req.header('x-forwarded-host') ?? c.req.header('host')
     const forwardedProto = c.req.header('x-forwarded-proto') ?? 'https'
-    const original = new URL(c.req.url)
-
-    // OAuth callback の真因特定のため詳細ログ (state_security_mismatch 解消後に削除)
-    if (original.pathname.includes('/callback/') || original.pathname.includes('/sign-in/social')) {
-      const cookieHeader = c.req.header('cookie') ?? ''
-      const stateCookies = cookieHeader
-        .split(';')
-        .map((entry) => entry.trim())
-        .filter((entry) => entry.toLowerCase().includes('better-auth') || entry.toLowerCase().includes('state'))
-      // eslint-disable-next-line no-console
-      console.log('[oauth-debug]', JSON.stringify({
-        path: original.pathname,
-        search_keys: [...original.searchParams.keys()],
-        forwardedHost,
-        forwardedProto,
-        host_header: c.req.header('host'),
-        origin_header: c.req.header('origin'),
-        referer_header: c.req.header('referer'),
-        has_cookie_header: cookieHeader.length > 0,
-        state_cookies: stateCookies.map((c) => c.split('=')[0]),
-        cookie_count: cookieHeader ? cookieHeader.split(';').length : 0
-      }))
-    }
 
     if (!forwardedHost) {
       return options.auth.handler(c.req.raw)
     }
+    const original = new URL(c.req.url)
     const rewritten = new URL(original.pathname + original.search, `${forwardedProto}://${forwardedHost}`)
     const rewrittenRequest = new Request(rewritten, {
       method: c.req.raw.method,
@@ -229,28 +192,7 @@ export function createAuthRoutes(options: AuthRoutesOptions): Hono {
       // @ts-expect-error duplex required for streaming bodies in Node 20+
       duplex: 'half'
     })
-    return options.auth.handler(rewrittenRequest).then((response) => {
-      if (original.pathname.includes('/callback/')) {
-        const setCookies = response.headers.getSetCookie?.() ?? []
-        const location = response.headers.get('location')
-        // eslint-disable-next-line no-console
-        console.log('[oauth-callback-response]', JSON.stringify({
-          path: original.pathname,
-          status: response.status,
-          location,
-          set_cookies_count: setCookies.length,
-          set_cookies: setCookies.map((c) => {
-            const eq = c.indexOf('=')
-            const semicolon = c.indexOf(';')
-            return {
-              name: eq > 0 ? c.substring(0, eq) : c,
-              attrs: semicolon > 0 ? c.substring(semicolon + 1).trim() : ''
-            }
-          })
-        }))
-      }
-      return response
-    })
+    return options.auth.handler(rewrittenRequest)
   })
 
   return app
