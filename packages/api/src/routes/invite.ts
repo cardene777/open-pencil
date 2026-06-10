@@ -1,11 +1,9 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import { resolveAnonymousId } from '../anonymousId.js'
+import { getInviterAnonymousLabel, resolveAnonymousId } from '../anonymousId.js'
 import { isBoardOwner, resolveRequestActor } from '../auth/actor.js'
 import { getAuthSession, type InklyAuth } from '../auth/index.js'
-import type { InvitationEmailSender } from '../email/resend.js'
-import { getInviterAnonymousLabel } from '../email/template.js'
 import {
   hashInvitationEmail,
   INVITATION_TTL_MS,
@@ -44,7 +42,6 @@ export interface InviteRoutesOptions {
   store: InvitationStore
   boardStore?: BoardStore
   notificationStore?: NotificationStore
-  emailSender?: InvitationEmailSender
   now?: () => number
 }
 
@@ -130,27 +127,6 @@ export function createInviteRoutes(options: InviteRoutesOptions): Hono {
           url: relativeUrl
         }
       })
-    }
-
-    if (options.emailSender) {
-      // メール送信は best-effort。 Resend の sandbox 制限や DNS 未設定等で失敗しても
-      // 招待そのものは DB に保存済 / URL は response で返している、 SPA 側で modal
-      // 表示してユーザーに手動共有してもらう経路があるので、 ここでは throw せず
-      // log warn に留めて 201 を返す。 サーバーログから email 送信失敗を追跡可能。
-      try {
-        await options.emailSender.sendInvitation({
-          boardName: board?.name ?? 'Untitled board',
-          invitationUrl,
-          inviterAnonymousId: actor.anonymousId ?? actor.userId ?? 'unknown-user',
-          role: invitation.role,
-          to: parsed.data.email
-        })
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        process.stderr.write(
-          `[inkly-api] invitation email send failed (best-effort, returning 201 with url): ${message}\n`
-        )
-      }
     }
 
     return c.json(

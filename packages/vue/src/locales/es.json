@@ -666,7 +666,6 @@
     "toastCreateFail": "No se pudo crear la invitación",
     "toastLinkCopied": "Enlace copiado al portapapeles",
     "share": "Share",
-    "emailDeliveryHint": "Email delivery is currently disabled. Copy the link below and share it via Slack, LINE, or email.",
     "expiresIn7Days": "Link expires in 7 days.",
     "shareTitle": "Invitation to {boardName}"
   },

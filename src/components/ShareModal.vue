@@ -189,12 +189,6 @@ async function shareInvitationUrl() {
             v-if="invitationUrl"
             class="space-y-3 rounded-xl border border-border bg-canvas/80 p-3"
           >
-            <div
-              data-test-id="share-email-disabled-hint"
-              class="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-[11px] leading-relaxed text-amber-100"
-            >
-              {{ shareModalT.emailDeliveryHint }}
-            </div>
             <div class="flex items-center justify-between gap-3">
               <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">{{ shareModalT.invitationUrlLabel }}</span>
               <div class="flex items-center gap-1">
