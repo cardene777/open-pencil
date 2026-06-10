@@ -214,7 +214,28 @@ export function createAuthRoutes(options: AuthRoutesOptions): Hono {
       // @ts-expect-error duplex required for streaming bodies in Node 20+
       duplex: 'half'
     })
-    return options.auth.handler(rewrittenRequest)
+    return options.auth.handler(rewrittenRequest).then((response) => {
+      if (original.pathname.includes('/callback/')) {
+        const setCookies = response.headers.getSetCookie?.() ?? []
+        const location = response.headers.get('location')
+        // eslint-disable-next-line no-console
+        console.log('[oauth-callback-response]', JSON.stringify({
+          path: original.pathname,
+          status: response.status,
+          location,
+          set_cookies_count: setCookies.length,
+          set_cookies: setCookies.map((c) => {
+            const eq = c.indexOf('=')
+            const semicolon = c.indexOf(';')
+            return {
+              name: eq > 0 ? c.substring(0, eq) : c,
+              attrs: semicolon > 0 ? c.substring(semicolon + 1).trim() : ''
+            }
+          })
+        }))
+      }
+      return response
+    })
   })
 
   return app
