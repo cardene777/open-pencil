@@ -133,7 +133,17 @@ async function getSessionFromHandler(
   request: Request,
   basePath = INKLY_API_AUTH_BASE_PATH
 ): Promise<InklyAuthSession | null> {
-  const url = new URL(request.url)
+  // Fly proxy 経由のリクエストは url が `http://0.0.0.0:3001/...` (内部 listen)
+  // となり better-auth の cookie domain / baseURL 整合 check で fail する。
+  // x-forwarded-host / proto から公開 origin を再構築して url を作り直す。
+  const forwardedHost =
+    request.headers.get('x-forwarded-host') ?? request.headers.get('host')
+  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https'
+  const original = new URL(request.url)
+  const base = forwardedHost
+    ? `${forwardedProto}://${forwardedHost}`
+    : `${original.protocol}//${original.host}`
+  const url = new URL(original.pathname + original.search, base)
   setSessionPathname(url, basePath)
 
   const response = await auth.handler(
