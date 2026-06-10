@@ -664,7 +664,11 @@
     "copied": "Skopiowano",
     "toastInvitationCreated": "Link z zaproszeniem utworzony",
     "toastCreateFail": "Nie udało się utworzyć zaproszenia",
-    "toastLinkCopied": "Link skopiowany do schowka"
+    "toastLinkCopied": "Link skopiowany do schowka",
+    "share": "Share",
+    "emailDeliveryHint": "Email delivery is currently disabled. Copy the link below and share it via Slack, LINE, or email.",
+    "expiresIn7Days": "Link expires in 7 days.",
+    "shareTitle": "Invitation to {boardName}"
   },
   "teams": {
     "headTitle": "Zespoły",

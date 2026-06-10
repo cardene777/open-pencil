@@ -664,7 +664,11 @@
     "copied": "Скопировано",
     "toastInvitationCreated": "Ссылка-приглашение создана",
     "toastCreateFail": "Не удалось создать приглашение",
-    "toastLinkCopied": "Ссылка скопирована в буфер обмена"
+    "toastLinkCopied": "Ссылка скопирована в буфер обмена",
+    "share": "Share",
+    "emailDeliveryHint": "Email delivery is currently disabled. Copy the link below and share it via Slack, LINE, or email.",
+    "expiresIn7Days": "Link expires in 7 days.",
+    "shareTitle": "Invitation to {boardName}"
   },
   "teams": {
     "headTitle": "Команды",

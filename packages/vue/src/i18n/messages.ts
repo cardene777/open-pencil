@@ -704,9 +704,14 @@ export const shareModalMessages = i18n('shareModal', {
   invitationUrlLabel: 'Invitation URL',
   copy: 'Copy',
   copied: 'Copied',
+  share: 'Share',
+  emailDeliveryHint:
+    'Email delivery is currently disabled. Copy the link below and share it via Slack, LINE, or email.',
+  expiresIn7Days: 'Link expires in 7 days.',
   toastInvitationCreated: 'Invitation link created',
   toastCreateFail: 'Failed to create invitation',
-  toastLinkCopied: 'Link copied to clipboard'
+  toastLinkCopied: 'Link copied to clipboard',
+  shareTitle: params('Invitation to {boardName}')
 })
 
 export const fontSettingsMessages = i18n('fontSettings', {

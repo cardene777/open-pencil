@@ -664,7 +664,11 @@
     "copied": "已复制",
     "toastInvitationCreated": "已创建邀请链接",
     "toastCreateFail": "创建邀请失败",
-    "toastLinkCopied": "已将链接复制到剪贴板"
+    "toastLinkCopied": "已将链接复制到剪贴板",
+    "share": "Share",
+    "emailDeliveryHint": "Email delivery is currently disabled. Copy the link below and share it via Slack, LINE, or email.",
+    "expiresIn7Days": "Link expires in 7 days.",
+    "shareTitle": "Invitation to {boardName}"
   },
   "teams": {
     "headTitle": "团队",

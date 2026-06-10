@@ -27,7 +27,10 @@ export function createResendEmailSender(
   options: CreateResendEmailSenderOptions = {}
 ): InvitationEmailSender {
   const apiKey = options.apiKey?.trim() || process.env.INKLY_API_RESEND_KEY?.trim() || ''
-  const from = options.from ?? DEFAULT_FROM
+  // INKLY_API_RESEND_FROM で from を上書き可能。
+  // Resend で独自ドメインを verify した後に fly secrets で切替えるだけで済む。
+  // 例: `noreply@jfet.co.jp` / `Pencil Editor <invite@jfet.co.jp>` 等
+  const from = options.from ?? (process.env.INKLY_API_RESEND_FROM?.trim() || DEFAULT_FROM)
   const log = options.logger ?? console.log
 
   if (!apiKey) {
