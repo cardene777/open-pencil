@@ -1,7 +1,52 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+
+import { useAuthStore } from '@/app/auth/store'
+import { toast } from '@/app/shell/ui'
 
 const year = computed(() => new Date().getFullYear())
+
+const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+const loggingIn = ref(false)
+
+const returnTo = computed(() => {
+  const value = route.query.returnTo
+  return typeof value === 'string' && value.startsWith('/') ? value : ''
+})
+
+const ctaPrimaryLabel = computed(() => {
+  if (auth.isAuthenticated) return 'ダッシュボードを開く'
+  if (returnTo.value) return 'ログインして招待先を開く'
+  return 'Google でログイン'
+})
+
+const ctaSecondaryTo = computed(() => {
+  if (auth.isAuthenticated) return '/boards'
+  return null
+})
+
+async function handlePrimaryCta() {
+  if (auth.isAuthenticated) {
+    void router.push(returnTo.value || '/dashboard')
+    return
+  }
+
+  if (loggingIn.value) return
+  loggingIn.value = true
+  try {
+    // returnTo があるとログイン callback でその path に戻す、 無ければ /dashboard
+    const callbackURL = new URL(returnTo.value || '/dashboard', window.location.origin).toString()
+    await auth.signInWithGoogle(callbackURL)
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'ログインを開始できませんでした'
+    toast.error(message)
+  } finally {
+    loggingIn.value = false
+  }
+}
 
 const features = [
   {
@@ -60,8 +105,31 @@ onBeforeUnmount(() => {
         すべてオープンソース、 すべてあなたのものに。
       </p>
       <div class="hero__cta">
-        <router-link to="/editor" class="btn btn--primary">エディタを開く</router-link>
-        <router-link to="/dashboard" class="btn btn--ghost">ダッシュボードを開く</router-link>
+        <button
+          type="button"
+          class="btn btn--primary"
+          data-test-id="landing-primary-cta"
+          :disabled="loggingIn"
+          @click="handlePrimaryCta"
+        >
+          {{ loggingIn ? 'ログイン中…' : ctaPrimaryLabel }}
+        </button>
+        <router-link
+          v-if="ctaSecondaryTo"
+          :to="ctaSecondaryTo"
+          class="btn btn--ghost"
+          data-test-id="landing-secondary-cta"
+        >
+          ボード一覧
+        </router-link>
+        <router-link
+          v-else
+          to="/editor"
+          class="btn btn--ghost"
+          data-test-id="landing-secondary-cta"
+        >
+          まずはお試し編集
+        </router-link>
       </div>
       <p class="hero__formats">
         対応形式 ·
