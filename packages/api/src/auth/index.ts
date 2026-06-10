@@ -220,6 +220,12 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
           google: {
             clientId: config.google.clientId,
             clientSecret: config.google.clientSecret,
+            // prompt=select_account を明示し Google が勝手に prompt=none で silent
+            // re-auth するのを防ぐ。 prompt=none の callback は iframe 経由になる
+            // ことがあり __Secure- + SameSite=Lax cookie が送信されない問題を回避。
+            // select_account はユーザーに常にアカウント選択画面を見せる (login ボタン
+            // 押下後に通常の OAuth 画面が表示される)。
+            prompt: 'select_account',
             // Google OAuth の profile レスポンスから picture URL を image にマッピング
             mapProfileToUser: (profile) => ({
               name: profile.name,
