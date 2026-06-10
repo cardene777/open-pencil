@@ -91,6 +91,24 @@ onBeforeUnmount(() => {
       <nav class="landing__nav">
         <a href="https://github.com/cardene777/open-pencil" target="_blank" rel="noopener">GitHub</a>
         <a href="https://inkly.dev" target="_blank" rel="noopener">ドキュメント</a>
+        <button
+          v-if="!auth.isAuthenticated"
+          type="button"
+          class="landing__nav-cta"
+          data-test-id="landing-nav-login"
+          :disabled="loggingIn"
+          @click="handlePrimaryCta"
+        >
+          {{ loggingIn ? 'ログイン中…' : 'ログイン' }}
+        </button>
+        <router-link
+          v-else
+          to="/dashboard"
+          class="landing__nav-cta"
+          data-test-id="landing-nav-dashboard"
+        >
+          ダッシュボード
+        </router-link>
       </nav>
     </header>
 
@@ -121,14 +139,6 @@ onBeforeUnmount(() => {
           data-test-id="landing-secondary-cta"
         >
           ボード一覧
-        </router-link>
-        <router-link
-          v-else
-          to="/editor"
-          class="btn btn--ghost"
-          data-test-id="landing-secondary-cta"
-        >
-          まずはお試し編集
         </router-link>
       </div>
       <p class="hero__formats">
@@ -194,6 +204,7 @@ onBeforeUnmount(() => {
 
 .landing__nav {
   display: flex;
+  align-items: center;
   gap: 1.5rem;
 }
 
@@ -206,6 +217,30 @@ onBeforeUnmount(() => {
 
 .landing__nav a:hover {
   color: #e8eaed;
+}
+
+.landing__nav-cta {
+  cursor: pointer;
+  background: rgba(124, 140, 255, 0.18);
+  border: 1px solid rgba(124, 140, 255, 0.45);
+  color: #e8eaed;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.45rem 1.1rem;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s;
+  margin-left: 0.5rem;
+}
+
+.landing__nav-cta:hover:not(:disabled) {
+  background: rgba(124, 140, 255, 0.3);
+  border-color: rgba(124, 140, 255, 0.65);
+}
+
+.landing__nav-cta:disabled {
+  cursor: wait;
+  opacity: 0.6;
 }
 
 .hero {
