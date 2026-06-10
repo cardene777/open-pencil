@@ -202,15 +202,18 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
       skipStateCookieCheck: true
     },
     advanced: {
-      // production HTTPS では Secure cookie を強制、 Fly proxy (X-Forwarded-Proto)
-      // 経由でも better-auth が baseURL の prefix を見て確実に secure 判定する。
-      useSecureCookies: isProductionURL,
-      // 全 cookie に SameSite=None を強制。 better-auth が __Secure- prefix を付ける
-      // 経路で SameSite=Lax だと Fly proxy 経由 (実質 cross-site とブラウザが判定する
-      // ケース) で cookie が送信されない問題が確認された。 None は HTTPS + Secure 必須、
-      // production HTTPS で動作する。 CSRF 防御は state パラメータ (DB lookup) で担保。
+      // `__Secure-` prefix と `__Host-` prefix の自動付与は host-only cookie の
+      // 制約が厳しく Fly.io の cross-machine routing で fail することを確認。
+      // useSecureCookies を false にして prefix なしの通常 cookie で運用する。
+      // Secure 属性自体は defaultCookieAttributes.secure で個別に true 化できる
+      // ため、 HTTPS 通信での secrecy は維持される。
+      useSecureCookies: false,
       defaultCookieAttributes: {
-        sameSite: isProductionURL ? 'none' : 'lax',
+        // production HTTPS でも SameSite=Lax を使う。 Lax は top-level navigation
+        // で送られるので OAuth callback (Google → 自サイトの GET) で確実に乗る。
+        // None だと CSRF 攻撃面が広がり、 prefix 無しでは Secure も付かないため
+        // 安全側に Lax で運用 (state パラメータの DB lookup で CSRF 防御は別途)。
+        sameSite: 'lax',
         secure: isProductionURL,
         httpOnly: true,
         path: '/'
