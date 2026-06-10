@@ -143,8 +143,18 @@ onBeforeUnmount(() => {
 .hero {
   text-align: center;
   padding: 6rem 2rem 5rem;
-  max-width: 800px;
+  max-width: 960px;
   margin: 0 auto;
+}
+
+.hero__title,
+.hero__lead {
+  /* 日本語の自動改行で「デザインエ／ディタ」のような文節途中の改行を防ぐ。
+     keep-all は CJK 単語 (デザインエディタ等) を 1 単語として扱い、 半角空白
+     と <br> でのみ改行するようになる。 */
+  word-break: keep-all;
+  overflow-wrap: normal;
+  line-break: strict;
 }
 
 .hero__title {
@@ -265,14 +275,19 @@ onBeforeUnmount(() => {
 
 <style>
 /* Landing 表示中だけ overflow: hidden を解除してスクロール可能化。
-   app.css の html/body/#app overflow: hidden は editor canvas を全画面 fixed
-   するための強制設定で、 LP では縦スクロールが必要なため一時的に override。
-   user-select: none も同様に解除して LP 本文のコピーを許可。 */
+   app.css の `html, body, #app { overflow: hidden }` は editor canvas を
+   全画面 fixed するための強制設定、 LP では縦スクロールが必要なため override。
+   html 単独に対しても、 body + #app 全部に対しても完全に上書きする (!important
+   は specificity 戦争を避けるため必須)。 user-select も解除して LP 本文の
+   コピーを許可、 文字選択でテキストを参照できる状態にする。 */
+html:has(body.landing-active),
 body.landing-active,
 body.landing-active #app {
   overflow: auto !important;
+  overflow-y: auto !important;
   height: auto !important;
-  user-select: text;
-  -webkit-user-select: text;
+  min-height: 100vh !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 </style>

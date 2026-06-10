@@ -168,6 +168,7 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
     options.logger?.warn(warning)
   }
 
+  const isProductionURL = config.baseURL.startsWith('https://')
   const auth = betterAuth({
     basePath: config.basePath,
     baseURL: config.baseURL,
@@ -179,6 +180,20 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
       usePlural: true
     }),
     plugins: config.enableTestUtils ? [testUtils()] : undefined,
+    advanced: {
+      // production HTTPS では Secure cookie を強制、 Fly proxy (X-Forwarded-Proto)
+      // 経由でも better-auth が baseURL の prefix を見て確実に secure 判定する。
+      useSecureCookies: isProductionURL,
+      // OAuth state cookie は top-level redirect (Google → 自サイト) で送られる
+      // 必要があるため SameSite=Lax。 Lax は top-level GET navigation で送られる
+      // ので OAuth callback (GET) には乗る。 None は CSRF 攻撃面が広がるので不採用。
+      defaultCookieAttributes: {
+        sameSite: 'lax',
+        secure: isProductionURL,
+        httpOnly: true,
+        path: '/'
+      }
+    },
     socialProviders: config.google
       ? {
           google: {

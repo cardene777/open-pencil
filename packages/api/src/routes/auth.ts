@@ -171,7 +171,28 @@ export function createAuthRoutes(options: AuthRoutesOptions): Hono {
     })
   })
 
-  app.all('/*', (c) => options.auth.handler(c.req.raw))
+  app.all('/*', (c) => {
+    // Fly proxy 経由のリクエストは c.req.raw の URL が `http://0.0.0.0:3001/...`
+    // (内部 listen address) になっており、 better-auth が baseURL (production の
+    // `https://pencil-editor.fly.dev`) との origin 不一致で state cookie 検証や
+    // OAuth callback の URL 解決に失敗する。 x-forwarded-proto / host から
+    // 公開 origin を再構築して request を作り直す。
+    const forwardedHost = c.req.header('x-forwarded-host') ?? c.req.header('host')
+    const forwardedProto = c.req.header('x-forwarded-proto') ?? 'https'
+    if (!forwardedHost) {
+      return options.auth.handler(c.req.raw)
+    }
+    const original = new URL(c.req.url)
+    const rewritten = new URL(original.pathname + original.search, `${forwardedProto}://${forwardedHost}`)
+    const rewrittenRequest = new Request(rewritten, {
+      method: c.req.raw.method,
+      headers: c.req.raw.headers,
+      body: ['GET', 'HEAD'].includes(c.req.raw.method) ? undefined : c.req.raw.body,
+      // @ts-expect-error duplex required for streaming bodies in Node 20+
+      duplex: 'half'
+    })
+    return options.auth.handler(rewrittenRequest)
+  })
 
   return app
 }
