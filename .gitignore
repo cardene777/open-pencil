@@ -10,6 +10,12 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+dist-promo
+# promo: Remotion build artifacts と Playwright auth state
+scripts/promo/output
+scripts/promo/remotion/out
+scripts/promo/remotion/public/shots
+scripts/promo/.playwright-state.json
 *.local
 # Tauri updater private signing keys
 /desktop/*.key
