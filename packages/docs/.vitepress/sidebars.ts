@@ -82,6 +82,7 @@ export const referenceSidebar = (prefix: string, label: string): DefaultTheme.Si
       { text: 'Node Types', link: `${prefix}/reference/node-types` },
       { text: 'Scene Graph', link: `${prefix}/reference/scene-graph` },
       { text: 'File Format', link: `${prefix}/reference/file-format` },
+      { text: 'Figma Compatibility', link: `${prefix}/reference/figma-compatibility` },
     ],
   },
 ]
