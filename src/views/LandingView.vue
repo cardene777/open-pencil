@@ -17,6 +17,11 @@ const returnTo = computed(() => {
   return typeof value === 'string' && value.startsWith('/') ? value : ''
 })
 
+const inviteToken = computed(() => {
+  const value = route.query.invite
+  return typeof value === 'string' && value.length > 0 ? value : ''
+})
+
 const ctaPrimaryLabel = computed(() => {
   if (auth.isAuthenticated) return 'ダッシュボードを開く'
   if (returnTo.value) return 'ログインして招待先を開く'
@@ -30,7 +35,11 @@ const ctaSecondaryTo = computed(() => {
 
 async function handlePrimaryCta() {
   if (auth.isAuthenticated) {
-    void router.push(returnTo.value || '/dashboard')
+    // 認証済なら returnTo (or /dashboard) に直接遷移、 invite が付いていれば query で持ち越す
+    const target = returnTo.value || '/dashboard'
+    void router.push(
+      inviteToken.value ? { path: target, query: { invite: inviteToken.value } } : target
+    )
     return
   }
 
@@ -38,8 +47,12 @@ async function handlePrimaryCta() {
   loggingIn.value = true
   try {
     // returnTo があるとログイン callback でその path に戻す、 無ければ /dashboard
-    const callbackURL = new URL(returnTo.value || '/dashboard', window.location.origin).toString()
-    await auth.signInWithGoogle(callbackURL)
+    // 招待 token があれば callback URL の query に保持し、 board 画面側で再検証 / 利用できるようにする
+    const callbackURL = new URL(returnTo.value || '/dashboard', window.location.origin)
+    if (inviteToken.value && returnTo.value) {
+      callbackURL.searchParams.set('invite', inviteToken.value)
+    }
+    await auth.signInWithGoogle(callbackURL.toString())
   } catch (error) {
     const message = error instanceof Error ? error.message : 'ログインを開始できませんでした'
     toast.error(message)
@@ -75,8 +88,17 @@ const features = [
   }
 ]
 
-onMounted(() => {
+onMounted(async () => {
   document.body.classList.add('landing-active')
+  // LP 直アクセスでも既存セッションを読みに行く。
+  // 認証済なら CTA が「ダッシュボードを開く」に切り替わる (auth.init 未呼出だと未ログイン扱い)。
+  if (!auth.initialized) {
+    try {
+      await auth.init()
+    } catch {
+      // session 取得失敗時は LP を未ログイン状態のまま表示
+    }
+  }
 })
 
 onBeforeUnmount(() => {

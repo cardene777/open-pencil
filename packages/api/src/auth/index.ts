@@ -128,6 +128,19 @@ function serializeTestCookie(
   return parts.join('; ')
 }
 
+function resolveTrustedOrigin(): { host: string | null; proto: 'http' | 'https' } {
+  try {
+    const baseURL = process.env.INKLY_API_BETTER_AUTH_BASE_URL
+    if (baseURL) {
+      const u = new URL(baseURL)
+      return { host: u.host, proto: u.protocol === 'http:' ? 'http' : 'https' }
+    }
+  } catch {
+    // 不正な baseURL は無視
+  }
+  return { host: null, proto: 'https' }
+}
+
 async function getSessionFromHandler(
   auth: Pick<InklyAuth, 'handler'>,
   request: Request,
@@ -136,11 +149,24 @@ async function getSessionFromHandler(
   // Fly proxy 経由のリクエストは url が `http://0.0.0.0:3001/...` (内部 listen)
   // となり better-auth の cookie domain / baseURL 整合 check で fail する。
   // x-forwarded-host / proto から公開 origin を再構築して url を作り直す。
-  const forwardedHost =
+  //
+  // セキュリティ: x-forwarded-host は信頼できない外部ヘッダのため、
+  //   - `,` 区切りなら最初の値だけを使用
+  //   - protocol は `http`/`https` のみ許可
+  //   - trustedOrigin (baseURL から導出) と一致するときだけ rewrite する
+  const trusted = resolveTrustedOrigin()
+  const rawForwardedHost =
     request.headers.get('x-forwarded-host') ?? request.headers.get('host')
-  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https'
+  const rawForwardedProto = request.headers.get('x-forwarded-proto')
+  const forwardedHost = rawForwardedHost?.split(',')[0]?.trim() ?? null
+  const forwardedProtoCandidate = (rawForwardedProto?.split(',')[0]?.trim() ?? trusted.proto).toLowerCase()
+  const forwardedProto: 'http' | 'https' =
+    forwardedProtoCandidate === 'http' ? 'http' : forwardedProtoCandidate === 'https' ? 'https' : trusted.proto
+
   const original = new URL(request.url)
-  const base = forwardedHost
+  const useForwarded =
+    forwardedHost !== null && trusted.host !== null && forwardedHost === trusted.host
+  const base = useForwarded
     ? `${forwardedProto}://${forwardedHost}`
     : `${original.protocol}//${original.host}`
   const url = new URL(original.pathname + original.search, base)
