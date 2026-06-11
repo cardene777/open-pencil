@@ -133,6 +133,55 @@ scripts/promo/
 └── output/                    — build.sh が最終 mp4 を copy する場所
 ```
 
+## caption の再同期手順
+
+`scripts/promo/remotion/src/PencilEditorPromo.tsx` の `videoStartSec` と各 caption の `startSec` / `endSec` は、 `record-flow.ts` が生成する `flow.webm` の **実動作タイミングに手動で同期している** 。
+
+そのため `record-flow.ts` の `sleep` 値を変えると flow.webm 内の各シーン開始時刻がズレ、 caption と動画の対応が崩れる。 record-flow.ts を触る場合は **必ず caption も再同期する** 。
+
+### タイミング設計の考え方
+
+- `videoStartSec` = flow.webm の先頭から、 「最初の caption の対象シーンが始まる時刻」
+- 各 caption の `startSec` / `endSec` = `videoStartSec` を基準とした相対時刻 (秒)
+
+例えば flow.webm の 7 秒目から「03 / Open .fig」のシーンが始まる場合。
+
+```tsx
+videoStartSec={7}
+captions={[
+  { startSec: 0, endSec: 6, tag: '03 / Open .fig', ... }  // flow.webm の 7-13 秒目に対応
+]}
+```
+
+### flow.webm 内のシーン開始時刻を抽出する
+
+1. まず `bash scripts/promo/build.sh` を回して `scripts/promo/.video-tmp/flow.webm` を生成。
+2. `ffprobe` で総尺を確認。
+
+```bash
+ffprobe -v error -show_entries format=duration -of csv=p=0 \
+  scripts/promo/.video-tmp/flow.webm
+```
+
+3. 各シーン境界の frame を画像として抜き出し、 目視でシーン開始時刻 (秒) を特定する。
+
+```bash
+# 5 秒目を 1 枚 JPG として書き出す例
+ffmpeg -ss 5 -i scripts/promo/.video-tmp/flow.webm -frames:v 1 \
+  scripts/promo/.video-tmp/t05.jpg
+```
+
+4. 全シーン (DnD アニメ / 全景 / 編集 / 共有 / 招待 / コピー) の開始時刻が分かったら、 `PencilEditorPromo.tsx` を以下の式で更新する。
+
+```
+caption の startSec = (実シーン開始時刻) - videoStartSec
+caption の endSec   = (次シーン開始時刻) - videoStartSec
+```
+
+### Remotion Studio で目視確認する
+
+数値で合わせ込んだ後は `cd scripts/promo/remotion && bun run studio` を起動し、 ブラウザの timeline で 1 frame ずつ送りながら caption と動画の対応を目視確認する。 `bash scripts/promo/build.sh --skip-capture` で render だけ走らせて確認するのもよい。
+
 ## BGM (任意)
 
 Remotion は `Audio` Component で mp3/wav を載せられる。 `scripts/promo/remotion/public/bgm.mp3` を置いて、 `PencilEditorPromo.tsx` の最後に以下を追加:
