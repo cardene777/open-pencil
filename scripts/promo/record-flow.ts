@@ -21,6 +21,7 @@
 import { chromium, type Page } from '@playwright/test'
 import { mkdir, readdir, rename, rm, stat } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
+import type { PromoInklyWindow } from './inkly-types'
 
 const args = process.argv.slice(2)
 const urlArgIndex = args.indexOf('--url')
@@ -450,10 +451,7 @@ async function performDnD(
   await sleep(420)
 
   await page.evaluate(async (path) => {
-    interface InklyWindow extends Window {
-      inkly?: { openFile?: (path: string) => Promise<void> }
-    }
-    const w = window as InklyWindow
+    const w = window as PromoInklyWindow
     try {
       await w.inkly?.openFile?.(path)
     } catch (e) {
@@ -531,10 +529,7 @@ async function main() {
 
   // zoomToFit で全景表示
   await page.evaluate(() => {
-    interface InklyWindow extends Window {
-      inkly?: { getStore?: () => { zoomToFit?: () => void; clearSelection?: () => void } }
-    }
-    const w = window as InklyWindow
+    const w = window as PromoInklyWindow
     const s = w.inkly?.getStore?.()
     s?.clearSelection?.()
     s?.zoomToFit?.()
@@ -571,25 +566,7 @@ async function main() {
 
   // 2) Screen を画面 (viewport) の左右上下中央に配置
   await page.evaluate(() => {
-    interface SceneNode {
-      id: string
-      type: string
-      x?: number
-      y?: number
-      width?: number
-      height?: number
-    }
-    interface InklyStore {
-      state?: { currentPageId?: string; zoom?: number; panX?: number; panY?: number }
-      getChildren?: (id: string) => SceneNode[]
-      graph?: { getNode?: (id: string) => SceneNode | null }
-      select?: (ids: string[]) => void
-      requestRepaint?: () => void
-    }
-    interface InklyWindow extends Window {
-      inkly?: { getStore?: () => InklyStore }
-    }
-    const w = window as InklyWindow
+    const w = window as PromoInklyWindow
     try {
       const store = w.inkly?.getStore?.()
       if (!store) return
@@ -632,21 +609,7 @@ async function main() {
 
   // 2) Screen 全体の fills を brand purple に → 画面全体が紫色になる
   await page.evaluate(() => {
-    interface SceneNode {
-      id: string
-      type: string
-    }
-    interface InklyStore {
-      state?: { currentPageId?: string }
-      getChildren?: (id: string) => SceneNode[]
-      graph?: { updateNode?: (id: string, changes: unknown) => void }
-      select?: (ids: string[]) => void
-      requestRepaint?: () => void
-    }
-    interface InklyWindow extends Window {
-      inkly?: { getStore?: () => InklyStore }
-    }
-    const w = window as InklyWindow
+    const w = window as PromoInklyWindow
     try {
       const store = w.inkly?.getStore?.()
       if (!store) return
