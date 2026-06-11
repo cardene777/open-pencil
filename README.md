@@ -10,6 +10,12 @@ Open-source design editor. Opens `.fig` and `.pen` design files, includes built-
 
 ![Inkly](packages/docs/public/screenshot.png)
 
+## Demo
+
+LLM-generated design, opened directly in the browser editor, edited inline, then shared with a teammate over Slack — all without leaving the browser.
+
+![Inkly demo — open .fig, edit, share, distribute](packages/docs/public/promo.gif)
+
 ## Installation
 
 **macOS (Homebrew):**
