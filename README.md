@@ -1,123 +1,134 @@
+<div align="center">
+
 # Inkly
 
-オープンソースのデザインエディタ。 `.fig` と `.pen` のデザインファイルを直接開き、 AI を内蔵し、 ヘッドレス Vue SDK でカスタムエディタを組める programmable toolkit として動く。
+**ブラウザの中で動く、 オープンソースのデザインエディタ。**
 
-> **ステータス** 活発に開発中。 production 利用はまだ推奨しない。
->
-> **注意** 同名の OSS が他にもある ([Inkly by ZSeven-W](https://github.com/ZSeven-W/inkly)、 AI-native な design-to-code workflow に特化)。 本プロジェクトは Figma 互換のビジュアルデザインとリアルタイムコラボレーションに特化している。
+`.fig` を開いて、 編集して、 招待リンクで配る。 アカウントもインストールも要らない。
 
-**[ブラウザで試す →](https://app.inkly.dev/demo)** · [ダウンロード](https://github.com/cardene777/open-pencil/releases/latest) · [ドキュメント](https://inkly.dev) · [llms.txt](https://inkly.dev/llms.txt)
+[ブラウザで試す](https://pencil-editor.fly.dev) ・ [ドキュメント](https://inkly.dev) ・ [ダウンロード](https://github.com/cardene777/open-pencil/releases/latest) ・ [llms.txt](https://inkly.dev/llms.txt)
 
-![Inkly](packages/docs/public/screenshot.png)
+![Inkly demo — .fig をドロップ、 編集、 Slack で共有](packages/docs/public/promo.gif)
 
-## デモ
+</div>
 
-LLM 生成デザインをそのままブラウザのエディタで開き、 インラインで編集して、 Slack 経由でチームに共有する。 すべてブラウザの中だけで完結する。
+---
 
-![Inkly デモ — .fig を開く / 編集 / 共有 / 配布](packages/docs/public/promo.gif)
+## 30 秒で動かす
 
-## インストール
+ブラウザで開く場合。
 
-**macOS (Homebrew):**
+```
+https://pencil-editor.fly.dev
+```
+
+ローカルで開発する場合。
+
+```sh
+git clone git@github.com:cardene777/open-pencil.git
+cd open-pencil
+bun install
+bun run dev:full
+```
+
+`http://localhost:1420` でランディング、 `/dashboard` でボード一覧、 `/editor` でエディタ。
+
+CLI だけ欲しい場合。
 
 ```sh
 brew install inkly
-```
-
-または [releases ページ](https://github.com/cardene777/open-pencil/releases/latest) からダウンロードする。 インストール不要で動かしたいなら [web 版](https://app.inkly.dev) を使う。
-
-## できること
-
-- **`.fig` / `.pen` を開く** — Figma ファイルをそのままネイティブに読み書き、 アプリ / OS のファイルブラウザから Pencil ドキュメントを開く、 ノードをアプリ間でコピー & ペースト
-- **AI でデザイン生成** — チャットに作りたいものを書くだけで、 90 以上の tool がノードを作成 / 編集する。 OpenRouter / Anthropic / OpenAI / Google AI / Z.ai / MiniMax または互換エンドポイントを接続できる
-- **完全にプログラマブル** — ヘッドレス CLI、 XPath クエリ、 `eval` 経由の Figma Plugin API、 AI エージェント向け MCP サーバ、 Claude Code / Codex / Gemini CLI 向けのデスクトップエージェント連携
-- **Lint / 変換 / トークン抽出** — ドキュメントを inspect、 命名 / レイアウト / アクセシビリティの lint、 対応フォーマット間での変換、 色 / タイポ / 余白 / クラスタの解析、 デザイントークン抽出
-- **コンポーネントとバリアント** — 再利用可能なコンポーネント作成、 バリアントをセットにまとめる、 ローカルアセットを instance として挿入、 inspector から variant 切替
-- **デザイン → コード** — 選択範囲を JSX / Tailwind として export、 トークン生成物の出力、 コンポーネント指向のコードワークフローへのマッピング
-- **カスタムエディタ向け Vue SDK** — ヘッドレスのコンポーネント / composable で Inkly を他アプリに埋め込んだり、 ワークフロー特化の編集 UI を組める。 [SDK ドキュメント →](https://inkly.dev/programmable/sdk/)
-- **リアルタイムコラボレーション** — WebRTC による P2P、 サーバ不要 / アカウント不要。 カーソル / プレゼンス / フォローモード
-- **サインイン済みユーザー向けの通知 inbox** — ボード招待 / チーム招待 / メンションの未読バッジと通知センター
-- **Auto layout と CSS Grid** — Yoga WASM 経由の flex / grid レイアウト、 gap / padding / 整列 / track size をサポート
-- **~7 MB のデスクトップアプリ** — Tauri v2 で macOS / Windows / Linux、 ブラウザでは PWA としても動く
-
-## CLI
-
-```sh
-npm install -g @inkly/cli
-# または: bun add -g @inkly/cli
-```
-
-### デザインファイルを inspect
-
-エディタを開かずに、 ノードツリーをたどったり、 名前 / 型で検索したり、 プロパティを掘ったりできる。
-
-```sh
 inkly tree design.fig
-inkly find design.pen --type TEXT
-inkly node design.fig --id 1:23
-inkly info design.fig
 ```
 
-```
-[0] [page] "Getting started" (0:46566)
-  [0] [section] "" (0:46567)
-    [0] [frame] "Body" (0:46568)
-      [0] [frame] "Introduction" (0:46569)
-        [0] [frame] "Introduction Card" (0:46570)
-          [0] [frame] "Guidance" (0:46571)
+---
+
+## Inkly が解く課題
+
+Figma は強い、 ただし閉じている。
+
+- ファイルは独自バイナリ、 公式ソフトでしか完全には読めない
+- プログラマブル経由 (CDP) は version 126 で塞がれた
+- MCP サーバは read-only、 AI に「デザインを直してもらう」 ができない
+- ベンダーがバージョンを上げるたびにワークフローが壊れる
+
+Inkly はその裏返しを取る。
+
+| 観点 | Figma | Inkly |
+|---|---|---|
+| ライセンス | プロプライエタリ | MIT |
+| `.fig` 読み書き | 公式ソフトのみ | ネイティブ、 CLI / SDK / MCP どこからでも |
+| AI からの編集 | 公式 MCP は read-only | 100+ tool で create / modify / export 可能 |
+| データの保存先 | Figma のサーバ | 手元 (ローカル / セルフホスト) |
+| カスタマイズ性 | プラグイン枠だけ | ソース全部、 fork して詰める |
+
+---
+
+## 3 つの使い方
+
+### 1. ブラウザでそのまま編集する
+
+`.fig` をブラウザにドロップすると、 16 画面でも 40 画面でもネイティブで開く。 編集はそのままインライン、 保存もブラウザの中で完結。 全ファイルは IndexedDB に永続化され、 次に開いたとき復元される。
+
+```mermaid
+graph LR
+    A[.fig をドロップ] --> B[Kiwi schema で decode]
+    B --> C[SceneGraph]
+    C --> D[CanvasKit で描画]
+    D --> E[編集する]
+    E --> F[Zstd で再 encode]
+    F --> G[.fig を保存]
 ```
 
-### XPath でクエリ
+### 2. AI に「デザインを直してもらう」
 
-XPath セレクタで、 型 / 属性 / 構造からノードを探せる。
+`⌘` + `J` で内蔵 AI を開く。 100+ tool が、 形状作成 / 塗り / 線 / auto layout / コンポーネント / 変数 / ブーリアン / トークン解析 / アセット export まで担当する。
+
+API キーは自前のものを使う (OpenRouter / Anthropic / OpenAI / Google AI / Z.ai / MiniMax)。 バックエンド不要、 アカウント不要。
+
+デスクトップアプリ + ローカル CLI なら、 Claude Code / Codex / Gemini CLI をエディタの中に接続できる。 エージェントが MCP 経由で 100+ tool を直接叩く。
 
 ```sh
-inkly query design.fig "//FRAME"                              # 全フレーム
-inkly query design.fig "//FRAME[@width < 300]"                # 300px 未満のフレーム
-inkly query design.fig "//TEXT[contains(@name, 'Button')]"     # 名前に 'Button' を含むテキスト
-inkly query design.fig "//*[@cornerRadius > 0]"               # 角丸が付いているノード
-inkly query design.fig "//SECTION//TEXT"                       # セクションの中のテキスト
+# Claude Code から Inkly を操作する例
+npm install -g @agentclientprotocol/claude-agent-acp
+# settings.json で mcp__inkly__* を allow
+# デスクトップアプリで ⌃J → Claude Code を選択
 ```
 
-### エクスポート
+### 3. リンク 1 本でチームに配る
 
-PNG / JPG / WEBP / SVG / `.fig` / JSX へレンダリングできる。 選択範囲やページを `.fig` として export したり、 ドキュメント全体をフォーマット間で変換することも可能。
+ボードを開いて「共有」を押すと、 招待 URL が発行される。 URL を踏んだ相手は別タブで同じデザインを開く、 サーバ経由ではなく WebRTC P2P。 カーソル / 選択 / 編集はリアルタイムで同期する。
+
+招待 URL は Slack でも LINE でもメールでも貼れる、 受け取った側はリンクを踏むだけで参加できる。 アカウント不要、 招待先のメールアドレス入力も不要。
+
+---
+
+## ヘッドレスで全部できる
+
+エディタ UI に触らず、 ファイル / 設計システムを CLI と MCP だけで運用できる。
+
+### `.fig` を inspect する
 
 ```sh
-inkly export design.fig                           # PNG
-inkly export design.fig -f jpg -s 2 -q 90        # JPG、 2x、 品質 90
-inkly export design.fig -f fig --page "Page 1"   # ページを .fig として export
-inkly export design.fig -f jsx --style tailwind   # Tailwind JSX
-inkly convert design.pen output.fig               # ドキュメントフォーマット間の変換
+inkly tree design.fig                                  # ノード木構造
+inkly find design.fig --type TEXT                      # 型で検索
+inkly query design.fig "//FRAME[@width < 300]"          # XPath クエリ
+inkly info design.fig                                  # 情報サマリ
 ```
 
-```html
-<div className="flex flex-col gap-4 p-6 bg-white rounded-xl">
-  <p className="text-2xl font-bold text-[#1D1B20]">Card Title</p>
-  <p className="text-sm text-[#49454F]">Description text</p>
-</div>
+```
+[0] [page] "Getting started"
+  [0] [section] ""
+    [0] [frame] "Body"
+      [0] [frame] "Introduction"
+        [0] [frame] "Introduction Card"
 ```
 
-### デザインファイルを lint
-
-命名 / レイアウト / 構造 / アクセシビリティの問題を、 ターミナルから検出できる。
-
-```sh
-inkly lint design.fig
-inkly lint design.pen --preset strict
-inkly lint design.fig --rule color-contrast
-inkly lint design.fig --list-rules
-```
-
-### 解析とデザイントークン抽出
-
-デザインシステム全体をターミナルから監査できる。 不整合を見つけ、 実際のパレットを抽出し、 切り出し候補のコンポーネントを発見する。
+### 解析してデザイントークンを抽出
 
 ```sh
 inkly analyze colors design.fig
 inkly analyze typography design.fig
 inkly analyze spacing design.fig
-inkly analyze clusters design.fig
 inkly variables design.fig
 ```
 
@@ -129,265 +140,208 @@ inkly variables design.fig
 
 3771× frame "container" (100% match)
      size: 40×40, structure: Frame > [Frame]
-
-2982× instance "Checkboxes" (100% match)
-     size: 48×48, structure: Instance > [Frame]
 ```
 
-### Figma Plugin API でスクリプト
+### コードへ落とす
 
-`eval` で Figma Plugin API がそのまま使える。 ファイルを編集して書き戻すこともできる。
+```sh
+inkly export design.fig -f jsx --style tailwind
+inkly export design.fig -f svg
+inkly export design.fig -f png -s 2
+```
+
+```html
+<div className="flex flex-col gap-4 p-6 bg-white rounded-xl">
+  <p className="text-2xl font-bold text-[#1D1B20]">Card Title</p>
+  <p className="text-sm text-[#49454F]">Description text</p>
+</div>
+```
+
+### スクリプトで書き換える
+
+`eval` で Figma Plugin API がそのまま使える。
 
 ```sh
 inkly eval design.fig -c "figma.currentPage.children.length"
 inkly eval design.fig -c "figma.currentPage.selection.forEach(n => n.opacity = 0.5)" -w
 ```
 
-### 起動中のアプリを操作
-
-デスクトップアプリが起動しているときは、 ファイル引数を省略すると CLI が RPC 経由で接続し、 ライブのキャンバスを操作する。 自動化スクリプト / CI パイプライン / エディタとやり取りする AI エージェントから使うと便利。
+### Lint で品質を保つ
 
 ```sh
-inkly tree                               # ライブドキュメントを inspect
-inkly export -f png                      # 現在のキャンバスをスクリーンショット
-inkly eval -c "figma.currentPage.name"   # エディタにクエリ
+inkly lint design.fig                          # default ruleset
+inkly lint design.pen --preset strict          # 厳格
+inkly lint design.fig --rule color-contrast    # 単独ルール
 ```
 
-すべてのコマンドは `--json` で機械可読な出力を返せる。
+### AI エージェントから叩く (MCP)
 
-## AI と MCP
-
-### 組み込みチャット
-
-<kbd>⌘</kbd><kbd>J</kbd> で AI アシスタントを開ける。 100 以上の tool が、 形状作成 / 塗り・線の設定 / auto layout 管理 / コンポーネントと変数の操作 / ブーリアン演算 / デザイントークン解析 / アセット export を担当する。 API キーは自分で持ち込む (OpenRouter / Anthropic / OpenAI / Google AI / Z.ai / MiniMax または互換エンドポイント)。 バックエンド不要、 アカウント不要。
-
-### コーディングエージェント (デスクトップ)
-
-Claude Code / Codex / Gemini CLI をチャットパネルから直接使える。 エージェントはエディタの MCP サーバに接続し、 100 以上のデザイン tool を利用できる。 デスクトップアプリと該当エージェントの CLI をローカルにインストールしておく必要がある。
-
-**セットアップ (Claude Code):**
-
-1. ACP アダプタをインストール `npm install -g @agentclientprotocol/claude-agent-acp`
-2. `~/.claude/settings.json` に MCP 権限を追加
-   ```json
-   {
-     "permissions": {
-       "allow": ["mcp__inkly__*"]
-     }
-   }
-   ```
-3. デスクトップアプリを開く → <kbd>Ctrl</kbd><kbd>J</kbd> → プロバイダ選択で **Claude Code**
-
-### MCP サーバ
-
-Claude Code / Cursor / Windsurf 等の MCP クライアントに繋いで、 デザインドキュメントをヘッドレスに inspect / 編集 / export できる。 100 以上の tool が利用可能。 [詳細ドキュメント →](https://inkly.dev/reference/mcp-tools)
-
-**Stdio** (Claude Code / Cursor / Windsurf):
+Claude Code / Cursor / Windsurf に直接繋ぐ。
 
 ```sh
 npm install -g @inkly/mcp
 claude mcp add --scope user inkly -- inkly-mcp
 ```
 
-その他の MCP クライアント向け。
+すべての CLI コマンドは `--json` で機械可読出力に対応している。
 
-```json
-{
-  "mcpServers": {
-    "inkly": {
-      "command": "inkly-mcp"
-    }
-  }
-}
+---
+
+## なぜ動くのか — 互換性の仕組み
+
+`.fig` の仕様は Figma 公式公開されていない。 それでも Inkly が読み書きできる理由は 3 層に分かれる。
+
+1. **Kiwi serialization 言語** — Figma 共同創業者 Evan Wallace が個人 OSS で公開している。 protobuf 風のバイナリ schema 言語、 これ自体は public
+2. **fig.kiwi (5,623 行)** — Figma desktop app の binary 解析 / multiplayer 通信観測 / 先行 OSS (Penpot / figma-use) からの抽出を curated merge したもの
+3. **forward 互換性** — Kiwi のタグ番号付きフィールドは追加に強い、 schema が古くてもほとんどのファイルは開ける
+
+詳細は [Figma Compatibility](https://inkly.dev/reference/figma-compatibility) を参照。
+
+法律面は interoperability 目的の reverse engineering を許容する区域 (US DMCA §1201(f) / EU Directive 2009/24 / 日本著作権法 30-4 + 47-4) で grey-but-allowed、 Figma TOS には反するが過去 OSS への訴訟例はない。 ユーザー自己責任で使う。
+
+---
+
+## 機能一覧
+
+| 領域 | 機能 |
+|---|---|
+| ファイル | `.fig` / `.pen` ネイティブ、 SVG / PDF / PNG / JPG / WEBP export、 JSX / Tailwind 出力 |
+| 編集 | auto layout / CSS Grid (Yoga WASM)、 コンポーネント / バリアント、 変数 / トークン、 boolean 演算 |
+| AI | 100+ tool 内蔵チャット、 multi-provider (OpenRouter / Anthropic / OpenAI / Google AI / Z.ai / MiniMax) |
+| エージェント | Claude Code / Codex / Gemini CLI を MCP 経由で接続、 デスクトップアプリ内に統合 |
+| プログラマブル | ヘッドレス CLI、 XPath クエリ、 Figma Plugin API (eval)、 MCP サーバ (stdio + HTTP)、 Vue SDK |
+| コラボ | WebRTC P2P (Trystero + Yjs)、 カーソル / プレゼンス / フォローモード、 招待 URL 共有 |
+| デスクトップ | Tauri v2 (~7 MB)、 macOS / Windows / Linux、 ブラウザでは PWA |
+| 検査 | lint (a11y / 命名 / レイアウト)、 デザイントークン抽出、 色 / タイポ / 余白 / クラスタ解析 |
+| 通知 | 未読バッジ、 ボード招待 / チーム招待 / メンションの通知センター |
+
+---
+
+## どう統合するか — Vue SDK
+
+ヘッドレスコンポーネントを使って、 ワークフロー特化のエディタを自前アプリに埋め込める。
+
+```vue
+<script setup lang="ts">
+import { createEditor } from '@inkly/vue'
+
+const editor = await createEditor({
+  document: '/path/to/design.fig',
+  tools: ['select', 'frame', 'text']
+})
+</script>
+
+<template>
+  <InklyCanvas :editor="editor" />
+  <InklyToolbar :editor="editor" />
+</template>
 ```
 
-**HTTP** (スクリプト / CI):
+カスタムサイドバー / プロパティパネル / ツールバーを自前で組み、 内部のエンジン (scene graph / renderer / file IO) だけ Inkly に任せる。 詳細は [SDK ドキュメント](https://inkly.dev/programmable/sdk/) を参照。
 
-```sh
-inkly-mcp-http   # http://localhost:3100/mcp
-```
-
-**ファイルアクセス** `INKLY_MCP_ROOT` を設定すると、 ファイル操作 (`open_file` / `new_document` / export の `path` 引数) を特定ディレクトリ配下に制限できる。 未設定時はカレントディレクトリ。
-
-### AI エージェント向け skill
-
-AI コーディングエージェントに Inkly の使い方を教える。 デザインの inspect / アセット export / トークン解析 / `.fig` 編集を任せられる。
-
-```sh
-npx skills add inkly/skills@inkly
-```
-
-Claude Code / Cursor / Windsurf / Codex など、 [skills](https://skills.sh) 対応エージェントすべてで動く。
-
-ドキュメント参照ができるエージェント向けには、 docs サイトが [llms.txt](https://inkly.dev/llms.txt) / [llms-full.txt](https://inkly.dev/llms-full.txt) / VitePress から生成したページ別 Markdown を配信している。
-
-## コラボレーション
-
-リンクを共有してリアルタイムで共同編集できる。 サーバ不要 / アカウント不要、 ピア同士は WebRTC で直接つながる。
-
-1. 右上パネルの共有ボタンを押す
-2. 生成されたリンク (`app.inkly.dev/share/<room-id>`) を共有する
-3. 共同編集者にはあなたのカーソル / 選択 / 編集がリアルタイムで見える
-4. ピアのアバターを押すと、 そのピアのビューポートを追従できる
-
-## なぜ Inkly か
-
-Figma は閉鎖的なプラットフォームで、 プログラマブルアクセスを能動的に制限している。 公式 MCP サーバは read-only。 [figma-use](https://github.com/dannote/figma-use) は CDP 経由で完全 read/write 自動化を実現したが、 [Figma 126 が CDP を封じた](https://forum.figma.com/report-a-problem-6/remote-debugging-port-not-working-in-figma-desktop-126-1-2-50858)。 デザインファイルは独自バイナリで、 公式ソフトでしか完全には読めない。 ワークフローはバージョンアップで壊れる。
-
-Inkly はその代替を目指す。 オープンソース (MIT)、 `.fig` をネイティブに読み、 すべての操作はスクリプタブル、 データは手元から離れない。
-
-製品の方向性と現在の Figma 互換性ギャップは [ロードマップ](https://inkly.dev/development/roadmap) を参照。
+---
 
 ## コントリビュート
 
-### セットアップ
+### 環境を作る
 
 ```sh
 bun install
+cp .env.local.example .env.local
+bun run dev:full
 ```
 
-env ファイルを 2 つから選んで作成 (どちらか or 両方)。
+env ファイルは 2 種から選ぶ (両方持っていてよい)。
 
 | file | 用途 |
 |---|---|
 | `.env.local` | 完全ローカル開発 (SQLite ファイル / dummy secret / オフライン OK) |
 | `.env.dev` | ローカル PC で実 DB + 実 OAuth に接続 (Turso / Google ログイン本物) |
 
-```sh
-cp .env.local.example .env.local   # 完全ローカル用
-cp .env.dev.example   .env.dev     # 実 DB / OAuth 用 (Turso + GCP の値を埋める)
-```
+`scripts/dev.sh` は `.env.dev` を優先し、 無ければ `.env.local` を読む。
 
-起動。
+### 個別起動
 
 ```sh
-bun run dev:full
+bun run dev        # Vite のみ        (localhost:1420)
+bun run dev:api    # API server のみ  (localhost:3001)
+bun run tauri dev  # デスクトップ      (Rust 必要)
 ```
 
-`scripts/dev.sh` は **`.env.dev` を優先**し、 無ければ `.env.local` を読む (両方ある場合は `.env.dev` が使われる)。 エディタは `http://localhost:1420/` (Landing) または `http://localhost:1420/editor` で起動する。
-
-#### 個別に起動したい場合
-
-```sh
-bun run dev        # Vite のみ (localhost:1420)
-bun run dev:api    # API server のみ (localhost:3001)
-bun run tauri dev  # デスクトップアプリ (Rust 必要)
-```
-
-API を立てずに Vite だけで動かすと、 `/dashboard` `/boards` 等の auth 必須画面で「Failed to load session」エラーになる。 エディタ (`/` または `/editor`) は API なしでも閲覧できる。
-
-### DB
-
-DB の接続先は環境変数で完全に切替できる。
-
-| 設定 | 接続先 |
-|---|---|
-| `TURSO_DATABASE_URL` に値あり | Turso (libSQL remote) |
-| `INKLY_API_DB_MODE=memory` | in-memory (e2e 用、 リセット可能) |
-| どちらも空 | ローカル SQLite ファイル (`.context/api-data/inkly.db`) |
-
-ローカル PC から Turso に接続したい場合は、 `.env.dev` (推奨) または `.env.local` の `TURSO_DATABASE_URL` / `TURSO_AUTH_TOKEN` に値を設定する。
-
-Turso のセットアップ。
-
-```sh
-# Turso CLI install (macOS)
-brew install tursodatabase/tap/turso
-
-# プロジェクト DB 作成
-turso db create pencil-editor-prod
-turso db show pencil-editor-prod --url        # → TURSO_DATABASE_URL
-turso db tokens create pencil-editor-prod     # → TURSO_AUTH_TOKEN
-
-# migration (SQL は packages/api/src/db/migrations/)
-bun run packages/api/src/db/migrate.ts
-```
-
-### Google ログイン
-
-Google ログインを使う場合は GCP 側のセットアップが必要。 値が空のままなら Google ログインボタンは「Google login is not configured」を返す。
-
-1. [GCP コンソール](https://console.cloud.google.com) でプロジェクト作成
-2. 「APIs & Services」→「Credentials」→「Create OAuth 2.0 Client ID」(type: Web application)
-3. 承認済みリダイレクト URI に `http://localhost:3001/api/auth/callback/google` を追加
-4. 取得した Client ID / Client Secret を `.env.dev` (または `.env.local`) の `INKLY_API_GOOGLE_CLIENT_ID` / `INKLY_API_GOOGLE_CLIENT_SECRET` に設定
-5. `bun run dev:full` を再起動 → ダッシュボードで「Google でログイン」が動く
-
-### 招待メール (Resend)
-
-招待メールを実際に送信したい場合は Resend 側のセットアップが必要。 値が空のままならメール送信は no-op (招待 URL は引き続き発行できる)。
-
-1. [Resend](https://resend.com) でアカウント作成
-2. API key を発行
-3. `.env.dev` (または `.env.local`) の `INKLY_API_RESEND_KEY` に値を設定
-4. `bun run dev:full` を再起動 → 招待フローでメール送信される
+API なしで Vite だけだと `/dashboard` / `/boards` の auth 必須画面で 「Failed to load session」 になる。 エディタ (`/` / `/editor`) は API なしでも開く。
 
 ### 品質ゲート
 
-| コマンド | 説明 |
+| コマンド | 内容 |
 |---|---|
 | `bun run check` | Lint + typecheck |
 | `bun run test` | E2E visual regression |
 | `bun run test:unit` | 単体テスト |
-| `bun run coverage:unit` | 単体カバレッジ (`.context/coverage/unit/lcov.info`) |
-| `bun run coverage:e2e:demo` | `dashboard.interaction.spec.ts` のデモ E2E カバレッジ (`.context/coverage/e2e/`) |
-| `bun run coverage:report` | unit + demo E2E カバレッジを実行してマージ済み summary を表示 |
+| `bun run coverage:report` | 単体 + デモ E2E カバレッジのマージ summary |
 | `bun run format` | コードフォーマット |
 
-### カバレッジ
+カバレッジ成果物は `.context/coverage/` 配下 (git ignore)。
 
-カバレッジの成果物は `.context/coverage/` 配下に書き出され、 git ignore 対象。
+### Turso / Google OAuth / Resend
 
-```sh
-bun run coverage:unit
-bun run coverage:e2e:demo
-bun run coverage:report
-```
+詳細セットアップ手順は docs を参照。 値が空のまま運用すると、 機能は **配線済みだが動かない** 状態で安全に turn off される (OAuth ボタンは「未設定」表示、 招待メールは no-op、 ローカル SQLite に fallback)。
 
-- 単体カバレッジは Bun ネイティブの LCOV reporter を使い `.context/coverage/unit/lcov.info` を出力
-- Bun のしきい値は `bunfig.toml` で 60% 行 / 60% 関数 / 60% statement の初期 baseline を設定
-- Bun 1.3.14 は LCOV に branch データを出さないため、 branch カバレッジはマージ summary で `n/a` として表示される (Bun が branch を出すまでの暫定)
-- デモ E2E カバレッジは opt-in、 `tests/e2e/interaction/dashboard.interaction.spec.ts` に限定。 Playwright の trace zip を `.context/coverage/e2e/traces/` にコピーする
-- しきい値を上げる前に、 マージ summary でカバーされていない行数が多いファイルから優先的にカバーする
+---
 
-### プロジェクト構成
+## プロジェクト構成
 
 ```
 packages/
-  core/           @inkly/core — エンジン (シーングラフ / レンダラ / レイアウト / ファイルフォーマット / ツール)
-  vue/            @inkly/vue — ヘッドレス Vue SDK
-  cli/            @inkly/cli — ヘッドレス CLI
-  mcp/            @inkly/mcp — MCP サーバ (stdio + HTTP)
+  core/           @inkly/core   エンジン (シーングラフ / レンダラ / レイアウト / ファイル IO)
+  vue/            @inkly/vue    ヘッドレス Vue SDK
+  cli/            @inkly/cli    ヘッドレス CLI
+  mcp/            @inkly/mcp    MCP サーバ (stdio + HTTP)
+  api/            Hono + better-auth + Drizzle + Turso/SQLite
   docs/           ドキュメントサイト (inkly.dev)
-src/              Vue アプリ (コンポーネント / composable / store)
+src/              Vue アプリ (LP / dashboard / boards / editor)
 desktop/          Tauri v2 (Rust + config)
-tests/            E2E (188 件) + 単体 (764 件)
+scripts/promo/    Remotion + Playwright によるプロモ動画 build
+tests/            E2E (188) + 単体 (764)
 ```
 
-### 技術スタック
+---
+
+## 技術スタック
 
 | レイヤ | 技術 |
 |---|---|
 | レンダリング | Skia (CanvasKit WASM) |
 | レイアウト | Yoga WASM (flex + grid via [fork](https://github.com/inkly/yoga/tree/grid)) |
 | UI | Vue 3 / Reka UI / Tailwind CSS 4 |
-| ファイルフォーマット | Kiwi バイナリ + Zstd + ZIP |
-| コラボレーション | Trystero (WebRTC P2P) + Yjs (CRDT) |
+| ファイル | Kiwi バイナリ + Zstd + ZIP |
+| コラボ | Trystero (WebRTC P2P) + Yjs (CRDT) |
+| 認証 | better-auth + Drizzle + Turso/SQLite |
+| API | Hono |
 | デスクトップ | Tauri v2 |
-| AI / MCP | Multi-provider (Anthropic / OpenAI / Google AI / OpenRouter) / MCP SDK / Hono |
+| AI / MCP | Anthropic / OpenAI / Google AI / OpenRouter、 MCP SDK |
+| 動画生成 | Remotion + Playwright (promo build) |
 
-### デスクトップビルド
+---
 
-[Rust](https://rustup.rs/) とプラットフォーム別の前提環境 ([Tauri v2 ガイド](https://v2.tauri.app/start/prerequisites/)) が必要。
+## ロードマップ
 
-```sh
-bun run tauri build
-```
+- [x] `.fig` ネイティブ読み書き
+- [x] AI 駆動デザイン生成 (内蔵チャット + コーディングエージェント)
+- [x] ヘッドレス CLI / MCP サーバ
+- [x] WebRTC P2P コラボレーション + 招待 URL 共有
+- [x] 本番デプロイ (pencil-editor.fly.dev)
+- [ ] Figma マルチプレイヤーセッションの直接読み込み
+- [ ] アニメーション / インタラクション編集
+- [ ] FigJam 形式の対応
+
+最新は [ロードマップページ](https://inkly.dev/development/roadmap) を参照。
+
+---
 
 ## 謝辞
 
-[ドキュメントサイト](https://inkly.dev) の作成 / 保守を担っている [@sld0Ant](https://github.com/sld0Ant) (Anton Soldatov) に感謝。
+ドキュメントサイト [inkly.dev](https://inkly.dev) の構築 / 保守を担っている [@sld0Ant](https://github.com/sld0Ant) (Anton Soldatov)、 そしてバイナリシリアライズ言語 [Kiwi](https://github.com/evanw/kiwi) を公開している [@evanw](https://github.com/evanw) (Evan Wallace、 Figma 共同創業者) に感謝。
 
 ## ライセンス
 
-MIT
+[MIT](./LICENSE)
