@@ -216,6 +216,16 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
       usePlural: true
     }),
     plugins: config.enableTestUtils ? [testUtils()] : undefined,
+    // 招待 URL 経由で email+password sign-in できるよう emailAndPassword provider を有効化。
+    // 公開 sign-up は閉じ (disableSignUp: true)、 新規 user 作成は `/api/invite/redeem` 経由のみ。
+    // これにより「招待された人だけ」 が password で入れる設計を保つ。
+    emailAndPassword: {
+      enabled: true,
+      disableSignUp: true,
+      autoSignIn: true,
+      minPasswordLength: 8,
+      maxPasswordLength: 128
+    },
     account: {
       // Cookie ベースの state 検証を skip し DB ベースの state mismatch check
       // (verifications.identifier 照合) だけで CSRF 防御する。 Fly proxy + Bun の
