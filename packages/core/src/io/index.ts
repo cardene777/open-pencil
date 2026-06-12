@@ -8,11 +8,18 @@ export {
   jpgFormat,
   webpFormat,
   svgFormat,
+  pdfFormat,
   jsxFormat
 } from './formats'
 export { exportFigFile, parseFigFile, readFigFile } from './formats/fig'
 export { parsePenFile, readPenFile } from './formats/pen'
 export { sceneNodeToJSX, selectionToJSX, type JSXFormat } from './formats/jsx'
+export {
+  renderMultiPagePDF,
+  renderNodesToPDF,
+  type PDFExportOptions,
+  type PDFMultiPageInput
+} from './formats/pdf'
 export {
   computeContentBounds,
   renderNodesToImage,

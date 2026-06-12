@@ -58,6 +58,17 @@ function resolveExportNodes(request: ExportRequest): { pageId: string; nodeIds: 
   }
 }
 
+function resolvePDFExportPages(
+  request: ExportRequest
+): { pageId: string; nodeIds: string[] }[] | null {
+  if (request.target.scope === 'document') {
+    return request.graph.getPages().map((page) => ({ pageId: page.id, nodeIds: page.childIds }))
+  }
+
+  const target = resolveExportNodes(request)
+  return target ? [target] : null
+}
+
 async function renderRaster(
   request: ExportRequest,
   options: RasterExportOptions,
@@ -271,10 +282,10 @@ export const pdfFormat: IOFormatAdapter = {
     quality: false
   },
   async exportContent(request) {
-    const target = resolveExportNodes(request)
-    if (!target) throw new Error('Nothing to export')
-    const { renderNodesToPDF } = await import('./formats/pdf')
-    const data = await renderNodesToPDF(request.graph, target.pageId, target.nodeIds)
+    const pages = resolvePDFExportPages(request)
+    if (!pages) throw new Error('Nothing to export')
+    const { renderMultiPagePDF } = await import('./formats/pdf')
+    const data = await renderMultiPagePDF(request.graph, pages)
     if (!data) throw new Error('Nothing to export')
     return {
       format: 'pdf',
