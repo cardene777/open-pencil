@@ -15,16 +15,9 @@ test.describe('dashboard view accessibility', () => {
     await cleanState(page)
   })
 
-  test('anonymous state has no critical accessibility violations', async ({ page }) => {
-    await page.goto('/dashboard')
-    await expect(page.getByTestId('dashboard-view')).toBeVisible()
-    await waitForVisualReady(page)
-
-    const results = await runA11yScan(page, {
-      disableRules: dashboardViewDisabledRules
-    })
-    expectNoCriticalViolations(results)
-  })
+  // PR #141 で /dashboard は auth 必須化された。 anonymous で /dashboard を開くと LP redirect
+  // されるため、 anonymous 向け a11y scan は意味を成さない。 LP 側の a11y は LP 自体の
+  // a11y test で別途検査する。
 
   test('populated state has no critical accessibility violations', async ({ page }) => {
     await mockGoogleLogin(page, {
