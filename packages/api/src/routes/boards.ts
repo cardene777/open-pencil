@@ -2,8 +2,8 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { resolveAnonymousId } from '../anonymousId.js'
-import { getAuthSession, type InklyAuth } from '../auth/index.js'
 import { isBoardOwner, resolveRequestActor } from '../auth/actor.js'
+import { getAuthSession, type InklyAuth } from '../auth/index.js'
 import type {
   BoardStore,
   InternalUserStore,
@@ -19,6 +19,10 @@ const createBoardSchema = z.object({
 const shareBoardSchema = z.object({
   emails: z.array(z.string().trim().email()).min(1).max(50),
   role: z.enum(INVITATION_ROLES).default('editor')
+})
+
+const updateBoardStartFrameSchema = z.object({
+  startFrameId: z.string().trim().min(1).max(256).nullable()
 })
 
 interface ValidationErrorBody {
@@ -127,6 +131,31 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
     return c.json({ deleted: true })
   })
 
+  app.patch('/boards/:id/start-frame', async (c) => {
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!isBoardOwner(board, actor)) {
+      return forbiddenResponse('Only the creator can update the board start frame')
+    }
+
+    const body = await c.req.json().catch(() => null)
+    const parsed = updateBoardStartFrameSchema.safeParse(body)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]?.message ?? 'Invalid request body'
+      return c.json(validationError(issue), 400)
+    }
+
+    const updatedBoard = await options.boardStore.updateBoardStartFrame(
+      board.id,
+      parsed.data.startFrameId
+    )
+    if (!updatedBoard) return notFoundResponse('board_not_found', 'Board not found')
+
+    return c.json({ board: updatedBoard })
+  })
+
   app.get('/boards/:id/invitations', async (c) => {
     const board = await options.boardStore.findBoard(c.req.param('id'))
     if (!board) return notFoundResponse('board_not_found', 'Board not found')
@@ -181,7 +210,7 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
     if (!board) return notFoundResponse('board_not_found', 'Board not found')
 
     const session = await getAuthSession(options.auth, c.req.raw)
-    if (!session?.user?.id) {
+    if (!session) {
       return Response.json(
         {
           error: {
@@ -206,9 +235,7 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
     }
 
     // dedup + normalize
-    const normalized = Array.from(
-      new Set(parsed.data.emails.map((e) => e.trim().toLowerCase()))
-    )
+    const normalized = Array.from(new Set(parsed.data.emails.map((e) => e.trim().toLowerCase())))
 
     const added: { email: string; userId: string }[] = []
     const pending: { email: string }[] = []

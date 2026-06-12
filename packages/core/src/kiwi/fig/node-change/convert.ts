@@ -18,8 +18,10 @@ import {
   extractPluginData,
   extractPluginRelaunchData,
   getInklyPluginValue,
+  parseInklyJsonPluginValue,
   LAYOUT_DIRECTION_PLUGIN_KEY,
   NODE_TYPE_PLUGIN_KEY,
+  PROTOTYPE_REACTIONS_PLUGIN_KEY,
   TEXT_DIRECTION_PLUGIN_KEY
 } from './plugin-data'
 import { resolveGeometryPaths, resolveVectorNetwork } from './vector-geometry'
@@ -46,7 +48,8 @@ import type {
   ComponentPropertyDefinition,
   ComponentPropertyType,
   SymbolLink,
-  VariantPropSpec
+  VariantPropSpec,
+  PrototypeReaction
 } from '#core/scene-graph'
 import type { GUID } from '#core/types'
 
@@ -359,9 +362,8 @@ function convertTextProps(nc: NodeChange, blobs: Uint8Array[]): TextProps {
     fontFeatures: convertFontFeatures(nc),
     textTruncation: (nc.textTruncation as string) === 'ENDING' ? 'ENDING' : 'DISABLED',
     textDirection:
-      (getInklyPluginValue(nc, TEXT_DIRECTION_PLUGIN_KEY) as
-        | SceneNode['textDirection']
-        | null) || 'AUTO',
+      (getInklyPluginValue(nc, TEXT_DIRECTION_PLUGIN_KEY) as SceneNode['textDirection'] | null) ||
+      'AUTO',
     figmaDerivedLayout: nc.derivedTextData?.layoutSize
       ? {
           width: nc.derivedTextData.layoutSize.x,
@@ -496,6 +498,70 @@ function convertVectorAndStrokeProps(nc: NodeChange, blobs: Uint8Array[]) {
   }
 }
 
+const PROTOTYPE_REACTION_TRIGGERS = new Set<PrototypeReaction['trigger']>([
+  'onClick',
+  'onHover',
+  'onMouseDown',
+  'afterDelay'
+])
+
+const PROTOTYPE_REACTION_ACTIONS = new Set<PrototypeReaction['action']>([
+  'navigate',
+  'openOverlay',
+  'closeOverlay',
+  'back',
+  'externalUrl'
+])
+
+const PROTOTYPE_REACTION_TRANSITIONS = new Set<NonNullable<PrototypeReaction['transition']>>([
+  'instant',
+  'dissolve',
+  'slideLeft',
+  'slideRight'
+])
+
+function isOptionalNumber(value: unknown): value is number | undefined {
+  return value === undefined || typeof value === 'number'
+}
+
+function isOptionalString(value: unknown): value is string | undefined {
+  return value === undefined || typeof value === 'string'
+}
+
+function isOptionalPrototypeTransition(
+  value: unknown
+): value is PrototypeReaction['transition'] | undefined {
+  return (
+    value === undefined ||
+    PROTOTYPE_REACTION_TRANSITIONS.has(value as NonNullable<PrototypeReaction['transition']>)
+  )
+}
+
+function isPrototypeReaction(value: unknown): value is NonNullable<SceneNode['reactions']>[number] {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const reaction = value as Partial<PrototypeReaction>
+  return (
+    PROTOTYPE_REACTION_TRIGGERS.has(reaction.trigger as PrototypeReaction['trigger']) &&
+    PROTOTYPE_REACTION_ACTIONS.has(reaction.action as PrototypeReaction['action']) &&
+    isOptionalNumber(reaction.delayMs) &&
+    isOptionalString(reaction.targetFrameId) &&
+    isOptionalString(reaction.externalUrl) &&
+    isOptionalPrototypeTransition(reaction.transition) &&
+    isOptionalNumber(reaction.transitionDurationMs)
+  )
+}
+
+function isPrototypeReactionList(value: unknown): value is NonNullable<SceneNode['reactions']> {
+  return Array.isArray(value) && value.every((entry) => isPrototypeReaction(entry))
+}
+
+function extractPrototypeReactions(nc: NodeChange): SceneNode['reactions'] {
+  return (
+    parseInklyJsonPluginValue(nc, PROTOTYPE_REACTIONS_PLUGIN_KEY, isPrototypeReactionList) ??
+    undefined
+  )
+}
+
 export function nodeChangeToProps(
   nc: NodeChange,
   blobs: Uint8Array[]
@@ -552,6 +618,7 @@ export function nodeChangeToProps(
     componentId: extractSymbolId(nc),
     componentPropertyDefinitions: extractComponentPropertyDefs(nc),
     componentPropertyValues: extractComponentPropertyValues(nc),
+    reactions: extractPrototypeReactions(nc),
     ...extractComponentMetadata(nc)
   }
 }

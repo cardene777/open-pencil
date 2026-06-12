@@ -1,6 +1,7 @@
 export const BOARD_API_ENDPOINTS = {
   boards: '/api/boards',
   board: (boardId: string) => `/api/boards/${boardId}`,
+  startFrame: (boardId: string) => `/api/boards/${boardId}/start-frame`,
   share: (boardId: string) => `/api/boards/${boardId}/share`,
   invitations: (boardId: string) => `/api/boards/${boardId}/invitations`,
   invitation: (boardId: string, invitationId: string) =>

@@ -16,10 +16,6 @@ export interface CreateBoardStoreOptions {
   now?: () => number
 }
 
-function cloneBoard(record: BoardRecord): BoardRecord {
-  return structuredClone(record)
-}
-
 function mapCollaborator(row: typeof collaborators.$inferSelect): BoardCollaboratorRecord {
   return {
     anonymousId: row.anonymousId,
@@ -44,6 +40,7 @@ function createRecordMapper(database: ApiDatabase) {
       name: row.name,
       creatorAnonymousId: row.creatorAnonymousId,
       creatorUserId: row.creatorUserId,
+      startFrameId: row.startFrameId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       collaborators: collaboratorRows.map(mapCollaborator)
@@ -52,12 +49,23 @@ function createRecordMapper(database: ApiDatabase) {
 }
 
 async function createInMemoryDatabase() {
-  return await createMigratedApiDatabase({ mode: 'memory' })
+  return createMigratedApiDatabase({ mode: 'memory' })
 }
 
 async function mapBoardRows(
   database: ApiDatabase,
-  rows: Array<Pick<typeof boards.$inferSelect, 'id' | 'name' | 'creatorAnonymousId' | 'creatorUserId' | 'createdAt' | 'updatedAt'>>
+  rows: Array<
+    Pick<
+      typeof boards.$inferSelect,
+      | 'id'
+      | 'name'
+      | 'creatorAnonymousId'
+      | 'creatorUserId'
+      | 'startFrameId'
+      | 'createdAt'
+      | 'updatedAt'
+    >
+  >
 ): Promise<BoardRecord[]> {
   if (rows.length === 0) return []
 
@@ -81,11 +89,12 @@ async function mapBoardRows(
   }
 
   return rows.map((row) =>
-    cloneBoard({
+    structuredClone({
       id: row.id,
       name: row.name,
       creatorAnonymousId: row.creatorAnonymousId,
       creatorUserId: row.creatorUserId,
+      startFrameId: row.startFrameId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       collaborators: collaboratorsByBoardId.get(row.id) ?? []
@@ -107,9 +116,7 @@ function validateCreateBoardInput(input: CreateBoardInput) {
   }
 }
 
-export async function createBoardStore(
-  options: CreateBoardStoreOptions = {}
-): Promise<BoardStore> {
+export async function createBoardStore(options: CreateBoardStoreOptions = {}): Promise<BoardStore> {
   const database = options.database ?? (await createInMemoryDatabase())
   const now = options.now ?? Date.now
   const mapBoard = createRecordMapper(database)
@@ -154,7 +161,7 @@ export async function createBoardStore(
     },
     async findBoard(id: string) {
       const row = await database.db.select().from(boards).where(eq(boards.id, id)).get()
-      return row ? cloneBoard(await mapBoard(row)) : null
+      return row ? structuredClone(await mapBoard(row)) : null
     },
     async listBoardsForAnonymous(anonymousId: string) {
       const boardRows = await database.db
@@ -163,21 +170,19 @@ export async function createBoardStore(
           name: boards.name,
           creatorAnonymousId: boards.creatorAnonymousId,
           creatorUserId: boards.creatorUserId,
+          startFrameId: boards.startFrameId,
           createdAt: boards.createdAt,
           updatedAt: boards.updatedAt
         })
         .from(boards)
         .leftJoin(collaborators, eq(boards.id, collaborators.boardId))
         .where(
-          or(
-            eq(boards.creatorAnonymousId, anonymousId),
-            eq(collaborators.anonymousId, anonymousId)
-          )
+          or(eq(boards.creatorAnonymousId, anonymousId), eq(collaborators.anonymousId, anonymousId))
         )
         .orderBy(desc(boards.updatedAt))
         .all()
 
-      return await mapBoardRows(database, boardRows)
+      return mapBoardRows(database, boardRows)
     },
     async listBoardsForUser(userId: string) {
       // 1) creator として作った board (boards.creatorUserId = userId)
@@ -191,6 +196,7 @@ export async function createBoardStore(
           name: boards.name,
           creatorAnonymousId: boards.creatorAnonymousId,
           creatorUserId: boards.creatorUserId,
+          startFrameId: boards.startFrameId,
           createdAt: boards.createdAt,
           updatedAt: boards.updatedAt
         })
@@ -200,13 +206,13 @@ export async function createBoardStore(
         .orderBy(desc(boards.updatedAt))
         .all()
 
-      return await mapBoardRows(database, boardRows)
+      return mapBoardRows(database, boardRows)
     },
     async deleteBoard(id: string) {
       const record = await store.findBoard(id)
       if (!record) return null
       await database.db.delete(boards).where(eq(boards.id, id)).run()
-      return cloneBoard(record)
+      return structuredClone(record)
     },
     async addCollaborator(boardId: string, input: AddBoardCollaboratorInput) {
       const board = await store.findBoard(boardId)
@@ -234,16 +240,28 @@ export async function createBoardStore(
           })
           .run()
 
-        await tx
-          .update(boards)
-          .set({ updatedAt })
-          .where(eq(boards.id, boardId))
-          .run()
+        await tx.update(boards).set({ updatedAt }).where(eq(boards.id, boardId)).run()
       })
 
       const record = await store.findBoard(boardId)
-      return record ? cloneBoard(record) : null
+      return record ? structuredClone(record) : null
     },
+    async updateBoardStartFrame(id: string, startFrameId: string | null) {
+      const board = await store.findBoard(id)
+      if (!board) return null
+
+      await database.db
+        .update(boards)
+        .set({
+          startFrameId,
+          updatedAt: now()
+        })
+        .where(eq(boards.id, id))
+        .run()
+
+      const record = await store.findBoard(id)
+      return record ? structuredClone(record) : null
+    }
   }
 
   return store

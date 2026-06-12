@@ -70,6 +70,7 @@ export interface BoardRecord {
   name: string
   creatorAnonymousId: string
   creatorUserId: string | null
+  startFrameId: string | null
   createdAt: number
   updatedAt: number
   collaborators: BoardCollaboratorRecord[]
@@ -93,6 +94,10 @@ export interface AddBoardCollaboratorInput {
   invitationId: string | null
 }
 
+export interface UpdateBoardStartFrameInput {
+  startFrameId: string | null
+}
+
 export interface BoardStore {
   createBoard(input: CreateBoardInput): Promise<BoardRecord>
   findBoard(id: string): Promise<BoardRecord | null>
@@ -100,6 +105,7 @@ export interface BoardStore {
   listBoardsForUser(userId: string): Promise<BoardRecord[]>
   deleteBoard(id: string): Promise<BoardRecord | null>
   addCollaborator(boardId: string, input: AddBoardCollaboratorInput): Promise<BoardRecord | null>
+  updateBoardStartFrame(id: string, startFrameId: string | null): Promise<BoardRecord | null>
 }
 
 export interface UserRecord {

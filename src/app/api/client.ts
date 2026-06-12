@@ -18,6 +18,7 @@ export interface Board {
   name: string
   creatorAnonymousId: string
   creatorUserId: string | null
+  startFrameId: string | null
   createdAt: number
   updatedAt: number
   collaborators: BoardCollaborator[]
@@ -281,6 +282,14 @@ export function createBoard(input: { name: string } | string) {
     method: 'POST',
     body: JSON.stringify(payload)
   })
+}
+
+export async function updateBoardStartFrame(boardId: string, startFrameId: string | null) {
+  const response = await apiRequest<{ board: Board }>(BOARD_API_ENDPOINTS.startFrame(boardId), {
+    method: 'PATCH',
+    body: JSON.stringify({ startFrameId })
+  })
+  return response.board
 }
 
 export function deleteBoard(boardId: string) {
