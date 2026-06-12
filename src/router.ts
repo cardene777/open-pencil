@@ -68,9 +68,12 @@ const router = createRouter({
     { path: '/board/:id', component: () => import('./views/EditorView.vue') },
     { path: '/board/:id/settings', component: () => import('./views/BoardSettingsView.vue') },
     { path: '/invite/:token', component: () => import('./views/InviteRedirectView.vue') },
+    { path: '/login/guest', component: () => import('./views/GuestLoginView.vue') },
     { path: '/demo', component: () => import('./views/EditorView.vue'), meta: { demo: true } },
     { path: '/share/:roomId', component: () => import('./views/EditorView.vue') },
-    { path: '/permission-denied', component: () => import('./views/PermissionDeniedView.vue') }
+    { path: '/permission-denied', component: () => import('./views/PermissionDeniedView.vue') },
+    { path: '/docs', component: () => import('./views/DocsView.vue') },
+    { path: '/docs/:section', component: () => import('./views/DocsView.vue') }
   ]
 })
 

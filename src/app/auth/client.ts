@@ -102,6 +102,62 @@ export async function loginWithGoogle(callbackURL = currentCallbackURL()) {
   }
 }
 
+export interface EmailSignInInput {
+  email: string
+  password: string
+  callbackURL?: string
+}
+
+export interface EmailSignUpInput {
+  email: string
+  password: string
+  name: string
+  callbackURL?: string
+}
+
+export async function signInWithEmail(input: EmailSignInInput) {
+  const { response, data } = await requestJson<AuthSession>(
+    `${AUTH_API_BASE}/sign-in/email`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        email: input.email.trim(),
+        password: input.password,
+        callbackURL: input.callbackURL ?? currentCallbackURL()
+      })
+    }
+  )
+
+  if (!response.ok) {
+    const message = getErrorMessage(data as ApiErrorBody | null, 'メールログインに失敗しました')
+    throw new Error(message)
+  }
+
+  return data as AuthSession
+}
+
+export async function signUpWithEmail(input: EmailSignUpInput) {
+  const { response, data } = await requestJson<AuthSession>(
+    `${AUTH_API_BASE}/sign-up/email`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        email: input.email.trim(),
+        password: input.password,
+        name: input.name.trim(),
+        callbackURL: input.callbackURL ?? currentCallbackURL()
+      })
+    }
+  )
+
+  if (!response.ok) {
+    const message = getErrorMessage(data as ApiErrorBody | null, '新規登録に失敗しました')
+    throw new Error(message)
+  }
+
+  return data as AuthSession
+}
+
 export function logout() {
   return apiRequest<{ success: boolean }>(`${AUTH_API_BASE}/sign-out`, {
     method: 'POST'
