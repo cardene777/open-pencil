@@ -186,8 +186,13 @@ export async function createBoardStore(
       return await mapBoardRows(database, boardRows)
     },
     async listBoardsForUser(userId: string) {
+      // 1) creator として作った board (boards.creatorUserId = userId)
+      // 2) collaborator として userId が紐付いている board (collaborators.userId = userId)
+      // の和集合を listing する。 これで招待 redeem で collaborator 化された
+      // logged-in user の board も /boards 一覧に出る。
+      // listBoardsForAnonymous と同じ selectDistinct + LEFT JOIN 形式で統一。
       const boardRows = await database.db
-        .select({
+        .selectDistinct({
           id: boards.id,
           name: boards.name,
           creatorAnonymousId: boards.creatorAnonymousId,
@@ -197,7 +202,8 @@ export async function createBoardStore(
           updatedAt: boards.updatedAt
         })
         .from(boards)
-        .where(eq(boards.creatorUserId, userId))
+        .leftJoin(collaborators, eq(boards.id, collaborators.boardId))
+        .where(or(eq(boards.creatorUserId, userId), eq(collaborators.userId, userId)))
         .orderBy(desc(boards.updatedAt))
         .all()
 
