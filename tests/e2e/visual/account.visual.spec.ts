@@ -9,11 +9,8 @@ test.describe('account visual regression', () => {
     await cleanState(page)
   })
 
-  test('logged out state', async ({ page }) => {
-    await page.goto('/account')
-    await expect(page.getByTestId('account-login-button')).toBeVisible()
-    await expectPageScreenshot(page, 'account-logged-out.png')
-  })
+  // PR #141 で /account は auth 必須化された。 anonymous で /account を開くと LP
+  // redirect されるため visual snapshot 対象から外す。 LP 自体の visual は LP 側で別途。
 
   test('logged in state', async ({ page }) => {
     await mockGoogleLogin(page, {

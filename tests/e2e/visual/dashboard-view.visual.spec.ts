@@ -9,11 +9,8 @@ test.describe('dashboard view visual regression', () => {
     await cleanState(page)
   })
 
-  test('anonymous state', async ({ page }) => {
-    await page.goto('/dashboard')
-    await expect(page.getByTestId('dashboard-view')).toBeVisible()
-    await expectPageScreenshot(page, 'dashboard-view-anonymous.png')
-  })
+  // PR #141 で /dashboard は auth 必須化された。 anonymous で /dashboard を開くと LP
+  // redirect されるため visual snapshot 対象から外す。
 
   test('empty state', async ({ page }) => {
     await mockGoogleLogin(page, {
