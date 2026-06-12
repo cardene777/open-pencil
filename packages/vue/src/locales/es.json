@@ -458,7 +458,8 @@
       "keyboardMoveAnnounce": "{section} movido a la posición {position} de {total}.",
       "keyboardDropAnnounce": "{section} soltado.",
       "keyboardCancelAnnounce": "Reordenación por teclado de {section} cancelada."
-    }
+    },
+    "invitedBadge": "Invitado"
   },
   "account": {
     "headTitle": "Cuenta",
@@ -644,7 +645,18 @@
     "toastLinkCopied": "Enlace copiado al portapapeles",
     "share": "Share",
     "expiresIn7Days": "Link expires in 7 days.",
-    "shareTitle": "Invitation to {boardName}"
+    "shareTitle": "Invitation to {boardName}",
+    "internalEmailsLabel": "Miembros internos (jfet.co.jp)",
+    "internalEmailsPlaceholder": "alice@jfet.co.jp, bob@jfet.co.jp",
+    "internalEmailsHint": "Separa las direcciones con comas, espacios o saltos de línea.",
+    "internalChipRemove": "Quitar",
+    "externalEmailLabel": "Invitación externa (una sola)",
+    "shareSubmit": "Compartir",
+    "shareSubmitPending": "Compartiendo…",
+    "toastShareAdded": "{count} añadidos directamente al tablero.",
+    "toastSharePending": "{count} pendientes: se unirán tras iniciar sesión por primera vez.",
+    "toastShareRejected": "{count} direcciones externas: usa el enlace de invitación en su lugar.",
+    "toastShareFail": "No se pudo compartir el tablero"
   },
   "common": {
     "home": "Inicio",

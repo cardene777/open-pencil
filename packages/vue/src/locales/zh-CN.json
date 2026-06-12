@@ -458,7 +458,8 @@
       "keyboardMoveAnnounce": "已将 {section} 移动到 {total} 个中的第 {position} 位。",
       "keyboardDropAnnounce": "已放下 {section}。",
       "keyboardCancelAnnounce": "已取消 {section} 的键盘重新排序。"
-    }
+    },
+    "invitedBadge": "已邀请"
   },
   "account": {
     "headTitle": "账户",
@@ -644,7 +645,18 @@
     "toastLinkCopied": "已将链接复制到剪贴板",
     "share": "分享",
     "expiresIn7Days": "链接有效期为 7 天。",
-    "shareTitle": "邀请加入 {boardName}"
+    "shareTitle": "邀请加入 {boardName}",
+    "internalEmailsLabel": "内部成员 (jfet.co.jp)",
+    "internalEmailsPlaceholder": "alice@jfet.co.jp, bob@jfet.co.jp",
+    "internalEmailsHint": "使用逗号、空格或换行分隔地址。",
+    "internalChipRemove": "移除",
+    "externalEmailLabel": "外部邀请（单个）",
+    "shareSubmit": "共享",
+    "shareSubmitPending": "共享中…",
+    "toastShareAdded": "{count} 人已直接加入看板。",
+    "toastSharePending": "{count} 人待处理，将在首次登录后加入。",
+    "toastShareRejected": "{count} 个外部地址，请改用邀请链接。",
+    "toastShareFail": "无法共享看板"
   },
   "common": {
     "home": "首页",

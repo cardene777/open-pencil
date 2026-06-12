@@ -458,7 +458,8 @@
       "keyboardMoveAnnounce": "{section} を {total} 件中 {position} 番目に移動しました。",
       "keyboardDropAnnounce": "{section} をドロップしました。",
       "keyboardCancelAnnounce": "{section} のキーボード並び替えをキャンセルしました。"
-    }
+    },
+    "invitedBadge": "招待済み"
   },
   "account": {
     "headTitle": "アカウント",
@@ -644,7 +645,18 @@
     "toastInvitationCreated": "招待リンクを発行しました",
     "toastCreateFail": "招待の発行に失敗しました",
     "toastLinkCopied": "リンクをクリップボードにコピーしました",
-    "shareTitle": "{boardName} への招待"
+    "shareTitle": "{boardName} への招待",
+    "internalEmailsLabel": "社内メンバー (jfet.co.jp)",
+    "internalEmailsPlaceholder": "alice@jfet.co.jp, bob@jfet.co.jp",
+    "internalEmailsHint": "カンマ、スペース、改行で区切って入力します。",
+    "internalChipRemove": "削除",
+    "externalEmailLabel": "社外向け招待 (1 件)",
+    "shareSubmit": "共有",
+    "shareSubmitPending": "共有中…",
+    "toastShareAdded": "{count} 件をボードに直接追加しました。",
+    "toastSharePending": "{count} 件は保留中です。初回サインイン後に参加できます。",
+    "toastShareRejected": "{count} 件は外部アドレスです。代わりに招待リンクを使ってください。",
+    "toastShareFail": "ボードを共有できませんでした"
   },
   "common": {
     "home": "トップ",

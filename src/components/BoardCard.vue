@@ -10,10 +10,11 @@ import type { Board } from '@/app/api/client'
 
 const { boardCard: boardCardT } = useI18n()
 
-const { board, previewUrl = null, pinned = false } = defineProps<{
+const { board, previewUrl = null, pinned = false, canDelete = true } = defineProps<{
   board: Board
   previewUrl?: string | null
   pinned?: boolean
+  canDelete?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -140,6 +141,7 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
         </button>
       </div>
       <button
+        v-if="canDelete"
         type="button"
         data-test-id="board-delete"
         class="cursor-pointer rounded-md px-2 py-1 text-xs text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200"

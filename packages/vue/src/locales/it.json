@@ -458,7 +458,8 @@
       "keyboardMoveAnnounce": "{section} spostato in posizione {position} di {total}.",
       "keyboardDropAnnounce": "{section} rilasciato.",
       "keyboardCancelAnnounce": "Riordino da tastiera di {section} annullato."
-    }
+    },
+    "invitedBadge": "Invitato"
   },
   "account": {
     "headTitle": "Account",
@@ -644,7 +645,18 @@
     "toastLinkCopied": "Link copiato negli appunti",
     "share": "Share",
     "expiresIn7Days": "Link expires in 7 days.",
-    "shareTitle": "Invitation to {boardName}"
+    "shareTitle": "Invitation to {boardName}",
+    "internalEmailsLabel": "Membri interni (jfet.co.jp)",
+    "internalEmailsPlaceholder": "alice@jfet.co.jp, bob@jfet.co.jp",
+    "internalEmailsHint": "Separa gli indirizzi con virgole, spazi o nuove righe.",
+    "internalChipRemove": "Rimuovi",
+    "externalEmailLabel": "Invito esterno (singolo)",
+    "shareSubmit": "Condividi",
+    "shareSubmitPending": "Condivisione…",
+    "toastShareAdded": "{count} aggiunti direttamente alla bacheca.",
+    "toastSharePending": "{count} in attesa: entreranno dopo il primo accesso.",
+    "toastShareRejected": "{count} indirizzi esterni: usa invece il link di invito.",
+    "toastShareFail": "Impossibile condividere la bacheca"
   },
   "common": {
     "home": "Home",

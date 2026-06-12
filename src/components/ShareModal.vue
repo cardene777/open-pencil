@@ -14,7 +14,8 @@ import { useI18n } from '@inkly/vue'
 
 import AppInput from '@/components/ui/AppInput.vue'
 import { isValidEmail } from '@/app/auth/email'
-import { inviteUser, type InvitationRole } from '@/app/api/client'
+import { partitionShareEmails, parseShareEmailChips } from '@/app/boards/share'
+import { inviteUser, shareBoard, type InvitationRole } from '@/app/api/client'
 import { toast } from '@/app/shell/ui'
 import { useDialogUI } from '@/components/ui/dialog'
 
@@ -30,7 +31,8 @@ const { boardId, boardName = '' } = defineProps<{
 
 const { shareModal: shareModalT } = useI18n()
 
-const email = ref('')
+const internalEmailInput = ref('')
+const externalEmail = ref('')
 const role = ref<InvitationRole>('editor')
 const loading = ref(false)
 const invitationUrl = ref('')
@@ -45,19 +47,35 @@ const dialogDescriptionText = computed(() =>
   shareModalT.value.dialogDescription({ boardName: resolvedBoardName.value })
 )
 
-const normalizedEmail = computed(() => email.value.trim())
-const emailError = computed(() => {
-  if (normalizedEmail.value.length === 0) return shareModalT.value.emailRequired
-  if (!isValidEmail(normalizedEmail.value)) return shareModalT.value.emailInvalid
+const internalChips = computed(() => parseShareEmailChips(internalEmailInput.value))
+const invalidInternalEmails = computed(() =>
+  internalChips.value.filter((chip) => !chip.valid).map((chip) => chip.value)
+)
+const normalizedExternalEmail = computed(() => externalEmail.value.trim().toLowerCase())
+const externalEmailError = computed(() => {
+  if (normalizedExternalEmail.value.length === 0) return ''
+  if (!isValidEmail(normalizedExternalEmail.value)) return shareModalT.value.emailInvalid
   return ''
 })
-const canSubmit = computed(
-  () => !!boardId && emailError.value.length === 0 && !loading.value
+const shareTargets = computed(() =>
+  partitionShareEmails({
+    internalEmails: internalChips.value.map((chip) => chip.value),
+    externalEmail: normalizedExternalEmail.value
+  })
 )
+const hasShareInput = computed(
+  () => internalChips.value.length > 0 || normalizedExternalEmail.value.length > 0
+)
+const canSubmit = computed(() => {
+  if (!boardId || loading.value || !hasShareInput.value) return false
+  if (invalidInternalEmails.value.length > 0) return false
+  return externalEmailError.value.length === 0
+})
 
 watch(open, (value) => {
   if (value) return
-  email.value = ''
+  internalEmailInput.value = ''
+  externalEmail.value = ''
   role.value = 'editor'
   invitationUrl.value = ''
   errorMessage.value = ''
@@ -68,20 +86,51 @@ async function onSubmit() {
   if (!boardId || !canSubmit.value) return
   loading.value = true
   errorMessage.value = ''
+  invitationUrl.value = ''
+
+  let hasSuccess = false
+  let firstError = ''
 
   try {
-    const invitation = await inviteUser({
-      email: normalizedEmail.value,
-      boardId,
-      role: role.value
-    })
-    invitationUrl.value = new URL(invitation.url, window.location.origin).toString()
-    emit('created')
-    toast.info(shareModalT.value.toastInvitationCreated)
-  } catch (error) {
-    const message = error instanceof Error ? error.message : shareModalT.value.toastCreateFail
-    errorMessage.value = message
-    toast.error(message)
+    if (shareTargets.value.internal.length > 0) {
+      try {
+        const response = await shareBoard(boardId, {
+          emails: shareTargets.value.internal,
+          role: role.value
+        })
+        hasSuccess = true
+        reportShareResponse(response)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : shareModalT.value.toastShareFail
+        firstError ||= message
+        toast.error(message)
+      }
+    }
+
+    if (shareTargets.value.external.length > 0) {
+      try {
+        const invitation = await inviteUser({
+          email: shareTargets.value.external[0] ?? '',
+          boardId,
+          role: role.value
+        })
+        invitationUrl.value = new URL(invitation.url, window.location.origin).toString()
+        hasSuccess = true
+        toast.info(shareModalT.value.toastInvitationCreated)
+      } catch (error) {
+        const message = error instanceof Error ? error.message : shareModalT.value.toastCreateFail
+        firstError ||= message
+        toast.error(message)
+      }
+    }
+
+    if (hasSuccess) {
+      emit('created')
+      internalEmailInput.value = ''
+      externalEmail.value = ''
+    }
+
+    errorMessage.value = hasSuccess ? '' : firstError
   } finally {
     loading.value = false
   }
@@ -112,6 +161,25 @@ async function shareInvitationUrl() {
     }
   }
 }
+
+function removeInternalChip(index: number) {
+  internalEmailInput.value = internalChips.value
+    .filter((_, chipIndex) => chipIndex !== index)
+    .map((chip) => chip.value)
+    .join('\n')
+}
+
+function reportShareResponse(response: Awaited<ReturnType<typeof shareBoard>>) {
+  if (response.added.length > 0) {
+    toast.info(shareModalT.value.toastShareAdded({ count: response.added.length }))
+  }
+  if (response.pending.length > 0) {
+    toast.info(shareModalT.value.toastSharePending({ count: response.pending.length }))
+  }
+  if (response.rejected.length > 0) {
+    toast.warning(shareModalT.value.toastShareRejected({ count: response.rejected.length }))
+  }
+}
 </script>
 
 <template>
@@ -130,22 +198,74 @@ async function shareInvitationUrl() {
           </div>
 
           <label class="block space-y-1.5">
-            <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">{{ shareModalT.emailLabel }}</span>
-              <AppInput
-                v-model="email"
-                test-id="share-email-input"
-                type="email"
-                :placeholder="shareModalT.emailPlaceholder"
-                :disabled="loading || !boardId"
-              />
-            </label>
+            <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
+              {{ shareModalT.internalEmailsLabel }}
+            </span>
+            <textarea
+              v-model="internalEmailInput"
+              data-test-id="share-internal-emails-input"
+              rows="3"
+              :placeholder="shareModalT.internalEmailsPlaceholder"
+              :disabled="loading || !boardId"
+              class="min-h-24 w-full rounded border border-border bg-input px-3 py-2 text-sm text-surface outline-none transition-colors placeholder:text-muted focus:border-accent disabled:cursor-not-allowed disabled:opacity-60"
+            />
+            <p class="text-xs text-muted">{{ shareModalT.internalEmailsHint }}</p>
+          </label>
 
           <div
-            v-if="email.length > 0 && emailError"
+            v-if="internalChips.length > 0"
+            class="flex flex-wrap gap-2"
+          >
+            <div
+              v-for="(chip, index) in internalChips"
+              :key="chip.value"
+              :data-test-id="`share-internal-chip-${index}`"
+              :class="[
+                'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs',
+                chip.valid
+                  ? 'border-white/10 bg-canvas/70 text-surface'
+                  : 'border-red-500/30 bg-red-500/10 text-red-100'
+              ]"
+            >
+              <span>{{ chip.value }}</span>
+              <button
+                type="button"
+                class="cursor-pointer rounded-full text-[10px] text-muted transition-colors hover:text-surface"
+                :aria-label="`${shareModalT.internalChipRemove} ${chip.value}`"
+                :disabled="loading"
+                @click="removeInternalChip(index)"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+
+          <div
+            v-if="invalidInternalEmails.length > 0"
+            class="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-100"
+          >
+            {{ shareModalT.emailInvalid }}
+          </div>
+
+          <label data-test-id="share-external-email-input" class="block space-y-1.5">
+            <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
+              {{ shareModalT.externalEmailLabel }}
+            </span>
+            <AppInput
+              v-model="externalEmail"
+              test-id="share-email-input"
+              type="email"
+              :placeholder="shareModalT.emailPlaceholder"
+              :disabled="loading || !boardId"
+            />
+          </label>
+
+          <div
+            v-if="externalEmail.length > 0 && externalEmailError"
             data-test-id="share-email-error"
             class="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-100"
           >
-            {{ emailError }}
+            {{ externalEmailError }}
           </div>
 
           <label class="block space-y-1.5">
@@ -177,7 +297,9 @@ async function shareInvitationUrl() {
               :disabled="!canSubmit"
               @click="onSubmit"
             >
-              {{ loading ? shareModalT.submitPending : shareModalT.submit }}
+              <span data-test-id="share-internal-submit">
+                {{ loading ? shareModalT.shareSubmitPending : shareModalT.shareSubmit }}
+              </span>
             </button>
           </div>
 

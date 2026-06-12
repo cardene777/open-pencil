@@ -458,7 +458,8 @@
       "keyboardMoveAnnounce": "{section} перемещён на позицию {position} из {total}.",
       "keyboardDropAnnounce": "{section} отпущен.",
       "keyboardCancelAnnounce": "Клавиатурное изменение порядка {section} отменено."
-    }
+    },
+    "invitedBadge": "Приглашён"
   },
   "account": {
     "headTitle": "Учётная запись",
@@ -644,7 +645,18 @@
     "toastLinkCopied": "Ссылка скопирована в буфер обмена",
     "share": "Поделиться",
     "expiresIn7Days": "Срок действия ссылки — 7 дней.",
-    "shareTitle": "Приглашение в {boardName}"
+    "shareTitle": "Приглашение в {boardName}",
+    "internalEmailsLabel": "Внутренние участники (jfet.co.jp)",
+    "internalEmailsPlaceholder": "alice@jfet.co.jp, bob@jfet.co.jp",
+    "internalEmailsHint": "Разделяйте адреса запятыми, пробелами или переводами строки.",
+    "internalChipRemove": "Удалить",
+    "externalEmailLabel": "Внешнее приглашение (одно)",
+    "shareSubmit": "Поделиться",
+    "shareSubmitPending": "Отправка…",
+    "toastShareAdded": "{count} добавлено на доску напрямую.",
+    "toastSharePending": "{count} в ожидании — они присоединятся после первого входа.",
+    "toastShareRejected": "{count} внешних адресов — вместо этого используйте ссылку-приглашение.",
+    "toastShareFail": "Не удалось открыть доступ к доске"
   },
   "common": {
     "home": "Главная",

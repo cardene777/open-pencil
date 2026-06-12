@@ -493,6 +493,7 @@ export const dashboardMessages = i18n('dashboard', {
     loading: 'Loading…',
     empty: 'No boards yet. Create your first board above.'
   },
+  invitedBadge: 'Invited',
   activityFeed: {
     heading: 'Activity',
     subtitle: 'Recent notifications and mentions',
@@ -690,7 +691,7 @@ export const safariBannerMessages = i18n('safariBanner', {
 
 export const shareModalMessages = i18n('shareModal', {
   dialogTitle: 'Share',
-  dialogDescription: params('Issue an invitation link to share {boardName}.'),
+  dialogDescription: params('Add internal members to {boardName} or send an invitation link.'),
   boardNameFallback: 'Board',
   boardMissingNotice: 'Create a board on /boards first, then re-open to issue invitation links.',
   emailLabel: 'Email',
@@ -711,7 +712,18 @@ export const shareModalMessages = i18n('shareModal', {
   toastInvitationCreated: 'Invitation link created',
   toastCreateFail: 'Failed to create invitation',
   toastLinkCopied: 'Link copied to clipboard',
-  shareTitle: params('Invitation to {boardName}')
+  shareTitle: params('Invitation to {boardName}'),
+  internalEmailsLabel: 'Internal members (jfet.co.jp)',
+  internalEmailsPlaceholder: 'alice@jfet.co.jp, bob@jfet.co.jp',
+  internalEmailsHint: 'Separate addresses with commas, spaces, or newlines.',
+  internalChipRemove: 'Remove',
+  externalEmailLabel: 'External invitation (single)',
+  shareSubmit: 'Share',
+  shareSubmitPending: 'Sharing…',
+  toastShareAdded: params('{count} added directly to the board.'),
+  toastSharePending: params('{count} pending — they will join after first sign-in.'),
+  toastShareRejected: params('{count} external addresses — use the invitation link instead.'),
+  toastShareFail: 'Failed to share the board'
 })
 
 export const fontSettingsMessages = i18n('fontSettings', {

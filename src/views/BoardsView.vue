@@ -16,6 +16,7 @@ import {
 import { useI18n } from '@inkly/vue'
 
 import { useAuthStore } from '@/app/auth/store'
+import { isBoardOwner } from '@/app/boards/ownership'
 import { readPinnedBoardIds, togglePinnedBoard } from '@/app/boards/pinned'
 import { readBoardPreview } from '@/app/boards/preview'
 import { initials, toast } from '@/app/shell/ui'
@@ -28,6 +29,7 @@ import {
   createBoard,
   createBoardEditorLocation,
   deleteBoard,
+  getAnonymousId,
   listBoards,
   type Board
 } from '@/app/api/client'
@@ -56,6 +58,12 @@ const authDisplayName = computed(() => auth.user?.name?.trim() || auth.user?.ema
 const authInitials = computed(() => initials(authDisplayName.value))
 const showLoginBanner = computed(() => auth.initialized && !auth.isAuthenticated)
 const showAccountLink = computed(() => auth.isAuthenticated)
+const isOwner = computed(() => (board: Board) =>
+  isBoardOwner(board, {
+    userId: auth.user?.id ?? null,
+    anonymousId: getAnonymousId()
+  })
+)
 
 const filteredBoards = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
@@ -303,6 +311,7 @@ onMounted(async () => {
           :board="board"
           :preview-url="previews[board.id] ?? null"
           :pinned="pinnedIds.has(board.id)"
+          :can-delete="isOwner(board)"
           @open="openBoard"
           @settings="openSettings"
           @delete="requestRemoveBoard"

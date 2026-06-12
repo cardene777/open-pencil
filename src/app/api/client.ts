@@ -71,6 +71,17 @@ export interface BoardInvitationsResponse {
   invitations: Invitation[]
 }
 
+export interface ShareBoardInput {
+  emails: string[]
+  role: InvitationRole
+}
+
+export interface ShareBoardResponse {
+  added: { email: string; userId: string }[]
+  pending: { email: string }[]
+  rejected: { email: string; reason: string }[]
+}
+
 export interface RedeemInvitationInput {
   token: string
   email: string
@@ -161,6 +172,13 @@ export async function apiRequest<T>(input: string, init: RequestInit = {}): Prom
 
 export function inviteUser(input: InviteUserInput) {
   return apiRequest<InviteUserResponse>(BOARD_API_ENDPOINTS.invite, {
+    method: 'POST',
+    body: JSON.stringify(input)
+  })
+}
+
+export function shareBoard(boardId: string, input: ShareBoardInput) {
+  return apiRequest<ShareBoardResponse>(BOARD_API_ENDPOINTS.share(boardId), {
     method: 'POST',
     body: JSON.stringify(input)
   })

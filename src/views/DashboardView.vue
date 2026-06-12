@@ -6,6 +6,7 @@ import { useHead } from '@unhead/vue'
 import { useI18n } from '@inkly/vue'
 
 import { useAuthStore } from '@/app/auth/store'
+import { isBoardOwner } from '@/app/boards/ownership'
 import { readPinnedBoardIds, togglePinnedBoard } from '@/app/boards/pinned'
 import { readBoardPreview } from '@/app/boards/preview'
 import { useNotificationsStore } from '@/app/notifications/store'
@@ -19,6 +20,7 @@ import { initials, toast } from '@/app/shell/ui'
 import {
   createBoard,
   createBoardEditorLocation,
+  getAnonymousId,
   listBoards,
   type Board
 } from '@/app/api/client'
@@ -44,6 +46,12 @@ const authDisplayName = computed(() => auth.user?.name?.trim() || auth.user?.ema
 const authInitials = computed(() => initials(authDisplayName.value))
 const showLoginBanner = computed(() => auth.initialized && !auth.isAuthenticated)
 const showAccountLink = computed(() => auth.isAuthenticated)
+const isOwner = computed(() => (board: Board) =>
+  isBoardOwner(board, {
+    userId: auth.user?.id ?? null,
+    anonymousId: getAnonymousId()
+  })
+)
 
 const recentBoards = computed(() => [...boards.value].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6))
 const pinnedBoards = computed(() => boards.value.filter((board) => pinnedIds.value.has(board.id)))
@@ -295,10 +303,11 @@ onMounted(async () => {
             <li
               v-for="board in recentBoards"
               :key="board.id"
-              :data-test-id="`dashboard-board-${board.id}`"
+              data-test-id="dashboard-board"
             >
               <button
                 type="button"
+                :data-test-id="`dashboard-board-${board.id}`"
                 class="flex w-full items-center gap-4 rounded-2xl border border-white/8 bg-canvas/45 p-4 text-left transition-colors hover:bg-hover"
                 @click="openBoard(board)"
               >
@@ -317,6 +326,13 @@ onMounted(async () => {
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-2">
                     <p class="truncate text-sm font-medium text-surface">{{ board.name }}</p>
+                    <span
+                      v-if="!isOwner(board)"
+                      :data-test-id="`dashboard-invited-badge-${board.id}`"
+                      class="rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-accent"
+                    >
+                      {{ dashboard.invitedBadge }}
+                    </span>
                     <button
                       type="button"
                       :data-test-id="`dashboard-pin-${board.id}`"
