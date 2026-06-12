@@ -7,7 +7,8 @@ const ANONYMOUS_ID_STORAGE_KEY = 'inkly.anonymous-id'
 export const ANONYMOUS_ID_HEADER = 'X-Inkly-Anonymous-Id'
 
 export interface BoardCollaborator {
-  anonymousId: string
+  anonymousId: string | null
+  userId: string | null
   role: InvitationRole | 'owner'
   addedAt: number
   invitationId: string | null

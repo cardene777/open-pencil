@@ -774,7 +774,8 @@
     "toastDeleteFail": "Nie udało się usunąć zespołu"
   },
   "common": {
-    "home": "Strona główna"
+    "home": "Strona główna",
+    "openBoard": "Otwórz →"
   },
   "inviteAuth": {
     "headTitle": "Zaakceptuj zaproszenie",
@@ -952,5 +953,38 @@
       "exportToastSingular": "Wyeksportowano {count} członka",
       "exportToastPlural": "Wyeksportowano {count} członków"
     }
+  },
+  "guestDashboard": {
+    "headTitle": "Twoje zaproszone tablice",
+    "guestBadge": "Gość",
+    "signOut": "Wyloguj się",
+    "accountAriaLabel": "Menu konta",
+    "welcomeTitle": "Witaj, {name}",
+    "welcomeSubtitle": "Zostałeś zaproszony do {boards} tablic przez {inviters} osób.",
+    "boardsHeading": "Twoje zaproszone tablice",
+    "boardsSubheading": "Tablice udostępnione przez członków jfet",
+    "emptyTitle": "Brak zaproszonych tablic",
+    "emptyDescription": "Gdy ktoś zaprosi cię do tablicy, pojawi się tutaj. Otwórz ponownie URL zaproszenia, jeśli trafiłeś tu przez pomyłkę.",
+    "inviterUnknown": "nieznany zapraszający",
+    "fromInviter": "od {name}",
+    "untitledBoard": "Tablica bez tytułu",
+    "relativeJustNow": "Przed chwilą",
+    "relativeMinutes": "{value} min temu",
+    "relativeHours": "{value} godz. temu",
+    "relativeDays": "{value} dni temu",
+    "roleLabel": {
+      "owner": "WŁAŚC.",
+      "editor": "EDYTOR",
+      "viewer": "CZYT.",
+      "commenter": "KOM."
+    }
+  },
+  "permissionDenied": {
+    "headTitle": "Brak dostępu",
+    "headline": "Brak dostępu",
+    "description": "Dostępne są tylko tablice udostępnione tobie. Otwórz ponownie URL zaproszenia lub zaloguj się na inne konto.",
+    "blockedPathLabel": "Zablokowana ścieżka",
+    "ctaPrimary": "Do zaproszonych tablic",
+    "ctaSignOut": "Wyloguj się"
   }
 }

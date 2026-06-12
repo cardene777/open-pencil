@@ -850,7 +850,43 @@ export const teamSettingsMessages = i18n('teamSettings', {
 })
 
 export const commonMessages = i18n('common', {
-  home: 'Home'
+  home: 'Home',
+  openBoard: 'Open →'
+})
+
+export const guestDashboardMessages = i18n('guestDashboard', {
+  headTitle: 'Your invited boards',
+  guestBadge: 'Guest',
+  signOut: 'Sign out',
+  accountAriaLabel: 'Account menu',
+  welcomeTitle: params('Welcome, {name}'),
+  welcomeSubtitle: params('You have been invited to {boards} boards by {inviters} inviters.'),
+  boardsHeading: 'Your invited boards',
+  boardsSubheading: 'Boards shared with you by jfet members',
+  emptyTitle: 'No invited boards yet',
+  emptyDescription: 'When someone invites you to a board, it will appear here. Re-open the invitation URL if you came in by mistake.',
+  inviterUnknown: 'unknown inviter',
+  fromInviter: params('from {name}'),
+  untitledBoard: 'Untitled board',
+  relativeJustNow: 'Just now',
+  relativeMinutes: params('{value} min ago'),
+  relativeHours: params('{value}h ago'),
+  relativeDays: params('{value}d ago'),
+  roleLabel: {
+    owner: 'OWNER',
+    editor: 'EDITOR',
+    viewer: 'VIEWER',
+    commenter: 'COMMENT'
+  }
+})
+
+export const permissionDeniedMessages = i18n('permissionDenied', {
+  headTitle: 'Access not granted',
+  headline: 'Access not granted',
+  description: 'Only boards shared with you are available. Open the invitation URL again, or sign in with a different account.',
+  blockedPathLabel: 'Blocked path',
+  ctaPrimary: 'Go to invited boards',
+  ctaSignOut: 'Sign out'
 })
 
 export const inviteAuthMessages = i18n('inviteAuth', {

@@ -33,11 +33,14 @@ const updatedAtLabel = computed(() =>
 )
 
 const collaboratorAvatars = computed(() =>
-  board.collaborators.slice(0, 3).map((collaborator) => ({
-    anonymousId: collaborator.anonymousId,
-    initials: collaborator.anonymousId.replace(/[^a-z0-9]+/gi, '').slice(0, 2).toUpperCase() || 'AN',
-    color: colorToCSS(colorFromAnonymousId(collaborator.anonymousId))
-  }))
+  board.collaborators.slice(0, 3).map((collaborator) => {
+    const identity = collaborator.anonymousId ?? collaborator.userId ?? ''
+    return {
+      anonymousId: identity,
+      initials: identity.replace(/[^a-z0-9]+/gi, '').slice(0, 2).toUpperCase() || 'AN',
+      color: colorToCSS(colorFromAnonymousId(identity))
+    }
+  })
 )
 
 const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.length - 3, 0))

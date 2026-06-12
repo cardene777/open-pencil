@@ -774,7 +774,8 @@
     "toastDeleteFail": "チームの削除に失敗しました"
   },
   "common": {
-    "home": "トップ"
+    "home": "トップ",
+    "openBoard": "ボードを開く →"
   },
   "inviteAuth": {
     "headTitle": "招待を受け取る",
@@ -952,5 +953,38 @@
       "exportToastSingular": "{count} 件のメンバーをエクスポートしました",
       "exportToastPlural": "{count} 件のメンバーをエクスポートしました"
     }
+  },
+  "guestDashboard": {
+    "headTitle": "招待されたボード",
+    "guestBadge": "ゲスト",
+    "signOut": "サインアウト",
+    "accountAriaLabel": "アカウントメニュー",
+    "welcomeTitle": "ようこそ、 {name} さん",
+    "welcomeSubtitle": "{inviters} 名から {boards} 件のボードに招待されています。",
+    "boardsHeading": "招待されたボード",
+    "boardsSubheading": "jfet メンバーから共有されているボード",
+    "emptyTitle": "招待されているボードがありません",
+    "emptyDescription": "招待されるとここに表示されます。 誤って到達した場合は招待 URL から再アクセスしてください。",
+    "inviterUnknown": "招待者不明",
+    "fromInviter": "{name} さんから",
+    "untitledBoard": "無題のボード",
+    "relativeJustNow": "たった今",
+    "relativeMinutes": "{value} 分前",
+    "relativeHours": "{value} 時間前",
+    "relativeDays": "{value} 日前",
+    "roleLabel": {
+      "owner": "オーナー",
+      "editor": "編集",
+      "viewer": "閲覧",
+      "commenter": "コメント"
+    }
+  },
+  "permissionDenied": {
+    "headTitle": "アクセス権限がありません",
+    "headline": "アクセス権限がありません",
+    "description": "招待されたボードのみご覧いただけます。 招待 URL を開き直すか、 別のアカウントでサインインしてください。",
+    "blockedPathLabel": "ブロックされたパス",
+    "ctaPrimary": "招待されたボード一覧へ",
+    "ctaSignOut": "サインアウト"
   }
 }

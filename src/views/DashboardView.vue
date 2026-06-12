@@ -38,6 +38,7 @@ import { listTeams, type TeamSummary } from '@/app/api/teams'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import LoginBanner from '@/components/LoginBanner.vue'
 import NotificationBell from '@/components/NotificationBell.vue'
+import GuestDashboardView from '@/views/GuestDashboardView.vue'
 
 const { dashboard, notificationsFormat: notificationsFormatT, common: commonT } = useI18n()
 
@@ -344,7 +345,9 @@ onMounted(async () => {
 </script>
 
 <template>
+  <GuestDashboardView v-if="auth.isGuest" />
   <main
+    v-else
     data-test-id="dashboard-view"
     class="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(89,140,255,0.16),transparent_30%),linear-gradient(180deg,var(--color-canvas),#0d1017)] px-6 py-10"
   >

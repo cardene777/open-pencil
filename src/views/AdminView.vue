@@ -230,7 +230,8 @@ const totalCollaborators = computed(() => {
   const ids = new Set<string>()
   for (const board of boards.value) {
     for (const collab of board.collaborators) {
-      ids.add(collab.anonymousId)
+      const id = collab.userId ?? collab.anonymousId
+      if (id) ids.add(id)
     }
   }
   return ids.size

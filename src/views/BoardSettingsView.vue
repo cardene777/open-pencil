@@ -242,11 +242,11 @@ onMounted(() => {
           <ul data-test-id="board-collaborator-list" class="mt-4 space-y-3">
             <li
               v-for="collaborator in payload.board.collaborators"
-              :key="collaborator.anonymousId"
+              :key="collaborator.invitationId ?? collaborator.userId ?? collaborator.anonymousId ?? `c-${collaborator.addedAt}`"
               class="flex items-center justify-between rounded-2xl border border-border bg-canvas/70 px-4 py-3"
             >
               <div>
-                <p class="text-sm font-medium text-surface">{{ collaborator.anonymousId }}</p>
+                <p class="text-sm font-medium text-surface">{{ collaborator.userId ?? collaborator.anonymousId ?? '—' }}</p>
                 <p class="text-[11px] text-muted">
                   {{ boardSettingsT.addedPrefix }} {{ new Date(collaborator.addedAt).toLocaleString() }}
                 </p>

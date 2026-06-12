@@ -28,6 +28,24 @@ const PROTECTED_PATH_PREFIXES = [
   '/board/'
 ]
 
+// guest user (jfet.co.jp ドメイン外) に対して禁止する path 群。
+// 招待された board だけが見える環境にするため、 これらは PermissionDeniedView に redirect。
+// `/dashboard` と `/board/:id` (招待された board のエディタ) は guest でも開ける。
+const GUEST_FORBIDDEN_PATH_PREFIXES = [
+  '/boards',
+  '/teams',
+  '/team/',
+  '/notifications',
+  '/account',
+  '/admin'
+]
+
+function isForbiddenForGuest(path: string): boolean {
+  return GUEST_FORBIDDEN_PATH_PREFIXES.some((prefix) =>
+    prefix.endsWith('/') ? path.startsWith(prefix) : path === prefix || path.startsWith(`${prefix}/`)
+  )
+}
+
 function isProtectedPath(path: string): boolean {
   return PROTECTED_PATH_PREFIXES.some((prefix) =>
     prefix.endsWith('/') ? path.startsWith(prefix) : path === prefix || path.startsWith(`${prefix}/`)
@@ -51,7 +69,8 @@ const router = createRouter({
     { path: '/board/:id/settings', component: () => import('./views/BoardSettingsView.vue') },
     { path: '/invite/:token', component: () => import('./views/InviteRedirectView.vue') },
     { path: '/demo', component: () => import('./views/EditorView.vue'), meta: { demo: true } },
-    { path: '/share/:roomId', component: () => import('./views/EditorView.vue') }
+    { path: '/share/:roomId', component: () => import('./views/EditorView.vue') },
+    { path: '/permission-denied', component: () => import('./views/PermissionDeniedView.vue') }
   ]
 })
 
@@ -66,16 +85,25 @@ router.beforeEach(async (to) => {
     await auth.init()
   }
 
-  if (auth.isAuthenticated) {
-    return true
+  if (!auth.isAuthenticated) {
+    // 未ログインで保護 path へアクセス → LP へ。 returnTo に元の path + query を保持して
+    // LP のログインボタンから戻ってこられるようにする (fullPath は ?query も含む)。
+    return {
+      path: '/',
+      query: { returnTo: to.fullPath }
+    }
   }
 
-  // 未ログインで保護 path へアクセス → LP へ。 returnTo に元の path + query を保持して
-  // LP のログインボタンから戻ってこられるようにする (fullPath は ?query も含む)。
-  return {
-    path: '/',
-    query: { returnTo: to.fullPath }
+  // ログイン済 guest user (jfet.co.jp ドメイン外) が禁止 path に来たら
+  // PermissionDeniedView へ redirect。 元 path を ?from で保持して説明文に使う。
+  if (auth.isGuest && isForbiddenForGuest(to.path)) {
+    return {
+      path: '/permission-denied',
+      query: { from: to.fullPath }
+    }
   }
+
+  return true
 })
 
 export default router

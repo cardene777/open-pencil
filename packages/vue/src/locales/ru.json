@@ -774,7 +774,8 @@
     "toastDeleteFail": "Не удалось удалить команду"
   },
   "common": {
-    "home": "Главная"
+    "home": "Главная",
+    "openBoard": "Открыть →"
   },
   "inviteAuth": {
     "headTitle": "Принять приглашение",
@@ -952,5 +953,38 @@
       "exportToastSingular": "Экспортирован {count} участник",
       "exportToastPlural": "Экспортировано {count} участников"
     }
+  },
+  "guestDashboard": {
+    "headTitle": "Ваши приглашённые доски",
+    "guestBadge": "Гость",
+    "signOut": "Выйти",
+    "accountAriaLabel": "Меню учётной записи",
+    "welcomeTitle": "Добро пожаловать, {name}",
+    "welcomeSubtitle": "Вы приглашены на {boards} досок от {inviters} людей.",
+    "boardsHeading": "Ваши приглашённые доски",
+    "boardsSubheading": "Доски, которыми поделились участники jfet",
+    "emptyTitle": "Пока нет приглашённых досок",
+    "emptyDescription": "Когда вас пригласят на доску, она появится здесь. Откройте URL приглашения снова, если попали сюда по ошибке.",
+    "inviterUnknown": "неизвестный приглашающий",
+    "fromInviter": "от {name}",
+    "untitledBoard": "Доска без названия",
+    "relativeJustNow": "Только что",
+    "relativeMinutes": "{value} мин назад",
+    "relativeHours": "{value} ч назад",
+    "relativeDays": "{value} д назад",
+    "roleLabel": {
+      "owner": "ВЛАД.",
+      "editor": "РЕДАК.",
+      "viewer": "ЧИТ.",
+      "commenter": "КОММ."
+    }
+  },
+  "permissionDenied": {
+    "headTitle": "Доступ запрещён",
+    "headline": "Доступ запрещён",
+    "description": "Доступны только доски, которыми поделились с вами. Откройте URL приглашения снова или войдите с другим аккаунтом.",
+    "blockedPathLabel": "Заблокированный путь",
+    "ctaPrimary": "К приглашённым доскам",
+    "ctaSignOut": "Выйти"
   }
 }
