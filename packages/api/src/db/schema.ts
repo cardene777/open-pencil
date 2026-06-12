@@ -1,13 +1,12 @@
 import { index, integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
-import type { BoardCollaboratorRecord, InvitationRole, TeamMemberRole } from '../types.js'
+import type { BoardCollaboratorRecord, InvitationRole } from '../types.js'
 
 export const boards = sqliteTable('boards', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   creatorAnonymousId: text('creator_anonymous_id').notNull(),
   creatorUserId: text('creator_user_id').references(() => users.id, { onDelete: 'set null' }),
-  teamId: text('team_id').references(() => teams.id, { onDelete: 'set null' }),
   createdAt: integer('created_at', { mode: 'number' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'number' }).notNull()
 })
@@ -51,25 +50,6 @@ export const collaborators = sqliteTable(
   ]
 )
 
-export const teamMembers = sqliteTable(
-  'team_members',
-  {
-    teamId: text('team_id')
-      .notNull()
-      .references(() => teams.id, { onDelete: 'cascade' }),
-    userId: text('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    role: text('role').$type<TeamMemberRole>().notNull(),
-    addedAt: integer('added_at', { mode: 'number' }).notNull()
-  },
-  (table) => [
-    primaryKey({ columns: [table.teamId, table.userId] }),
-    index('team_members_user_id_idx').on(table.userId),
-    index('team_members_role_idx').on(table.role)
-  ]
-)
-
 export const users = sqliteTable(
   'users',
   {
@@ -82,20 +62,6 @@ export const users = sqliteTable(
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull()
   },
   (table) => [uniqueIndex('users_email_unique').on(table.email)]
-)
-
-export const teams = sqliteTable(
-  'teams',
-  {
-    id: text('id').primaryKey(),
-    name: text('name').notNull(),
-    ownerUserId: text('owner_user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    createdAt: integer('created_at', { mode: 'number' }).notNull(),
-    updatedAt: integer('updated_at', { mode: 'number' }).notNull()
-  },
-  (table) => [index('teams_owner_user_id_idx').on(table.ownerUserId)]
 )
 
 export const sessions = sqliteTable(
@@ -172,5 +138,39 @@ export const verifications = sqliteTable(
   (table) => [
     index('verifications_identifier_idx').on(table.identifier),
     index('verifications_expires_at_idx').on(table.expiresAt)
+  ]
+)
+
+export const internalUsers = sqliteTable(
+  'internal_users',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull(),
+    userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+    addedAt: integer('added_at', { mode: 'number' }).notNull()
+  },
+  (table) => [
+    uniqueIndex('internal_users_email_unique').on(table.email),
+    index('internal_users_user_id_idx').on(table.userId)
+  ]
+)
+
+export const pendingInternalInvitations = sqliteTable(
+  'pending_internal_invitations',
+  {
+    id: text('id').primaryKey(),
+    boardId: text('board_id')
+      .notNull()
+      .references(() => boards.id, { onDelete: 'cascade' }),
+    email: text('email').notNull(),
+    role: text('role').$type<InvitationRole>().notNull(),
+    invitedByUserId: text('invited_by_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: integer('created_at', { mode: 'number' }).notNull()
+  },
+  (table) => [
+    index('pending_internal_invitations_email_idx').on(table.email),
+    index('pending_internal_invitations_board_id_idx').on(table.boardId)
   ]
 )

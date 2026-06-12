@@ -6,6 +6,12 @@ import { eq } from 'drizzle-orm'
 import type { ApiDatabase } from '../db/client.js'
 import { users } from '../db/schema.js'
 import * as schema from '../db/schema.js'
+import type {
+  BoardStore,
+  InternalUserStore,
+  PendingInternalInvitationStore
+} from '../types.js'
+import { isInternalDomainEmail } from '../types.js'
 import { INKLY_API_AUTH_BASE_PATH, resolveInklyAuthConfig } from './config.js'
 
 export interface InklyAuthSession {
@@ -68,7 +74,26 @@ export interface CreateInklyAuthOptions {
   database: ApiDatabase
   env?: NodeJS.ProcessEnv
   fallbackSecret: string
-  logger?: Pick<Console, 'warn'>
+  logger?: Pick<Console, 'warn' | 'error'>
+  /**
+   * jfet.co.jp ドメインの user を internal_users マスターに upsert する store。
+   * better-auth の databaseHooks.user.create.after / session.create.after で
+   * 呼ばれ、 内部 user 管理を完結させる。 store 不在時 (例 テスト) は hook を
+   * 仕込まず副作用 0 で動く。
+   */
+  internalUserStore?: InternalUserStore
+  /**
+   * pending_internal_invitations を保持する store。 未ログインの jfet user 宛て
+   * 招待を pre-record しておき、 user が初回 sign-in / sign-up したタイミングで
+   * collaborator に転記する。 boardStore と組み合わせて使う必要があるため
+   * 両方が渡されている時のみ転記 hook が有効になる。
+   */
+  pendingInternalInvitationStore?: PendingInternalInvitationStore
+  /**
+   * pending 転記の commit 先となる boardStore。 pendingInternalInvitationStore と
+   * 組で渡す必要がある。
+   */
+  boardStore?: BoardStore
 }
 
 interface BetterAuthTestContext {
@@ -224,6 +249,58 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
     options.logger?.warn(warning)
   }
 
+  const internalUserStore = options.internalUserStore
+  const pendingInternalInvitationStore = options.pendingInternalInvitationStore
+  const boardStore = options.boardStore
+  const enablePendingFlush = Boolean(pendingInternalInvitationStore && boardStore)
+
+  async function upsertInternalUserSafely(userId: string, email: string): Promise<void> {
+    if (!internalUserStore) return
+    if (!isInternalDomainEmail(email)) return
+    try {
+      await internalUserStore.upsertInternalUser({ email, userId })
+    } catch (cause) {
+      // hook 失敗で sign-up / sign-in を巻き戻すと UX 影響が大きい。
+      // 失敗は warn だけ残し、 再 sign-in / 別経路 (再起動時の補完バッチ等) で
+      // recovery する設計とする。
+      options.logger?.error?.(
+        `[inkly-api] failed to upsert internal_user for ${email}: ${(cause as Error).message}`
+      )
+    }
+  }
+
+  async function flushPendingInvitationsSafely(userId: string, email: string): Promise<void> {
+    if (!enablePendingFlush) return
+    if (!pendingInternalInvitationStore || !boardStore) return
+    if (!isInternalDomainEmail(email)) return
+    try {
+      const pendingList = await pendingInternalInvitationStore.listPendingByEmail(email)
+      if (pendingList.length === 0) return
+
+      // pending 1 件ずつ board の collaborator に転記する。
+      // 同 board 内で複数 pending が重なる場合は最後の role が勝つ (collaborators
+      // table の primary key が (boardId, anonymousId) で onConflictDoUpdate)。
+      // anonymousId は jfet user の場合 `internal:{userId}` 形式で固定し、
+      // 同 user で連続 sign-in しても重複行ができない設計とする。
+      const anonymousId = `internal:${userId}`
+      for (const pending of pendingList) {
+        await boardStore.addCollaborator(pending.boardId, {
+          anonymousId,
+          userId,
+          role: pending.role,
+          invitationId: null
+        })
+      }
+
+      // 転記済 pending を一括削除して再実行で重複しないようにする。
+      await pendingInternalInvitationStore.deletePendingByEmail(email)
+    } catch (cause) {
+      options.logger?.error?.(
+        `[inkly-api] failed to flush pending invitations for ${email}: ${(cause as Error).message}`
+      )
+    }
+  }
+
   const isProductionURL = config.baseURL.startsWith('https://')
   const auth = betterAuth({
     basePath: config.basePath,
@@ -235,6 +312,35 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
       schema,
       usePlural: true
     }),
+    databaseHooks: internalUserStore
+      ? {
+          user: {
+            create: {
+              after: async (user) => {
+                await upsertInternalUserSafely(user.id, user.email)
+                await flushPendingInvitationsSafely(user.id, user.email)
+              }
+            }
+          },
+          session: {
+            create: {
+              after: async (session) => {
+                // 既存 user の sign-in 時にも internal_users を補完し、
+                // pending 招待があれば collaborators に転記する。
+                const row = await options.database.db
+                  .select({ email: users.email })
+                  .from(users)
+                  .where(eq(users.id, session.userId))
+                  .get()
+                if (row?.email) {
+                  await upsertInternalUserSafely(session.userId, row.email)
+                  await flushPendingInvitationsSafely(session.userId, row.email)
+                }
+              }
+            }
+          }
+        }
+      : undefined,
     plugins: config.enableTestUtils ? [testUtils()] : undefined,
     // 招待 URL 経由で email+password sign-in できるよう emailAndPassword provider を有効化。
     // 公開 sign-up は open のまま (auth.api.signUpEmail を redeem 経路から内部呼び出しするため、

@@ -132,4 +132,60 @@ describe('board routes', () => {
     })
     database.close()
   })
+
+  test('invited collaborator cannot DELETE the board (403, board persists)', async () => {
+    const { app, database } = await createTestApiApp({ secret: TEST_API_SECRET })
+    const ownerId = 'anon-owner-only'
+
+    // owner が board 作成
+    const createBoardResponse = await app.request('/api/boards', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'X-Inkly-Anonymous-Id': ownerId
+      },
+      body: JSON.stringify({ name: 'Owner-only board' })
+    })
+    const board = (await createBoardResponse.json()) as { id: string }
+
+    // collaborator (anon-guest) を招待経路で追加
+    const inviteResponse = await app.request('/api/invite', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'X-Inkly-Anonymous-Id': ownerId
+      },
+      body: JSON.stringify({
+        email: 'guest@example.com',
+        boardId: board.id,
+        role: 'editor'
+      })
+    })
+    const invite = (await inviteResponse.json()) as { token: string }
+    await app.request('/api/invite/verify', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'X-Inkly-Anonymous-Id': 'anon-collaborator'
+      },
+      body: JSON.stringify({ token: invite.token })
+    })
+
+    // collaborator が board 削除を試みる → 403
+    const deleteResponse = await app.request(`/api/boards/${board.id}`, {
+      method: 'DELETE',
+      headers: { 'X-Inkly-Anonymous-Id': 'anon-collaborator' }
+    })
+    expect(deleteResponse.status).toBe(403)
+
+    // board は残っていることを GET で確認
+    const stillExistsResponse = await app.request(`/api/boards/${board.id}/invitations`, {
+      headers: { 'X-Inkly-Anonymous-Id': ownerId }
+    })
+    expect(stillExistsResponse.status).toBe(200)
+    const stillExistsBody = (await stillExistsResponse.json()) as { board: { id: string } }
+    expect(stillExistsBody.board.id).toBe(board.id)
+
+    database.close()
+  })
 })

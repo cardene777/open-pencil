@@ -8,7 +8,7 @@ import type {
   NotificationPayload,
   NotificationRecord,
   NotificationStore,
-  TeamUserRecord
+  UserRecord
 } from './types.js'
 
 export interface CreateNotificationStoreOptions {
@@ -27,7 +27,7 @@ function cloneNotification(record: NotificationRecord): NotificationRecord {
   return structuredClone(record)
 }
 
-function mapUser(row: typeof users.$inferSelect): TeamUserRecord {
+function mapUser(row: typeof users.$inferSelect): UserRecord {
   return {
     id: row.id,
     name: row.name,
@@ -103,6 +103,21 @@ export async function createNotificationStore(
       if (!normalizedEmail) return null
       const row = await database.db.select().from(users).where(eq(users.email, normalizedEmail)).get()
       return row ? structuredClone(mapUser(row)) : null
+    },
+    async findUserById(id: string) {
+      const row = await database.db.select().from(users).where(eq(users.id, id)).get()
+      return row ? structuredClone(mapUser(row)) : null
+    },
+    async listUsersByIds(ids: string[]) {
+      const uniqueIds = [...new Set(ids.filter((id) => id.trim().length > 0))]
+      if (uniqueIds.length === 0) return []
+
+      const result: UserRecord[] = []
+      for (const id of uniqueIds) {
+        const user = await store.findUserById(id)
+        if (user) result.push(user)
+      }
+      return result
     },
     async listNotificationsForUser(userId: string) {
       const rows = await database.db

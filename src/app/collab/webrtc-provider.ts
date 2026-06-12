@@ -375,7 +375,9 @@ export function connectWebRtcProvider({
       return
     }
 
-    console.warn('[collab] signaling error:', message.message)
+    if (message.type === 'error') {
+      console.warn('[collab] signaling error:', message.message)
+    }
   })
 
   socket.addEventListener('close', () => {

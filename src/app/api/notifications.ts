@@ -1,4 +1,4 @@
-import type { InvitationRole, TeamMemberRole } from '@/app/api/client'
+import type { InvitationRole } from '@/app/api/client'
 import { apiRequest } from '@/app/api/client'
 
 const NOTIFICATION_API_ENDPOINTS = {
@@ -6,25 +6,17 @@ const NOTIFICATION_API_ENDPOINTS = {
   notification: (notificationId: string) => `/api/notifications/${notificationId}`,
   read: (notificationId: string) => `/api/notifications/${notificationId}/read`,
   readAll: '/api/notifications/read-all',
-  mention: '/api/notifications/mention'
+  mention: '/api/notifications/mention',
+  mentionCandidates: (boardId: string) => `/api/notifications/mention-candidates/${boardId}`
 } as const
 
-export type NotificationType = 'invitation' | 'team_invite' | 'mention'
+export type NotificationType = 'invitation' | 'mention'
 
 export interface InvitationNotificationPayload {
   invitationId: string
   boardId: string
   boardName: string
   role: InvitationRole
-  inviterDisplayName: string
-  inviteeEmail: string
-  url: string
-}
-
-export interface TeamInviteNotificationPayload {
-  teamId: string
-  teamName: string
-  role: Exclude<TeamMemberRole, 'owner'>
   inviterDisplayName: string
   inviteeEmail: string
   url: string
@@ -38,10 +30,7 @@ export interface MentionNotificationPayload {
   url: string
 }
 
-export type NotificationPayload =
-  | InvitationNotificationPayload
-  | TeamInviteNotificationPayload
-  | MentionNotificationPayload
+export type NotificationPayload = InvitationNotificationPayload | MentionNotificationPayload
 
 interface NotificationRecordBase<TType extends NotificationType, TPayload extends NotificationPayload> {
   id: string
@@ -54,8 +43,14 @@ interface NotificationRecordBase<TType extends NotificationType, TPayload extend
 
 export type NotificationRecord =
   | NotificationRecordBase<'invitation', InvitationNotificationPayload>
-  | NotificationRecordBase<'team_invite', TeamInviteNotificationPayload>
   | NotificationRecordBase<'mention', MentionNotificationPayload>
+
+export interface MentionCandidate {
+  id: string
+  name: string
+  email: string
+  image: string | null
+}
 
 export interface CreateMentionNotificationInput {
   boardId: string
@@ -96,4 +91,10 @@ export function createMentionNotification(input: CreateMentionNotificationInput)
     method: 'POST',
     body: JSON.stringify(input)
   }).then((response) => response.notification)
+}
+
+export function listMentionCandidates(boardId: string) {
+  return apiRequest<{ users: MentionCandidate[] }>(NOTIFICATION_API_ENDPOINTS.mentionCandidates(boardId)).then(
+    (response) => response.users
+  )
 }

@@ -25,9 +25,7 @@ import {
   useCanvasVirtualReference,
   useTextEdit
 } from '@inkly/vue'
-import { listBoards } from '@/app/api/client'
-import { createMentionNotification } from '@/app/api/notifications'
-import { getTeam } from '@/app/api/teams'
+import { createMentionNotification, listMentionCandidates } from '@/app/api/notifications'
 import { useAuthStore } from '@/app/auth/store'
 import { useCollabInjected } from '@/app/collab/use'
 import { useEditorStore } from '@/app/editor/active-store'
@@ -220,16 +218,8 @@ async function loadMentionCandidates() {
   mentionCandidatesLoading.value = true
 
   try {
-    const boards = await listBoards()
-    const board = boards.find((candidate) => candidate.id === boardId.value) ?? null
-    if (!board?.teamId) {
-      mentionCandidates.value = []
-      return
-    }
-
-    const team = await getTeam(board.teamId)
-    mentionCandidates.value = team.members
-      .map((member) => mapCandidate(member.user))
+    mentionCandidates.value = (await listMentionCandidates(boardId.value))
+      .map(mapCandidate)
       .filter((candidate) => candidate.id !== auth.user?.id)
   } catch (error) {
     console.warn('[mentions]', error)

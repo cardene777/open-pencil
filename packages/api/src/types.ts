@@ -4,11 +4,7 @@ export const INVITATION_ROLES = ['editor', 'viewer'] as const
 
 export type InvitationRole = (typeof INVITATION_ROLES)[number]
 
-export const TEAM_MEMBER_ROLES = ['owner', 'editor', 'viewer'] as const
-
-export type TeamMemberRole = (typeof TEAM_MEMBER_ROLES)[number]
-
-export const NOTIFICATION_TYPES = ['invitation', 'team_invite', 'mention'] as const
+export const NOTIFICATION_TYPES = ['invitation', 'mention'] as const
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number]
 
@@ -74,7 +70,6 @@ export interface BoardRecord {
   name: string
   creatorAnonymousId: string
   creatorUserId: string | null
-  teamId: string | null
   createdAt: number
   updatedAt: number
   collaborators: BoardCollaboratorRecord[]
@@ -84,19 +79,18 @@ export interface CreateBoardInput {
   name: string
   creatorAnonymousId?: string | null
   creatorUserId?: string | null
-  teamId?: string | null
 }
 
 export interface AddBoardCollaboratorInput {
   anonymousId: string
   userId?: string | null
   role: InvitationRole
-  invitationId: string
-}
-
-export interface UpdateBoardInput {
-  name?: string
-  teamId?: string | null
+  /**
+   * 招待 token redeem 経由の場合は対応する invitations.id を渡す。
+   * jfet 内部 user の直接追加 (directAdd / pending 転記) では null を渡す
+   * (本 PR Phase 2 で導入された経路)。
+   */
+  invitationId: string | null
 }
 
 export interface BoardStore {
@@ -104,54 +98,15 @@ export interface BoardStore {
   findBoard(id: string): Promise<BoardRecord | null>
   listBoardsForAnonymous(anonymousId: string): Promise<BoardRecord[]>
   listBoardsForUser(userId: string): Promise<BoardRecord[]>
-  listBoardsForTeam(teamId: string): Promise<BoardRecord[]>
   deleteBoard(id: string): Promise<BoardRecord | null>
   addCollaborator(boardId: string, input: AddBoardCollaboratorInput): Promise<BoardRecord | null>
-  updateBoard(id: string, input: UpdateBoardInput): Promise<BoardRecord | null>
-  clearTeamForBoards(teamId: string): Promise<number>
 }
 
-export interface TeamRecord {
-  id: string
-  name: string
-  ownerUserId: string
-  createdAt: number
-  updatedAt: number
-}
-
-export interface TeamUserRecord {
+export interface UserRecord {
   id: string
   name: string
   email: string
   image: string | null
-}
-
-export interface TeamMemberRecord {
-  teamId: string
-  userId: string
-  role: TeamMemberRole
-  addedAt: number
-  user: TeamUserRecord
-}
-
-export interface TeamMembershipRecord {
-  team: TeamRecord
-  role: TeamMemberRole
-}
-
-export interface CreateTeamInput {
-  name: string
-  ownerUserId: string
-}
-
-export interface AddTeamMemberInput {
-  teamId: string
-  userId: string
-  role: Exclude<TeamMemberRole, 'owner'>
-}
-
-export interface UpdateTeamInput {
-  name: string
 }
 
 export interface InvitationNotificationPayload {
@@ -159,15 +114,6 @@ export interface InvitationNotificationPayload {
   boardId: string
   boardName: string
   role: InvitationRole
-  inviterDisplayName: string
-  inviteeEmail: string
-  url: string
-}
-
-export interface TeamInviteNotificationPayload {
-  teamId: string
-  teamName: string
-  role: Exclude<TeamMemberRole, 'owner'>
   inviterDisplayName: string
   inviteeEmail: string
   url: string
@@ -181,10 +127,7 @@ export interface MentionNotificationPayload {
   url: string
 }
 
-export type NotificationPayload =
-  | InvitationNotificationPayload
-  | TeamInviteNotificationPayload
-  | MentionNotificationPayload
+export type NotificationPayload = InvitationNotificationPayload | MentionNotificationPayload
 
 export interface NotificationRecord {
   id: string
@@ -204,7 +147,9 @@ export interface CreateNotificationInput {
 export interface NotificationStore {
   createNotification(input: CreateNotificationInput): Promise<NotificationRecord>
   findNotification(id: string): Promise<NotificationRecord | null>
-  findUserByEmail(email: string): Promise<TeamUserRecord | null>
+  findUserByEmail(email: string): Promise<UserRecord | null>
+  findUserById(id: string): Promise<UserRecord | null>
+  listUsersByIds(ids: string[]): Promise<UserRecord[]>
   listNotificationsForUser(userId: string): Promise<NotificationRecord[]>
   markNotificationRead(id: string, userId: string): Promise<NotificationRecord | null>
   markAllNotificationsRead(userId: string): Promise<number>
@@ -212,21 +157,59 @@ export interface NotificationStore {
   sweepOldNotifications(olderThanMs?: number): Promise<number>
 }
 
-export interface TeamStore {
-  createTeam(input: CreateTeamInput): Promise<TeamRecord>
-  findTeam(id: string): Promise<TeamRecord | null>
-  listTeamsForUser(userId: string): Promise<TeamMembershipRecord[]>
-  listMembers(teamId: string): Promise<TeamMemberRecord[]>
-  findMembership(teamId: string, userId: string): Promise<TeamMemberRecord | null>
-  findUserById(userId: string): Promise<TeamUserRecord | null>
-  findUserByEmail(email: string): Promise<TeamUserRecord | null>
-  addMember(input: AddTeamMemberInput): Promise<TeamMemberRecord | null>
-  updateMemberRole(
-    teamId: string,
-    userId: string,
-    role: Exclude<TeamMemberRole, 'owner'>
-  ): Promise<TeamMemberRecord | null>
-  removeMember(teamId: string, userId: string): Promise<TeamMemberRecord | null>
-  updateTeam(id: string, input: UpdateTeamInput): Promise<TeamRecord | null>
-  deleteTeam(id: string): Promise<TeamRecord | null>
+export const INTERNAL_USER_DOMAIN = 'jfet.co.jp' as const
+
+export interface InternalUserRecord {
+  id: string
+  email: string
+  userId: string | null
+  addedAt: number
+}
+
+export interface UpsertInternalUserInput {
+  email: string
+  userId?: string | null
+}
+
+export interface InternalUserStore {
+  /**
+   * jfet.co.jp ドメインの user を upsert する。
+   * 既存 record があれば userId を更新、 無ければ新規作成。
+   * 非 jfet ドメインの email は null を返し、 record は作らない (caller 側で domain チェック済が前提だがガードで二重防御)。
+   */
+  upsertInternalUser(input: UpsertInternalUserInput): Promise<InternalUserRecord | null>
+  findInternalUserByEmail(email: string): Promise<InternalUserRecord | null>
+  findInternalUserByUserId(userId: string): Promise<InternalUserRecord | null>
+  listInternalUsers(): Promise<InternalUserRecord[]>
+}
+
+export interface PendingInternalInvitationRecord {
+  id: string
+  boardId: string
+  email: string
+  role: InvitationRole
+  invitedByUserId: string
+  createdAt: number
+}
+
+export interface CreatePendingInternalInvitationInput {
+  boardId: string
+  email: string
+  role: InvitationRole
+  invitedByUserId: string
+}
+
+export interface PendingInternalInvitationStore {
+  createPendingInvitation(
+    input: CreatePendingInternalInvitationInput
+  ): Promise<PendingInternalInvitationRecord>
+  listPendingByEmail(email: string): Promise<PendingInternalInvitationRecord[]>
+  deletePendingByEmail(email: string): Promise<number>
+}
+
+/**
+ * domain 判定ヘルパー (caller 側で利用)
+ */
+export function isInternalDomainEmail(email: string): boolean {
+  return email.trim().toLowerCase().endsWith(`@${INTERNAL_USER_DOMAIN}`)
 }

@@ -94,99 +94,81 @@ describe('mention notification route', () => {
   test.skipIf(SKIP_NON_TTY_WEBSOCKET_TESTS).serial(
     'creates a mention notification and pushes it over websocket',
     async () => {
-    const owner = createSession('user-owner', 'Owner User', 'owner@example.com')
-    const teammate = createSession('user-teammate', 'Teammate User', 'teammate@example.com')
-    const database = await createTestApiDatabase()
-    await seedUsers(database, [owner, teammate])
+      const owner = createSession('user-owner', 'Owner User', 'owner@example.com')
+      const teammate = createSession('user-teammate', 'Teammate User', 'teammate@example.com')
+      const database = await createTestApiDatabase()
+      await seedUsers(database, [owner, teammate])
 
-    const { app, server } = await startApiServer({
-      secret: TEST_API_SECRET,
-      host: '127.0.0.1',
-      port: TEST_NOTIFICATIONS_MENTION_PORT,
-      auth: createHeaderAuth([owner, teammate]),
-      database
-    })
-    servers.push(server)
-    databases.push(database)
-
-    const createTeamResponse = await app.request('/api/teams', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        [TEST_USER_HEADER]: owner.user.id
-      },
-      body: JSON.stringify({ name: 'Studio Alpha' })
-    })
-    expect(createTeamResponse.status).toBe(201)
-    const team = (await createTeamResponse.json()) as { id: string }
-
-    const addMemberResponse = await app.request(`/api/teams/${team.id}/members`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        [TEST_USER_HEADER]: owner.user.id
-      },
-      body: JSON.stringify({
-        userId: teammate.user.id,
-        role: 'editor'
+      const { app, boardStore, server } = await startApiServer({
+        secret: TEST_API_SECRET,
+        host: '127.0.0.1',
+        port: TEST_NOTIFICATIONS_MENTION_PORT,
+        auth: createHeaderAuth([owner, teammate]),
+        database
       })
-    })
-    expect(addMemberResponse.status).toBe(201)
+      servers.push(server)
+      databases.push(database)
 
-    const createBoardResponse = await app.request('/api/boards', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        [TEST_USER_HEADER]: owner.user.id
-      },
-      body: JSON.stringify({
-        name: 'Roadmap board',
-        teamId: team.id
-      })
-    })
-    expect(createBoardResponse.status).toBe(201)
-    const board = (await createBoardResponse.json()) as { id: string; name: string }
-
-    const socket = await connect(
-      `ws://127.0.0.1:${server.port}/api/ws/notifications`,
-      teammate.user.id
-    )
-
-    const mentionResponse = await app.request('/api/notifications/mention', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        [TEST_USER_HEADER]: owner.user.id
-      },
-      body: JSON.stringify({
-        boardId: board.id,
-        mentionedUserId: teammate.user.id,
-        sourceUserId: owner.user.id,
-        text: 'Please review @teammate@example.com before launch'
-      })
-    })
-    expect(mentionResponse.status).toBe(201)
-    const mentionBody = (await mentionResponse.json()) as {
-      notification: NotificationPushMessage['notification']
-    }
-    expect(mentionBody.notification).toEqual(
-      expect.objectContaining({
-        userId: teammate.user.id,
-        type: 'mention',
-        payload: expect.objectContaining({
-          boardId: board.id,
-          boardName: board.name,
-          mentionedByDisplayName: owner.user.name,
-          message: 'Please review @teammate@example.com before launch',
-          url: expect.stringContaining(`board=${board.id}`)
+      const createBoardResponse = await app.request('/api/boards', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          [TEST_USER_HEADER]: owner.user.id
+        },
+        body: JSON.stringify({
+          name: 'Roadmap board'
         })
       })
-    )
+      expect(createBoardResponse.status).toBe(201)
+      const board = (await createBoardResponse.json()) as { id: string; name: string }
 
-    await expect(socket.nextMessage()).resolves.toEqual({
-      type: 'notification.created',
-      notification: mentionBody.notification
-    })
+      await boardStore.addCollaborator(board.id, {
+        anonymousId: 'anon-teammate',
+        userId: teammate.user.id,
+        role: 'editor',
+        invitationId: 'invite-1'
+      })
+
+      const socket = await connect(
+        `ws://127.0.0.1:${server.port}/api/ws/notifications`,
+        teammate.user.id
+      )
+
+      const mentionResponse = await app.request('/api/notifications/mention', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          [TEST_USER_HEADER]: owner.user.id
+        },
+        body: JSON.stringify({
+          boardId: board.id,
+          mentionedUserId: teammate.user.id,
+          sourceUserId: owner.user.id,
+          text: 'Please review @teammate@example.com before launch'
+        })
+      })
+      expect(mentionResponse.status).toBe(201)
+      const mentionBody = (await mentionResponse.json()) as {
+        notification: NotificationPushMessage['notification']
+      }
+      expect(mentionBody.notification).toEqual(
+        expect.objectContaining({
+          userId: teammate.user.id,
+          type: 'mention',
+          payload: expect.objectContaining({
+            boardId: board.id,
+            boardName: board.name,
+            mentionedByDisplayName: owner.user.name,
+            message: 'Please review @teammate@example.com before launch',
+            url: expect.stringContaining(`board=${board.id}`)
+          })
+        })
+      )
+
+      await expect(socket.nextMessage()).resolves.toEqual({
+        type: 'notification.created',
+        notification: mentionBody.notification
+      })
     }
   )
 })

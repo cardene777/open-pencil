@@ -3,7 +3,7 @@ import { uniq } from 'es-toolkit/array'
 
 import { DEFAULT_FONT_FAMILY, IS_BROWSER, GOOGLE_FONTS_API_KEY } from '#core/constants'
 import type { SceneGraph } from '#core/scene-graph'
-import { fontFaceRenderFamily, parseFontStyle } from '#core/text/face'
+import { parseFontStyle } from '#core/text/face'
 import { fontFallbackEntry } from '#core/text/fallbacks'
 import type { FontFallbackScript } from '#core/text/fallbacks'
 
@@ -403,6 +403,7 @@ export class FontManager {
     targetFamilies: string[],
     options: { allowVariableLocalFonts?: boolean } = {}
   ): Promise<string[]> {
+    void options
     const manifest = fontFallbackEntry(script, this.fallbackUserAgent)
 
     // Use bundled Noto fonts. loadFont() now prefers BUNDLED_FONTS over local

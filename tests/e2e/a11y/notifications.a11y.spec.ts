@@ -51,18 +51,6 @@ test.describe('notifications accessibility', () => {
           }
         },
         {
-          type: 'team_invite',
-          read: true,
-          payload: {
-            teamId: 'a11y-team-1',
-            teamName: 'Research Ops',
-            role: 'viewer',
-            inviterDisplayName: 'Ops Owner',
-            inviteeEmail: 'notifications-a11y-populated@jfet.co.jp',
-            url: '/team/a11y-team-1'
-          }
-        },
-        {
           type: 'mention',
           payload: {
             boardId: 'a11y-board-2',
@@ -76,7 +64,7 @@ test.describe('notifications accessibility', () => {
     })
 
     await page.goto('/notifications')
-    await expect(page.getByTestId('notification-item')).toHaveCount(3)
+    await expect(page.getByTestId('notification-item')).toHaveCount(2)
     await waitForVisualReady(page)
 
     const results = await runA11yScan(page, {

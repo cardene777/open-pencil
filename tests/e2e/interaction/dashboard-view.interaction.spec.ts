@@ -16,13 +16,10 @@ test.describe('dashboard view interaction', () => {
     await page.goto('/dashboard')
 
     await expect(page.getByTestId('dashboard-view')).toBeVisible()
-    await expect(page.getByTestId('dashboard-metric-personal-boards')).toBeVisible()
-    await expect(page.getByTestId('dashboard-metric-team-boards')).toBeVisible()
-    await expect(page.getByTestId('dashboard-metric-teams')).toBeVisible()
+    await expect(page.getByTestId('dashboard-metric-total-boards')).toBeVisible()
     await expect(page.getByTestId('dashboard-metric-unread')).toBeVisible()
     await expect(page.getByTestId('dashboard-quick-actions')).toBeVisible()
     await expect(page.getByTestId('dashboard-link-boards')).toBeVisible()
-    await expect(page.getByTestId('dashboard-link-teams')).toBeVisible()
     await expect(page.getByTestId('dashboard-link-notifications')).toBeVisible()
   })
 
@@ -52,14 +49,6 @@ test.describe('dashboard view interaction', () => {
 
     await page.getByTestId('dashboard-link-boards').click()
     await expect(page).toHaveURL(/\/boards/)
-  })
-
-  test('Teams quick action navigates to /teams', async ({ page }) => {
-    await mockGoogleLogin(page, { email: 'dash-teams@jfet.co.jp', name: 'Dashboard Teams' })
-    await page.goto('/dashboard')
-
-    await page.getByTestId('dashboard-link-teams').click()
-    await expect(page).toHaveURL(/\/teams/)
   })
 
   test('pinning a recent board surfaces it in the pinned section', async ({ page }) => {

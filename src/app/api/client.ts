@@ -1,7 +1,6 @@
 import { BOARD_API_ENDPOINTS } from '@/app/api/boards'
 
 export type InvitationRole = 'editor' | 'viewer'
-export type TeamMemberRole = 'owner' | 'editor' | 'viewer'
 
 const ANONYMOUS_ID_STORAGE_KEY = 'inkly.anonymous-id'
 export const ANONYMOUS_ID_HEADER = 'X-Inkly-Anonymous-Id'
@@ -19,16 +18,9 @@ export interface Board {
   name: string
   creatorAnonymousId: string
   creatorUserId: string | null
-  teamId: string | null
   createdAt: number
   updatedAt: number
   collaborators: BoardCollaborator[]
-  team: BoardTeamSummary | null
-}
-
-export interface BoardTeamSummary {
-  id: string
-  name: string
 }
 
 export interface Invitation {
@@ -95,6 +87,26 @@ export interface RedeemInvitationResponse {
 
 export interface RedeemInvitationErrorResponse {
   error: { code: string; message: string }
+}
+
+function isRedeemInvitationSuccess(
+  data: ApiErrorBody | RedeemInvitationResponse | RedeemInvitationErrorResponse | null
+): data is RedeemInvitationResponse {
+  return Boolean(data && typeof data === 'object' && 'ok' in data && data.ok === true)
+}
+
+function isRedeemInvitationError(
+  data: ApiErrorBody | RedeemInvitationResponse | RedeemInvitationErrorResponse | null
+): data is RedeemInvitationErrorResponse {
+  return Boolean(
+    data &&
+      typeof data === 'object' &&
+      'error' in data &&
+      data.error &&
+      typeof data.error === 'object' &&
+      typeof data.error.code === 'string' &&
+      typeof data.error.message === 'string'
+  )
 }
 
 function readAnonymousId(): string | null {
@@ -181,18 +193,20 @@ export async function checkInvited(email: string): Promise<boolean> {
 export async function redeemInvitation(
   input: RedeemInvitationInput
 ): Promise<RedeemInvitationResponse | RedeemInvitationErrorResponse> {
-  const { data, status } = await requestJson<RedeemInvitationResponse | RedeemInvitationErrorResponse>(
+  const { response, data } = await requestJson<
+    RedeemInvitationResponse | RedeemInvitationErrorResponse
+  >(
     BOARD_API_ENDPOINTS.redeemInvite,
     {
       method: 'POST',
       body: JSON.stringify(input)
     }
   )
-  if (data) return data
+  if (isRedeemInvitationSuccess(data) || isRedeemInvitationError(data)) return data
   return {
     error: {
       code: 'unexpected_response',
-      message: `Unexpected response (HTTP ${status})`
+      message: `Unexpected response (HTTP ${response.status})`
     }
   }
 }
@@ -211,17 +225,11 @@ export function clearAnonymousId() {
 }
 
 export function createBoardEditorLocation(board: Board) {
-  const query: Record<string, string> = {
-    name: board.name
-  }
-
-  if (board.team?.name) {
-    query.teamName = board.team.name
-  }
-
   return {
     path: `/board/${board.id}`,
-    query
+    query: {
+      name: board.name
+    }
   }
 }
 
@@ -230,18 +238,11 @@ export async function listBoards() {
   return response.boards
 }
 
-export function createBoard(input: { name: string; teamId?: string | null } | string) {
+export function createBoard(input: { name: string } | string) {
   const payload = typeof input === 'string' ? { name: input } : input
   return apiRequest<Board>(BOARD_API_ENDPOINTS.boards, {
     method: 'POST',
     body: JSON.stringify(payload)
-  })
-}
-
-export function updateBoard(boardId: string, input: { teamId?: string | null }) {
-  return apiRequest<Board>(BOARD_API_ENDPOINTS.board(boardId), {
-    method: 'PATCH',
-    body: JSON.stringify(input)
   })
 }
 

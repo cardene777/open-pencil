@@ -118,7 +118,8 @@ async function submitForm() {
     })
 
     if ('error' in response) {
-      formError.value = t.value.errorMap[response.error.code] ?? response.error.message
+      const errorMap = t.value.errorMap as Record<string, string>
+      formError.value = errorMap[response.error.code] ?? response.error.message
       return
     }
 

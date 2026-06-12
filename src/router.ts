@@ -7,8 +7,6 @@ import { useAuthStore } from '@/app/auth/store'
 //   /dashboard          - 個人ダッシュボード
 //   /boards             - ボード一覧
 //   /notifications      - 通知一覧
-//   /teams              - チーム一覧
-//   /team/:id           - 個別チーム + settings
 //   /account            - アカウント設定
 //   /admin              - 管理画面
 //   /board/:id          - 編集画面 (招待リンク経由でも認証は必須、 招待 token 自体は
@@ -21,8 +19,6 @@ const PROTECTED_PATH_PREFIXES = [
   '/dashboard',
   '/boards',
   '/notifications',
-  '/teams',
-  '/team/',
   '/account',
   '/admin',
   '/board/'
@@ -33,8 +29,6 @@ const PROTECTED_PATH_PREFIXES = [
 // `/dashboard` と `/board/:id` (招待された board のエディタ) は guest でも開ける。
 const GUEST_FORBIDDEN_PATH_PREFIXES = [
   '/boards',
-  '/teams',
-  '/team/',
   '/notifications',
   '/account',
   '/admin'
@@ -61,9 +55,6 @@ const router = createRouter({
     { path: '/admin', component: () => import('./views/AdminView.vue') },
     { path: '/boards', component: () => import('./views/BoardsView.vue') },
     { path: '/notifications', component: () => import('./views/NotificationsView.vue') },
-    { path: '/teams', component: () => import('./views/TeamsView.vue') },
-    { path: '/team/:id', component: () => import('./views/TeamDetailView.vue') },
-    { path: '/team/:id/settings', component: () => import('./views/TeamSettingsView.vue') },
     { path: '/account', component: () => import('./views/AccountView.vue') },
     { path: '/board/:id', component: () => import('./views/EditorView.vue') },
     { path: '/board/:id/settings', component: () => import('./views/BoardSettingsView.vue') },

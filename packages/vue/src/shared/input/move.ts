@@ -66,7 +66,7 @@ export function handleMoveMove(
   bypassAutoLayout = false
 ) {
   const endTotal = perfTracer.mark('move:total', 'Custom', {
-    selected: d.originals.length
+    selected: d.originals.size
   })
   d.currentX = cx
   d.currentY = cy
@@ -127,7 +127,7 @@ export function handleMoveMove(
           )
         }
       },
-      { count: d.originals.length }
+      { count: d.originals.size }
     )
     perfTracer.measure('move:requestRepaint', 'Custom', () => editor.requestRepaint())
     endTotal()
@@ -152,7 +152,7 @@ export function handleMoveMove(
         )
       }
     },
-    { count: d.originals.length }
+    { count: d.originals.size }
   )
 
   editor.setDropTarget(dropTarget?.id ?? null)

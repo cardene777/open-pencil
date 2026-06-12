@@ -8,8 +8,7 @@ import type {
   BoardCollaboratorRecord,
   BoardRecord,
   BoardStore,
-  CreateBoardInput,
-  UpdateBoardInput
+  CreateBoardInput
 } from './types.js'
 
 export interface CreateBoardStoreOptions {
@@ -45,7 +44,6 @@ function createRecordMapper(database: ApiDatabase) {
       name: row.name,
       creatorAnonymousId: row.creatorAnonymousId,
       creatorUserId: row.creatorUserId,
-      teamId: row.teamId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       collaborators: collaboratorRows.map(mapCollaborator)
@@ -59,7 +57,7 @@ async function createInMemoryDatabase() {
 
 async function mapBoardRows(
   database: ApiDatabase,
-  rows: Array<Pick<typeof boards.$inferSelect, 'id' | 'name' | 'creatorAnonymousId' | 'creatorUserId' | 'teamId' | 'createdAt' | 'updatedAt'>>
+  rows: Array<Pick<typeof boards.$inferSelect, 'id' | 'name' | 'creatorAnonymousId' | 'creatorUserId' | 'createdAt' | 'updatedAt'>>
 ): Promise<BoardRecord[]> {
   if (rows.length === 0) return []
 
@@ -88,7 +86,6 @@ async function mapBoardRows(
       name: row.name,
       creatorAnonymousId: row.creatorAnonymousId,
       creatorUserId: row.creatorUserId,
-      teamId: row.teamId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       collaborators: collaboratorsByBoardId.get(row.id) ?? []
@@ -122,7 +119,6 @@ export async function createBoardStore(
       const createdAt = now()
       const id = crypto.randomUUID()
       const { creatorAnonymousId, creatorUserId } = validateCreateBoardInput(input)
-      const teamId = input.teamId?.trim() || null
 
       await database.db.transaction(async (tx) => {
         await tx
@@ -132,7 +128,6 @@ export async function createBoardStore(
             name: input.name,
             creatorAnonymousId,
             creatorUserId,
-            teamId,
             createdAt,
             updatedAt: createdAt
           })
@@ -168,7 +163,6 @@ export async function createBoardStore(
           name: boards.name,
           creatorAnonymousId: boards.creatorAnonymousId,
           creatorUserId: boards.creatorUserId,
-          teamId: boards.teamId,
           createdAt: boards.createdAt,
           updatedAt: boards.updatedAt
         })
@@ -197,31 +191,12 @@ export async function createBoardStore(
           name: boards.name,
           creatorAnonymousId: boards.creatorAnonymousId,
           creatorUserId: boards.creatorUserId,
-          teamId: boards.teamId,
           createdAt: boards.createdAt,
           updatedAt: boards.updatedAt
         })
         .from(boards)
         .leftJoin(collaborators, eq(boards.id, collaborators.boardId))
         .where(or(eq(boards.creatorUserId, userId), eq(collaborators.userId, userId)))
-        .orderBy(desc(boards.updatedAt))
-        .all()
-
-      return await mapBoardRows(database, boardRows)
-    },
-    async listBoardsForTeam(teamId: string) {
-      const boardRows = await database.db
-        .select({
-          id: boards.id,
-          name: boards.name,
-          creatorAnonymousId: boards.creatorAnonymousId,
-          creatorUserId: boards.creatorUserId,
-          teamId: boards.teamId,
-          createdAt: boards.createdAt,
-          updatedAt: boards.updatedAt
-        })
-        .from(boards)
-        .where(eq(boards.teamId, teamId))
         .orderBy(desc(boards.updatedAt))
         .all()
 
@@ -269,47 +244,6 @@ export async function createBoardStore(
       const record = await store.findBoard(boardId)
       return record ? cloneBoard(record) : null
     },
-    async updateBoard(id: string, input: UpdateBoardInput) {
-      const record = await store.findBoard(id)
-      if (!record) return null
-
-      const nextName = input.name?.trim()
-      const nextTeamId = input.teamId === undefined ? record.teamId : (input.teamId?.trim() || null)
-      const changes: typeof boards.$inferInsert = {
-        id: record.id,
-        name: nextName && nextName.length > 0 ? nextName : record.name,
-        creatorAnonymousId: record.creatorAnonymousId,
-        creatorUserId: record.creatorUserId,
-        teamId: nextTeamId,
-        createdAt: record.createdAt,
-        updatedAt: now()
-      }
-
-      await database.db
-        .update(boards)
-        .set({
-          name: changes.name,
-          teamId: changes.teamId,
-          updatedAt: changes.updatedAt
-        })
-        .where(eq(boards.id, id))
-        .run()
-
-      const updated = await store.findBoard(id)
-      return updated ? cloneBoard(updated) : null
-    },
-    async clearTeamForBoards(teamId: string) {
-      const result = await database.db
-        .update(boards)
-        .set({
-          teamId: null,
-          updatedAt: now()
-        })
-        .where(eq(boards.teamId, teamId))
-        .run()
-
-      return result.rowsAffected
-    }
   }
 
   return store
