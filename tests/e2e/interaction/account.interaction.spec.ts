@@ -9,13 +9,9 @@ test.describe('account interaction', () => {
     await cleanState(page)
   })
 
-  test('anonymous user sees the Google login button', async ({ page }) => {
-    await page.goto('/account')
-
-    await expect(page.getByTestId('account-view')).toBeVisible()
-    await expect(page.getByTestId('account-login-button')).toBeVisible()
-    await expect(page.getByTestId('account-profile')).toHaveCount(0)
-  })
+  // PR #141 で /account は auth 必須化された。 anonymous で /account を開くと LP redirect
+  // されるため、 anonymous 向け login button 表示 test は無意味になった。 削除して LP 側の
+  // landing-nav-login button 検証は LP 自体の test に委ねる。
 
   test('logged in user sees profile and logout button', async ({ page }) => {
     await mockGoogleLogin(page, { email: 'profile@jfet.co.jp', name: 'Profile User' })
