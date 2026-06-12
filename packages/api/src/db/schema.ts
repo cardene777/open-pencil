@@ -35,6 +35,10 @@ export const collaborators = sqliteTable(
       .notNull()
       .references(() => boards.id, { onDelete: 'cascade' }),
     anonymousId: text('anonymous_id').notNull(),
+    // 招待 redeem 経由で logged-in user が collaborator 化されたときに紐付ける user.id。
+    // anonymous (未ログイン) 経由の collaborator は null のまま、 後で sign-in した時に
+    // anonymousId と user.id を結びつけるための列。
+    userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
     role: text('role').$type<BoardCollaboratorRecord['role']>().notNull(),
     addedAt: integer('added_at', { mode: 'number' }).notNull(),
     invitationId: text('invitation_id')
@@ -42,6 +46,7 @@ export const collaborators = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.boardId, table.anonymousId] }),
     index('collaborators_anonymous_id_idx').on(table.anonymousId),
+    index('collaborators_user_id_idx').on(table.userId),
     index('collaborators_invitation_id_idx').on(table.invitationId)
   ]
 )

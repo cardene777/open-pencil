@@ -217,11 +217,12 @@ export function createInklyAuth(options: CreateInklyAuthOptions): InklyAuth {
     }),
     plugins: config.enableTestUtils ? [testUtils()] : undefined,
     // 招待 URL 経由で email+password sign-in できるよう emailAndPassword provider を有効化。
-    // 公開 sign-up は閉じ (disableSignUp: true)、 新規 user 作成は `/api/invite/redeem` 経由のみ。
-    // これにより「招待された人だけ」 が password で入れる設計を保つ。
+    // 公開 sign-up は open のまま (auth.api.signUpEmail を redeem 経路から内部呼び出しするため、
+    // disableSignUp: true だと redeem endpoint からも弾かれる)。
+    // sign-up しただけでは board は見えず、 必ず招待 token の検証 + collaborator 化を経由する必要が
+    // あるため、 sign-up を公開しても「招待された人だけが board を見れる」 制約は別レイヤーで守られる。
     emailAndPassword: {
       enabled: true,
-      disableSignUp: true,
       autoSignIn: true,
       minPasswordLength: 8,
       maxPasswordLength: 128

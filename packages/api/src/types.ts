@@ -58,6 +58,7 @@ export type InvitationVerifyFailureReason =
 
 export interface BoardCollaboratorRecord {
   anonymousId: string
+  userId: string | null
   role: InvitationRole | 'owner'
   addedAt: number
   invitationId: string | null
@@ -83,6 +84,7 @@ export interface CreateBoardInput {
 
 export interface AddBoardCollaboratorInput {
   anonymousId: string
+  userId?: string | null
   role: InvitationRole
   invitationId: string
 }
