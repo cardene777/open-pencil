@@ -2,15 +2,15 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import LoginModal from '@/components/LoginModal.vue'
 import { useAuthStore } from '@/app/auth/store'
-import { toast } from '@/app/shell/ui'
 
 const year = computed(() => new Date().getFullYear())
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
-const loggingIn = ref(false)
+const loginModalOpen = ref(false)
 
 const returnTo = computed(() => {
   const value = route.query.returnTo
@@ -24,8 +24,7 @@ const inviteToken = computed(() => {
 
 const ctaPrimaryLabel = computed(() => {
   if (auth.isAuthenticated) return 'ダッシュボードを開く'
-  if (returnTo.value) return 'ログインして招待先を開く'
-  return 'Google でログイン'
+  return 'ログイン'
 })
 
 const ctaSecondaryTo = computed(() => {
@@ -33,7 +32,7 @@ const ctaSecondaryTo = computed(() => {
   return null
 })
 
-async function handlePrimaryCta() {
+function handlePrimaryCta() {
   if (auth.isAuthenticated) {
     // 認証済なら returnTo (or /dashboard) に直接遷移、 invite が付いていれば query で持ち越す
     const target = returnTo.value || '/dashboard'
@@ -43,22 +42,11 @@ async function handlePrimaryCta() {
     return
   }
 
-  if (loggingIn.value) return
-  loggingIn.value = true
-  try {
-    // returnTo があるとログイン callback でその path に戻す、 無ければ /dashboard
-    // 招待 token があれば callback URL の query に保持し、 board 画面側で再検証 / 利用できるようにする
-    const callbackURL = new URL(returnTo.value || '/dashboard', window.location.origin)
-    if (inviteToken.value && returnTo.value) {
-      callbackURL.searchParams.set('invite', inviteToken.value)
-    }
-    await auth.signInWithGoogle(callbackURL.toString())
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'ログインを開始できませんでした'
-    toast.error(message)
-  } finally {
-    loggingIn.value = false
-  }
+  loginModalOpen.value = true
+}
+
+function closeLoginModal() {
+  loginModalOpen.value = false
 }
 
 const features = [
@@ -112,16 +100,16 @@ onBeforeUnmount(() => {
       <div class="landing__brand">Pencil Editor</div>
       <nav class="landing__nav">
         <a href="https://github.com/cardene777/open-pencil" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://inkly.dev" target="_blank" rel="noopener">ドキュメント</a>
+        <router-link to="/docs">ドキュメント</router-link>
         <button
           v-if="!auth.isAuthenticated"
           type="button"
           class="landing__nav-cta"
           data-test-id="landing-nav-login"
-          :disabled="loggingIn"
+          :disabled="auth.loginPending"
           @click="handlePrimaryCta"
         >
-          {{ loggingIn ? 'ログイン中…' : 'ログイン' }}
+          {{ auth.loginPending ? 'ログイン中…' : 'ログイン' }}
         </button>
         <router-link
           v-else
@@ -149,10 +137,10 @@ onBeforeUnmount(() => {
           type="button"
           class="btn btn--primary"
           data-test-id="landing-primary-cta"
-          :disabled="loggingIn"
+          :disabled="auth.loginPending"
           @click="handlePrimaryCta"
         >
-          {{ loggingIn ? 'ログイン中…' : ctaPrimaryLabel }}
+          {{ auth.loginPending ? 'ログイン中…' : ctaPrimaryLabel }}
         </button>
         <router-link
           v-if="ctaSecondaryTo"
@@ -182,6 +170,13 @@ onBeforeUnmount(() => {
     <footer class="landing__footer">
       <p>© {{ year }} Pencil Editor · MIT License</p>
     </footer>
+
+    <LoginModal
+      :open="loginModalOpen"
+      :return-to="returnTo"
+      :invite-token="inviteToken"
+      @close="closeLoginModal"
+    />
   </main>
 </template>
 

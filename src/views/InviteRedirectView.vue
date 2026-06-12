@@ -79,7 +79,18 @@ onMounted(async () => {
       return
     }
 
-    status.value = 'ready'
+    // 共有リンクからの未認証アクセスは guest login 画面へ強制遷移する。
+    // returnTo に invite path、 invite に token を持たせ、 ゲスト login 後に
+    // 招待先 board へ自動遷移できるようにする (`status === 'ready'` の signin
+    // フォームには到達させない)。
+    status.value = 'authed'
+    void router.replace({
+      path: '/login/guest',
+      query: {
+        returnTo: `/invite/${token.value}`,
+        invite: token.value
+      }
+    })
   } catch {
     status.value = 'invalid'
   }

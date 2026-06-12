@@ -29,6 +29,10 @@ const verifyRequestSchema = z.object({
   token: z.string().trim().min(1)
 })
 
+const checkInvitedRequestSchema = z.object({
+  email: z.string().trim().email()
+})
+
 const redeemRequestSchema = z.object({
   token: z.string().trim().min(1),
   email: z.string().trim().email(),
@@ -146,6 +150,22 @@ export function createInviteRoutes(options: InviteRoutesOptions): Hono {
       },
       201
     )
+  })
+
+  app.post('/invite/check', async (c) => {
+    // guest sign-up 前に「この email アドレスが招待されているか」を判定するための endpoint。
+    // 有効期限内 + revoke されていない invitation が 1 件でも存在すれば invited:true を返す。
+    // 招待 token 自体は返さない (privacy)、 boolean のみ。
+    const body = await c.req.json().catch(() => null)
+    const parsed = checkInvitedRequestSchema.safeParse(body)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]?.message ?? 'Invalid request body'
+      return c.json(validationError(issue), 400)
+    }
+
+    const emailHash = await hashInvitationEmail(parsed.data.email)
+    const invited = await options.store.hasActiveInvitationForEmailHash(emailHash, now())
+    return c.json({ invited })
   })
 
   app.post('/invite/verify', async (c) => {

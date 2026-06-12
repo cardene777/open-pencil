@@ -1,4 +1,4 @@
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq, gt } from 'drizzle-orm'
 
 import type { ApiDatabase } from './db/client.js'
 import { createMigratedApiDatabase } from './db/migrate.js'
@@ -86,6 +86,21 @@ export async function createInvitationStore(
         .run()
 
       return await store.findInvitation(id)
+    },
+    async hasActiveInvitationForEmailHash(emailHash: string, currentTime: number) {
+      const row = await database.db
+        .select({ id: invitations.id })
+        .from(invitations)
+        .where(
+          and(
+            eq(invitations.sentToEmailHash, emailHash),
+            eq(invitations.revoked, false),
+            gt(invitations.expiresAt, currentTime)
+          )
+        )
+        .limit(1)
+        .get()
+      return Boolean(row)
     }
   }
 

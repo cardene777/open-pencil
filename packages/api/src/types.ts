@@ -48,6 +48,11 @@ export interface InvitationStore {
   listInvitationsByBoardId(boardId: string): Promise<InvitationRecord[]>
   attachInvitationToken(id: string, token: string): Promise<InvitationRecord | null>
   revokeInvitation(id: string): Promise<InvitationRecord | null>
+  /**
+   * email hash で「現在有効な (未 revoke + 未 expire) 招待が 1 件以上存在するか」を判定する。
+   * guest sign-up 時の招待チェック用、 hits 数まで返す必要はないので boolean。
+   */
+  hasActiveInvitationForEmailHash(emailHash: string, now: number): Promise<boolean>
 }
 
 export type InvitationVerifyFailureReason =

@@ -7,7 +7,11 @@ import {
   loginWithGoogle,
   logout,
   migrateAnonymous,
+  signInWithEmail as signInWithEmailRequest,
+  signUpWithEmail as signUpWithEmailRequest,
   type AuthSession,
+  type EmailSignInInput,
+  type EmailSignUpInput,
   type MigrateAnonymousResponse
 } from '@/app/auth/client'
 import { isJfetMember, isGuestUser } from '@/app/auth/email'
@@ -81,6 +85,28 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function signInWithEmail(input: EmailSignInInput) {
+    loginPending.value = true
+
+    try {
+      await signInWithEmailRequest(input)
+      await refreshSession()
+    } finally {
+      loginPending.value = false
+    }
+  }
+
+  async function signUpWithEmail(input: EmailSignUpInput) {
+    loginPending.value = true
+
+    try {
+      await signUpWithEmailRequest(input)
+      await refreshSession()
+    } finally {
+      loginPending.value = false
+    }
+  }
+
   async function signOut() {
     logoutPending.value = true
 
@@ -110,6 +136,8 @@ export const useAuthStore = defineStore('auth', () => {
     init,
     refreshSession,
     signInWithGoogle,
+    signInWithEmail,
+    signUpWithEmail,
     signOut
   }
 })
