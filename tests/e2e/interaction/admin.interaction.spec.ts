@@ -12,6 +12,7 @@ test.describe('admin view interaction', () => {
   })
 
   test('renders the admin layout with all five tabs', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-layout@jfet.co.jp', name: 'Admin Layout' })
     await page.goto('/admin')
 
     await expect(page.getByTestId('admin-view')).toBeVisible()
@@ -24,6 +25,7 @@ test.describe('admin view interaction', () => {
   })
 
   test('default tab shows the overview metrics', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-overview@jfet.co.jp', name: 'Admin Overview' })
     await page.goto('/admin')
 
     await expect(page.getByTestId('admin-overview')).toBeVisible()
@@ -34,6 +36,7 @@ test.describe('admin view interaction', () => {
   })
 
   test('switching tabs replaces the active content', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'admin-switch@jfet.co.jp', name: 'Admin Switch' })
     await page.goto('/admin')
 
     await page.getByTestId('admin-tab-boards').click()

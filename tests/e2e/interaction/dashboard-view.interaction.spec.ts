@@ -12,6 +12,7 @@ test.describe('dashboard view interaction', () => {
   })
 
   test('renders the dashboard layout with metric cards and quick actions', async ({ page }) => {
+    await mockGoogleLogin(page, { email: 'dashboard-layout@jfet.co.jp', name: 'Dashboard Layout' })
     await page.goto('/dashboard')
 
     await expect(page.getByTestId('dashboard-view')).toBeVisible()
@@ -25,10 +26,8 @@ test.describe('dashboard view interaction', () => {
     await expect(page.getByTestId('dashboard-link-notifications')).toBeVisible()
   })
 
-  test('shows login banner for anonymous users', async ({ page }) => {
-    await page.goto('/dashboard')
-    await expect(page.getByTestId('login-banner')).toBeVisible()
-  })
+  // PR #141 で /dashboard は auth 必須化された。 anonymous での login-banner 表示確認は
+  // /dashboard 上では到達不能になったため削除。 LP login button の test は LP 自体で別途行う。
 
   test('recent boards section shows empty state when no boards exist', async ({ page }) => {
     await mockGoogleLogin(page, { email: 'dash-empty@jfet.co.jp', name: 'Dashboard Empty' })

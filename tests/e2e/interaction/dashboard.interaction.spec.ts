@@ -12,14 +12,8 @@ test.describe('dashboard interaction', () => {
     await cleanState(page)
   })
 
-  test('login banner is visible for anonymous users and links to Google login', async ({
-    page
-  }) => {
-    await page.goto('/boards')
-    const banner = page.getByTestId('login-banner')
-    await expect(banner).toBeVisible()
-    await expect(banner).toContainText(/log in|google/i)
-  })
+  // PR #141 で /boards は auth 必須化された。 anonymous での login-banner 検証は
+  // /boards 上では到達不能になったため削除。
 
   test('logged in users can create a board via the create form', async ({ page }) => {
     test.setTimeout(45_000)
