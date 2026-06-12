@@ -124,7 +124,19 @@ test.describe('jfet share ui smoke', () => {
       email: collaboratorEmail,
       name: 'Dashboard Collaborator'
     })
-    await collaboratorPage.goto('/dashboard')
+    await Promise.all([
+      collaboratorPage.waitForResponse(
+        (response) =>
+          response.url().includes('/api/boards') &&
+          response.request().method() === 'GET' &&
+          response.ok(),
+        { timeout: 15_000 }
+      ),
+      collaboratorPage.goto('/dashboard')
+    ])
+    await collaboratorPage
+      .getByTestId('dashboard-locale-switcher')
+      .waitFor({ state: 'visible', timeout: 15_000 })
     await collaboratorPage.getByTestId('dashboard-locale-switcher').selectOption('en')
 
     const card = collaboratorPage.getByTestId('dashboard-board').filter({ hasText: boardName })

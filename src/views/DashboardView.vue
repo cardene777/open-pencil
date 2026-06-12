@@ -56,7 +56,7 @@ const isOwner = computed(() => (board: Board) =>
 const recentBoards = computed(() => [...boards.value].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 6))
 const pinnedBoards = computed(() => boards.value.filter((board) => pinnedIds.value.has(board.id)))
 const totalBoards = computed(() => boards.value.length)
-const totalUnread = computed(() => notifications.unreadCount)
+const totalUnread = computed(() => notifications.unreadCount ?? 0)
 const latestNotifications = computed(() => notifications.latest)
 
 function syncPreviews(nextBoards: Board[]) {
@@ -273,7 +273,7 @@ onMounted(async () => {
           >
             <icon-lucide-bell class="size-5 text-accent" />
             <span class="font-medium">{{ dashboard.quickActions.notifications }}</span>
-            <span class="text-xs text-muted">{{ dashboard.quickActions.notificationsHint({ count: totalUnread }) }}</span>
+            <span class="text-xs text-muted">{{ typeof dashboard.quickActions.notificationsHint === 'function' ? dashboard.quickActions.notificationsHint({ count: totalUnread }) : '' }}</span>
           </RouterLink>
         </div>
       </section>
