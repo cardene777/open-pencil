@@ -24,6 +24,7 @@ function cloneBoard(record: BoardRecord): BoardRecord {
 function mapCollaborator(row: typeof collaborators.$inferSelect): BoardCollaboratorRecord {
   return {
     anonymousId: row.anonymousId,
+    userId: row.userId,
     role: row.role,
     addedAt: row.addedAt,
     invitationId: row.invitationId
@@ -143,6 +144,7 @@ export async function createBoardStore(
             .values({
               boardId: id,
               anonymousId: creatorAnonymousId,
+              userId: creatorUserId,
               role: 'owner',
               addedAt: createdAt,
               invitationId: null
@@ -236,6 +238,7 @@ export async function createBoardStore(
           .values({
             boardId,
             anonymousId: input.anonymousId,
+            userId: input.userId ?? null,
             role: input.role,
             addedAt: updatedAt,
             invitationId: input.invitationId
@@ -244,7 +247,8 @@ export async function createBoardStore(
             target: [collaborators.boardId, collaborators.anonymousId],
             set: {
               role: input.role,
-              invitationId: input.invitationId
+              invitationId: input.invitationId,
+              userId: input.userId ?? null
             }
           })
           .run()
