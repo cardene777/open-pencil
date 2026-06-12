@@ -28,7 +28,7 @@ async function selectedNodeSnapshot(page: Page) {
 
 test('assets panel groups component sets and inserts the default variant', async ({ page }) => {
   const canvas = new CanvasHelper(page)
-  await page.goto('/?test')
+  await page.goto('/editor?test')
   await canvas.waitForInit()
 
   const ids = await page.evaluate(() => {
@@ -122,13 +122,13 @@ test('assets panel groups component sets and inserts the default variant', async
   await expect(assetsPanel).not.toContainText('Type=Secondary')
   const buttonAsset = page.locator(`[data-asset-id="${ids.setId}"]`)
   await expect(buttonAsset.getByTestId('asset-variant-summary')).toContainText('Type')
-  await expect(buttonAsset.getByTestId('asset-library-badge')).toContainText('Library')
+  await expect(buttonAsset.getByTestId('asset-library-badge')).toContainText(/Library|ライブラリ/)
   await expect(buttonAsset.getByTestId('asset-description')).toContainText(
     'Reusable button component'
   )
   await expect(buttonAsset.getByTestId('asset-docs')).toBeVisible()
   await expect(buttonAsset.getByTestId('asset-variant-conflict')).toContainText(
-    'Duplicate variant values'
+    /Duplicate variant values|バリアントの重複/
   )
 
   await buttonAsset.click()
@@ -189,7 +189,7 @@ test('assets panel groups component sets and inserts the default variant', async
 
 test('assets insertion accounts for entered container coordinates', async ({ page }) => {
   const canvas = new CanvasHelper(page)
-  await page.goto('/?test')
+  await page.goto('/editor?test')
   await canvas.waitForInit()
 
   const setup = await page.evaluate(() => {
@@ -258,7 +258,7 @@ test('demo exposes component set assets', async ({ page }) => {
   const assetsPanel = page.getByTestId('assets-panel')
 
   await expect(assetsPanel).toContainText('Button')
-  await expect(assetsPanel).toContainText('2 variants · Variant')
+  await expect(assetsPanel).toContainText(/2 variants · Variant|2 個のバリアント · Variant/)
   await expect(assetsPanel).toContainText('Avatar')
   await expect(assetsPanel).not.toContainText('Button/Primary')
 

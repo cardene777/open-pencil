@@ -140,7 +140,9 @@ test('⌘J switches back to Design tab', async () => {
 test('clicking AI tab shows provider setup when no key set', async () => {
   await chatTab().click()
   await expect(apiKeyInput()).toBeVisible()
-  await expect(page.getByText('Connect an AI provider to start chatting.')).toBeVisible()
+  await expect(
+    page.getByText(/Connect an AI provider to start chatting\.|AI プロバイダーを接続してチャットを開始します。/)
+  ).toBeVisible()
   await expect(page.getByTestId('provider-custom-model')).toBeHidden()
 })
 

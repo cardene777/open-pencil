@@ -139,9 +139,12 @@ test('fill color can create and bind a variable', async () => {
   await editor.canvas.drawRect(200, 200, 80, 80)
 
   await editor.page.getByTestId('fill-apply-variable-0').click()
-  await expect(editor.page.getByText(/Create color variable from #?[0-9A-F]{6}/)).toBeVisible()
+  // i18n: "Create color variable from #XXXXXX" / "#XXXXXX からカラー変数を作成"
+  await expect(
+    editor.page.getByText(/Create color variable from #?[0-9A-F]{6}|#?[0-9A-F]{6} からカラー変数を作成/)
+  ).toBeVisible()
   await editor.page.getByTestId('fill-apply-variable-0-create').click()
-  await editor.page.getByPlaceholder('Variable name').fill('Surface/default')
+  await editor.page.getByPlaceholder(/Variable name|変数名/).fill('Surface/default')
   await editor.page.getByTestId('fill-apply-variable-0-create').click()
   await editor.canvas.waitForRender()
 
