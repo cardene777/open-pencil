@@ -161,6 +161,23 @@ export function verifyInvitation(token: string) {
   }).then(({ data }) => (data ?? { valid: false, reason: 'malformed' }) as VerifyInvitationResponse)
 }
 
+export async function checkInvited(email: string): Promise<boolean> {
+  const { response, data } = await requestJson<{ invited: boolean }>(
+    BOARD_API_ENDPOINTS.checkInvited,
+    {
+      method: 'POST',
+      body: JSON.stringify({ email })
+    }
+  )
+
+  if (!response.ok) {
+    // 400/500 等は「招待判定不能」扱い、 sign-up は拒否側に倒す
+    return false
+  }
+  const successBody = data as { invited?: boolean } | null
+  return Boolean(successBody?.invited)
+}
+
 export async function redeemInvitation(
   input: RedeemInvitationInput
 ): Promise<RedeemInvitationResponse | RedeemInvitationErrorResponse> {

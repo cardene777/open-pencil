@@ -14,6 +14,7 @@ import {
   teams,
   users
 } from '../db/schema.js'
+import { hashInvitationEmail } from '../token.js'
 import type {
   BoardRecord,
   BoardStore,
@@ -434,10 +435,13 @@ async function seedInvitations(
 ) {
   const created = await Promise.all(input.items.map(async (item, index) => {
     const createdAt = nextTimestamp()
-    const expiresAt = createdAt + (item.expiresInMs ?? INVITATION_TTL_MS)
+    // 招待の有効期限は guest sign-up 時に real Date.now() で照合されるため、 テスト時刻基準 (2026-01-01)
+    // で計算すると常に expired 扱いになる。 expiresAt は real time 基準で算出する。
+    const expiresAt = Date.now() + (item.expiresInMs ?? INVITATION_TTL_MS)
+    const sentToEmailHash = await hashInvitationEmail(item.email)
     const invitation = await options.invitationStore.createInvitation({
       boardId: input.boardId,
-      sentToEmailHash: item.email,
+      sentToEmailHash,
       role: item.role,
       expiresAt
     })

@@ -2,6 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { checkInvited } from '@/app/api/client'
+import { EmailAlreadyExistsError } from '@/app/auth/client'
 import { useAuthStore } from '@/app/auth/store'
 import { toast } from '@/app/shell/ui'
 
@@ -55,6 +57,17 @@ async function submitForm() {
     return
   }
 
+  // sign-up は board 招待を受けた email でのみ許可。 invitations テーブルに
+  // 有効な招待が無ければ作成を拒否する (招待されていない人の勝手な sign-up を防止)。
+  if (mode.value === 'signUp') {
+    const invited = await checkInvited(email.value).catch(() => false)
+    if (!invited) {
+      formError.value =
+        '招待を受けていないメールアドレスです。 招待リンクから登録してください。'
+      return
+    }
+  }
+
   try {
     if (mode.value === 'signIn') {
       await auth.signInWithEmail({
@@ -84,6 +97,11 @@ async function submitForm() {
     }
     toast.info(mode.value === 'signIn' ? 'ログインしました' : 'アカウントを作成しました')
   } catch (error) {
+    if (error instanceof EmailAlreadyExistsError) {
+      formError.value = error.message
+      mode.value = 'signIn'
+      return
+    }
     formError.value = error instanceof Error ? error.message : '認証に失敗しました'
   }
 }
