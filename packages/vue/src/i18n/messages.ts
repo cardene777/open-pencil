@@ -1,7 +1,7 @@
-import type { ReadableAtom } from 'nanostores'
 import { createI18n, params } from '@nanostores/i18n'
 import type { ComponentsJSON } from '@nanostores/i18n'
 import type { TranslationFunction } from '@nanostores/i18n'
+import type { ReadableAtom } from 'nanostores'
 
 import { locale } from '#vue/i18n/locale'
 import type { Locale } from '#vue/i18n/locale'
@@ -22,14 +22,13 @@ type MessageTree = {
 }
 
 type MessageValues<Tree extends MessageTree> = {
-  [Key in keyof Tree]:
-    Tree[Key] extends string
-      ? string
-      : Tree[Key] extends TranslationFunction<infer Args, infer Output>
-        ? TranslationFunction<Args, Output>
-        : Tree[Key] extends MessageTree
-          ? MessageValues<Tree[Key]>
-          : never
+  [Key in keyof Tree]: Tree[Key] extends string
+    ? string
+    : Tree[Key] extends TranslationFunction<infer Args, infer Output>
+      ? TranslationFunction<Args, Output>
+      : Tree[Key] extends MessageTree
+        ? MessageValues<Tree[Key]>
+        : never
 }
 
 type NestedI18n = <Body extends MessageTree>(
@@ -528,7 +527,8 @@ export const dashboardMessages = i18n('dashboard', {
     dragStartAnnounce: params('Grabbed {section}. Drop it on another section to reorder.'),
     dragDropAnnounce: params('Moved {section} before {target}.'),
     dragCancelAnnounce: params('Cancelled reorder of {section}.'),
-    keyboardHint: 'Press Space to pick up. Use arrow keys to move, Enter to drop, Escape to cancel.',
+    keyboardHint:
+      'Press Space to pick up. Use arrow keys to move, Enter to drop, Escape to cancel.',
     keyboardPickupAnnounce: params(
       'Picked up {section}. Arrow keys move, Enter drops, Escape cancels.'
     ),
@@ -557,8 +557,7 @@ export const accountMessages = i18n('account', {
   logoutPending: 'Signing out…',
   logoutDialogTitle: 'Log out',
   logoutDialogDescription: 'You will return to anonymous mode on this device.',
-  logoutDialogHint:
-    'Your boards remain available. Sign in again to restore account notifications.',
+  logoutDialogHint: 'Your boards remain available. Sign in again to restore account notifications.',
   logoutDialogCancel: 'Cancel',
   logoutDialogConfirm: 'Log out',
   toastSignedOut: 'Signed out',
@@ -714,6 +713,11 @@ export const shareModalMessages = i18n('shareModal', {
   toastLinkCopied: 'Link copied to clipboard',
   shareTitle: params('Invitation to {boardName}'),
   internalEmailsLabel: 'Internal members (jfet.co.jp)',
+  internalSuggestPlaceholder: 'Search by name or email',
+  internalSuggestHint: 'Select a suggestion or add a full email manually.',
+  internalSuggestLoading: 'Searching internal members…',
+  internalSuggestEmpty: 'No matching internal members.',
+  internalManualAdd: 'Add manually',
   internalEmailsPlaceholder: 'alice@jfet.co.jp, bob@jfet.co.jp',
   internalEmailsHint: 'Separate addresses with commas, spaces, or newlines.',
   internalChipRemove: 'Remove',
@@ -746,8 +750,7 @@ export const fontSettingsMessages = i18n('fontSettings', {
   enabled: 'Enabled',
   disabled: 'Disabled',
   fallbackHeading: 'Fallback packs',
-  fallbackDescription:
-    'Download CJK and Arabic fallbacks before opening files that need them.',
+  fallbackDescription: 'Download CJK and Arabic fallbacks before opening files that need them.',
   download: 'Download',
   downloading: 'Downloading…',
   refresh: 'Refresh',
@@ -769,7 +772,8 @@ export const guestDashboardMessages = i18n('guestDashboard', {
   boardsHeading: 'Your invited boards',
   boardsSubheading: 'Boards shared with you by jfet members',
   emptyTitle: 'No invited boards yet',
-  emptyDescription: 'When someone invites you to a board, it will appear here. Re-open the invitation URL if you came in by mistake.',
+  emptyDescription:
+    'When someone invites you to a board, it will appear here. Re-open the invitation URL if you came in by mistake.',
   inviterUnknown: 'unknown inviter',
   fromInviter: params('from {name}'),
   untitledBoard: 'Untitled board',
@@ -788,7 +792,8 @@ export const guestDashboardMessages = i18n('guestDashboard', {
 export const permissionDeniedMessages = i18n('permissionDenied', {
   headTitle: 'Access not granted',
   headline: 'Access not granted',
-  description: 'Only boards shared with you are available. Open the invitation URL again, or sign in with a different account.',
+  description:
+    'Only boards shared with you are available. Open the invitation URL again, or sign in with a different account.',
   blockedPathLabel: 'Blocked path',
   ctaPrimary: 'Go to invited boards',
   ctaSignOut: 'Sign out'

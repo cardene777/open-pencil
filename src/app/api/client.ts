@@ -82,6 +82,12 @@ export interface ShareBoardResponse {
   rejected: { email: string; reason: string }[]
 }
 
+export interface InternalUserSummary {
+  id: string
+  name: string
+  email: string
+}
+
 export interface RedeemInvitationInput {
   token: string
   email: string
@@ -111,12 +117,12 @@ function isRedeemInvitationError(
 ): data is RedeemInvitationErrorResponse {
   return Boolean(
     data &&
-      typeof data === 'object' &&
-      'error' in data &&
-      data.error &&
-      typeof data.error === 'object' &&
-      typeof data.error.code === 'string' &&
-      typeof data.error.message === 'string'
+    typeof data === 'object' &&
+    'error' in data &&
+    data.error &&
+    typeof data.error === 'object' &&
+    typeof data.error.code === 'string' &&
+    typeof data.error.message === 'string'
   )
 }
 
@@ -184,6 +190,22 @@ export function shareBoard(boardId: string, input: ShareBoardInput) {
   })
 }
 
+export function searchInternalUsers(query: string, limit?: number) {
+  const normalizedQuery = query.trim()
+  if (!normalizedQuery) {
+    return Promise.resolve({ users: [] satisfies InternalUserSummary[] })
+  }
+
+  const params = new URLSearchParams({ q: normalizedQuery })
+  if (typeof limit === 'number') {
+    params.set('limit', String(limit))
+  }
+
+  return apiRequest<{ users: InternalUserSummary[] }>(
+    `${BOARD_API_ENDPOINTS.internalUsers}?${params.toString()}`
+  )
+}
+
 export function verifyInvitation(token: string) {
   return requestJson<VerifyInvitationResponse>(BOARD_API_ENDPOINTS.verifyInvite, {
     method: 'POST',
@@ -213,13 +235,10 @@ export async function redeemInvitation(
 ): Promise<RedeemInvitationResponse | RedeemInvitationErrorResponse> {
   const { response, data } = await requestJson<
     RedeemInvitationResponse | RedeemInvitationErrorResponse
-  >(
-    BOARD_API_ENDPOINTS.redeemInvite,
-    {
-      method: 'POST',
-      body: JSON.stringify(input)
-    }
-  )
+  >(BOARD_API_ENDPOINTS.redeemInvite, {
+    method: 'POST',
+    body: JSON.stringify(input)
+  })
   if (isRedeemInvitationSuccess(data) || isRedeemInvitationError(data)) return data
   return {
     error: {

@@ -166,6 +166,12 @@ export interface InternalUserRecord {
   addedAt: number
 }
 
+export interface InternalUserSearchResult {
+  id: string
+  name: string
+  email: string
+}
+
 export interface UpsertInternalUserInput {
   email: string
   userId?: string | null
@@ -181,6 +187,7 @@ export interface InternalUserStore {
   findInternalUserByEmail(email: string): Promise<InternalUserRecord | null>
   findInternalUserByUserId(userId: string): Promise<InternalUserRecord | null>
   listInternalUsers(): Promise<InternalUserRecord[]>
+  searchInternalUsersByPrefix(query: string, limit?: number): Promise<InternalUserSearchResult[]>
 }
 
 export interface PendingInternalInvitationRecord {

@@ -5,6 +5,7 @@ export const BOARD_API_ENDPOINTS = {
   invitations: (boardId: string) => `/api/boards/${boardId}/invitations`,
   invitation: (boardId: string, invitationId: string) =>
     `/api/boards/${boardId}/invitations/${invitationId}`,
+  internalUsers: '/api/internal-users',
   invite: '/api/invite',
   verifyInvite: '/api/invite/verify',
   redeemInvite: '/api/invite/redeem',

@@ -122,7 +122,9 @@ onMounted(() => {
     class="min-h-screen bg-[radial-gradient(circle_at_top_right,rgba(255,190,92,0.14),transparent_28%),linear-gradient(180deg,var(--color-canvas),#0c1119)] px-6 py-10"
   >
     <div class="mx-auto flex w-full max-w-5xl flex-col gap-6">
-      <section class="rounded-[28px] border border-white/8 bg-panel/85 p-6 shadow-2xl backdrop-blur-xl">
+      <section
+        class="rounded-[28px] border border-white/8 bg-panel/85 p-6 shadow-2xl backdrop-blur-xl"
+      >
         <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div class="space-y-2">
             <button
@@ -161,7 +163,10 @@ onMounted(() => {
         </div>
       </section>
 
-      <section v-if="loading" class="rounded-2xl border border-border bg-panel/70 p-6 text-sm text-muted">
+      <section
+        v-if="loading"
+        class="rounded-2xl border border-border bg-panel/70 p-6 text-sm text-muted"
+      >
         {{ boardSettingsT.loading }}
       </section>
 
@@ -175,7 +180,9 @@ onMounted(() => {
       <template v-else-if="payload">
         <section class="rounded-[24px] border border-border bg-panel/75 p-5">
           <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold text-surface">{{ boardSettingsT.invitationLinksHeading }}</h2>
+            <h2 class="text-lg font-semibold text-surface">
+              {{ boardSettingsT.invitationLinksHeading }}
+            </h2>
             <button
               type="button"
               class="cursor-pointer rounded-md px-2 py-1 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
@@ -194,13 +201,21 @@ onMounted(() => {
               <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div class="space-y-1">
                   <p class="text-sm font-medium text-surface">
-                    {{ invitation.role === 'editor' ? boardSettingsT.editorInvite : boardSettingsT.viewerInvite }}
+                    {{
+                      invitation.role === 'editor'
+                        ? boardSettingsT.editorInvite
+                        : boardSettingsT.viewerInvite
+                    }}
                   </p>
                   <p class="break-all text-xs text-muted">
                     {{ invitationUrl(invitation.token) }}
                   </p>
                   <p class="text-[11px] text-muted">
-                    {{ invitation.revoked ? boardSettingsT.statusRevoked : boardSettingsT.statusActive }}{{ boardSettingsT.statusSeparator }}{{ boardSettingsT.expiresPrefix }}
+                    {{
+                      invitation.revoked
+                        ? boardSettingsT.statusRevoked
+                        : boardSettingsT.statusActive
+                    }}{{ boardSettingsT.statusSeparator }}{{ boardSettingsT.expiresPrefix }}
                     {{ new Date(invitation.expiresAt).toLocaleString() }}
                   </p>
                 </div>
@@ -238,20 +253,32 @@ onMounted(() => {
         </section>
 
         <section class="rounded-[24px] border border-border bg-panel/75 p-5">
-          <h2 class="text-lg font-semibold text-surface">{{ boardSettingsT.collaboratorsHeading }}</h2>
+          <h2 class="text-lg font-semibold text-surface">
+            {{ boardSettingsT.collaboratorsHeading }}
+          </h2>
           <ul data-test-id="board-collaborator-list" class="mt-4 space-y-3">
             <li
               v-for="collaborator in payload.board.collaborators"
-              :key="collaborator.invitationId ?? collaborator.userId ?? collaborator.anonymousId ?? `c-${collaborator.addedAt}`"
+              :key="
+                collaborator.invitationId ??
+                collaborator.userId ??
+                collaborator.anonymousId ??
+                `c-${collaborator.addedAt}`
+              "
               class="flex items-center justify-between rounded-2xl border border-border bg-canvas/70 px-4 py-3"
             >
               <div>
-                <p class="text-sm font-medium text-surface">{{ collaborator.userId ?? collaborator.anonymousId ?? '—' }}</p>
+                <p class="text-sm font-medium text-surface">
+                  {{ collaborator.userId ?? collaborator.anonymousId ?? '—' }}
+                </p>
                 <p class="text-[11px] text-muted">
-                  {{ boardSettingsT.addedPrefix }} {{ new Date(collaborator.addedAt).toLocaleString() }}
+                  {{ boardSettingsT.addedPrefix }}
+                  {{ new Date(collaborator.addedAt).toLocaleString() }}
                 </p>
               </div>
-              <span class="rounded-full border border-white/10 bg-panel px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-muted">
+              <span
+                class="rounded-full border border-white/10 bg-panel px-2 py-1 text-[11px] uppercase tracking-[0.14em] text-muted"
+              >
                 {{ collaborator.role }}
               </span>
             </li>
@@ -264,6 +291,7 @@ onMounted(() => {
       v-model:open="shareOpen"
       :board-id="payload?.board.id ?? boardId"
       :board-name="payload?.board.name ?? boardSettingsT.shareModalBoardFallback"
+      :board-collaborators="payload?.board.collaborators"
       @created="onInvitationCreated"
     />
 
@@ -275,13 +303,19 @@ onMounted(() => {
           :class="cls.content"
           @escape-key-down="revokeOpen = false"
         >
-          <AlertDialogTitle :class="cls.title">{{ boardSettingsT.revokeDialogTitle }}</AlertDialogTitle>
+          <AlertDialogTitle :class="cls.title">{{
+            boardSettingsT.revokeDialogTitle
+          }}</AlertDialogTitle>
           <AlertDialogDescription :class="cls.description">
             {{ boardSettingsT.revokeDialogDescription }}
           </AlertDialogDescription>
 
           <div class="mt-4 rounded-xl border border-border bg-canvas/70 p-3 text-xs text-muted">
-            {{ revokeTarget?.token ? invitationUrl(revokeTarget.token) : boardSettingsT.linkUnavailable }}
+            {{
+              revokeTarget?.token
+                ? invitationUrl(revokeTarget.token)
+                : boardSettingsT.linkUnavailable
+            }}
           </div>
 
           <div class="mt-5 flex justify-end gap-2">

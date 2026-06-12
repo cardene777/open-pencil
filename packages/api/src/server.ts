@@ -1,5 +1,4 @@
 import type { ServerWebSocket } from 'bun'
-
 import { Hono } from 'hono'
 import { serveStatic } from 'hono/bun'
 
@@ -15,6 +14,7 @@ import {
 import { createPendingInternalInvitationStore } from './pendingInternalInvitationStore.js'
 import { createAuthRoutes } from './routes/auth.js'
 import { createBoardRoutes } from './routes/boards.js'
+import { createInternalUserRoutes } from './routes/internalUsers.js'
 import { createInviteRoutes } from './routes/invite.js'
 import { createNotificationRoutes } from './routes/notifications.js'
 import { createTestingRoutes } from './routes/testing.js'
@@ -147,6 +147,14 @@ export async function createApiApp(options: CreateApiAppOptions) {
   )
 
   app.route(
+    '/api',
+    createInternalUserRoutes({
+      auth,
+      internalUserStore
+    })
+  )
+
+  app.route(
     '/api/test',
     createTestingRoutes({
       enabled: typeof auth.createTestSession === 'function',
@@ -175,20 +183,19 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
   const host = options.host ?? env.INKLY_API_HOST ?? API_HOST
   const requestedPort = options.port ?? Number(env.PORT ?? env.INKLY_API_PORT ?? API_PORT)
   let onNotificationCreated: ((notification: NotificationRecord) => void) | undefined
-  const { app, store, boardStore, notificationStore, database, auth } =
-    await createApiApp({
-      boardStore: options.boardStore,
-      notificationStore: options.notificationStore,
-      database: options.database,
-      auth: options.auth,
-      env,
-      secret,
-      store: options.store,
-      now: options.now,
-      onNotificationCreated: (notification) => {
-        onNotificationCreated?.(notification)
-      }
-    })
+  const { app, store, boardStore, notificationStore, database, auth } = await createApiApp({
+    boardStore: options.boardStore,
+    notificationStore: options.notificationStore,
+    database: options.database,
+    auth: options.auth,
+    env,
+    secret,
+    store: options.store,
+    now: options.now,
+    onNotificationCreated: (notification) => {
+      onNotificationCreated?.(notification)
+    }
+  })
   const signaling = createSignalingServer()
   const notifications = createNotificationWebSocketServer(auth)
   onNotificationCreated = (notification) => {
@@ -265,9 +272,7 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
   }
 
   if (!server) {
-    throw lastError instanceof Error
-      ? lastError
-      : new Error('Failed to bind an ephemeral API port')
+    throw lastError instanceof Error ? lastError : new Error('Failed to bind an ephemeral API port')
   }
 
   process.stderr.write(`Inkly API server listening on http://${host}:${port}\n`)

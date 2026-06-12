@@ -1,8 +1,8 @@
-import { asc, eq } from 'drizzle-orm'
+import { and, asc, eq, isNotNull, or, sql } from 'drizzle-orm'
 
 import type { ApiDatabase } from './db/client.js'
 import { createMigratedApiDatabase } from './db/migrate.js'
-import { internalUsers } from './db/schema.js'
+import { internalUsers, users } from './db/schema.js'
 import type {
   InternalUserRecord,
   InternalUserStore,
@@ -15,11 +15,7 @@ export interface CreateInternalUserStoreOptions {
 }
 
 async function createInMemoryDatabase() {
-  return await createMigratedApiDatabase({ mode: 'memory' })
-}
-
-function cloneInternalUser(record: InternalUserRecord): InternalUserRecord {
-  return structuredClone(record)
+  return createMigratedApiDatabase({ mode: 'memory' })
 }
 
 function mapInternalUser(row: typeof internalUsers.$inferSelect): InternalUserRecord {
@@ -29,6 +25,10 @@ function mapInternalUser(row: typeof internalUsers.$inferSelect): InternalUserRe
     userId: row.userId,
     addedAt: row.addedAt
   }
+}
+
+function escapeLikePattern(value: string) {
+  return value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_')
 }
 
 export async function createInternalUserStore(
@@ -55,7 +55,7 @@ export async function createInternalUserStore(
         })
         .run()
 
-      return await store.findInternalUserByEmail(normalizedEmail)
+      return store.findInternalUserByEmail(normalizedEmail)
     },
     async findInternalUserByEmail(email: string) {
       const normalizedEmail = email.trim().toLowerCase()
@@ -65,7 +65,7 @@ export async function createInternalUserStore(
         .where(eq(internalUsers.email, normalizedEmail))
         .get()
 
-      return row ? cloneInternalUser(mapInternalUser(row)) : null
+      return row ? structuredClone(mapInternalUser(row)) : null
     },
     async findInternalUserByUserId(userId: string) {
       const row = await database.db
@@ -74,7 +74,7 @@ export async function createInternalUserStore(
         .where(eq(internalUsers.userId, userId))
         .get()
 
-      return row ? cloneInternalUser(mapInternalUser(row)) : null
+      return row ? structuredClone(mapInternalUser(row)) : null
     },
     async listInternalUsers() {
       const rows = await database.db
@@ -83,7 +83,42 @@ export async function createInternalUserStore(
         .orderBy(asc(internalUsers.email))
         .all()
 
-      return rows.map((row) => cloneInternalUser(mapInternalUser(row)))
+      return rows.map((row) => structuredClone(mapInternalUser(row)))
+    },
+    async searchInternalUsersByPrefix(query: string, limit = 20) {
+      const normalizedQuery = query.trim().toLowerCase()
+      if (!normalizedQuery) return []
+
+      const escapedQuery = `${escapeLikePattern(normalizedQuery)}%`
+      const maxResults = Math.min(Math.max(limit, 1), 50)
+      const rows = await database.db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email
+        })
+        .from(internalUsers)
+        .innerJoin(users, eq(users.id, internalUsers.userId))
+        .where(
+          and(
+            isNotNull(internalUsers.userId),
+            or(
+              sql`${users.email} LIKE ${escapedQuery} ESCAPE '\\' COLLATE NOCASE`,
+              sql`${users.name} LIKE ${escapedQuery} ESCAPE '\\' COLLATE NOCASE`
+            )
+          )
+        )
+        .orderBy(asc(users.email))
+        .limit(maxResults)
+        .all()
+
+      return rows.map((row) =>
+        structuredClone({
+          id: row.id,
+          name: row.name,
+          email: row.email
+        })
+      )
     }
   }
 
