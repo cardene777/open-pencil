@@ -2,7 +2,9 @@ import { test, expect, type Page } from '@playwright/test'
 
 import { CanvasHelper } from '#tests/helpers/canvas'
 
-export function useEditorSetup(url = '/') {
+// PR #141 で `/` は LandingView (LP) に変わったため、 editor を anonymous で
+// 起動する互換 path `/editor` を default にする。 anonymous OK のため auth 不要。
+export function useEditorSetup(url = '/editor') {
   let page: Page
   let canvas: CanvasHelper
 
@@ -29,7 +31,7 @@ export function useEditorSetup(url = '/') {
   }
 }
 
-export function useEditorSetupWithClear(url = '/') {
+export function useEditorSetupWithClear(url = '/editor') {
   const ctx = useEditorSetup(url)
 
   test.beforeEach(async () => {
