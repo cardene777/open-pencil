@@ -302,8 +302,8 @@ test('multi-select shows mixed header and boolean operations', async () => {
 
   const multiHeader = editor.page.getByTestId('design-multi-header')
   await expect(multiHeader).toBeVisible()
-  await expect(multiHeader).toContainText('Mixed')
-  await expect(multiHeader).toContainText('layers')
+  await expect(multiHeader).toContainText(/Mixed|混合/)
+  await expect(multiHeader).toContainText(/layers|レイヤー/)
 
   await editor.page.getByTestId('boolean-operations-trigger').click()
   await expect(editor.page.getByTestId('boolean-operation-booleanUnion')).toBeVisible()

@@ -29,7 +29,8 @@ function copyButton() {
 test('Code tab shows empty state with no selection', async () => {
   await codeTab().click()
   await expect(codePanelEmpty()).toBeVisible()
-  await expect(codePanelEmpty()).toContainText('Select a layer')
+  // i18n: 英語 "Select a layer" / 日本語 "レイヤーを選択" のどちらでも OK
+  await expect(codePanelEmpty()).toContainText(/Select a layer|レイヤーを選択/)
 })
 
 test('selecting a rectangle shows JSX code', async () => {
@@ -61,10 +62,11 @@ test('format toggle switches between Inkly and Tailwind', async () => {
 test('copy button works and shows confirmation', async () => {
   await copyButton().click()
 
-  await expect(copyButton()).toContainText('Copied')
+  // i18n: "Copied" or "コピーしました"
+  await expect(copyButton()).toContainText(/Copied|コピーしました|コピー済/)
 
   await editor.page.waitForTimeout(2500)
-  await expect(copyButton()).toContainText('Copy')
+  await expect(copyButton()).toContainText(/Copy$|コピー$/)
 })
 
 test('deselecting shows empty state again', async () => {

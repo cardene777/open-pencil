@@ -18,7 +18,8 @@ export function useEditorSetup(url = '/editor') {
   })
 
   test.afterAll(async () => {
-    await page.close()
+    // test.skip で beforeAll が走らなかった場合 page は undefined のため、 ガードする。
+    if (page) await page.close()
   })
 
   return {

@@ -31,11 +31,12 @@ test('Edit menu shows Undo/Redo/Delete', async () => {
   const menu = editor.page.locator('[role="menu"]')
   await expect(menu).toBeVisible()
 
+  // 日本語 default locale で訳されるため i18n regex で許容する。
   const items = await menu.locator('[role="menuitem"]').allTextContents()
-  expect(items.some((t) => t.includes('Undo'))).toBe(true)
-  expect(items.some((t) => t.includes('Redo'))).toBe(true)
-  expect(items.some((t) => t.includes('Delete'))).toBe(true)
-  expect(items.some((t) => t.includes('Select all'))).toBe(true)
+  expect(items.some((t) => /Undo|元に戻す/.test(t))).toBe(true)
+  expect(items.some((t) => /Redo|やり直し/.test(t))).toBe(true)
+  expect(items.some((t) => /Delete|削除/.test(t))).toBe(true)
+  expect(items.some((t) => /Select all|すべて選択/.test(t))).toBe(true)
 
   await editor.page.keyboard.press('Escape')
 })
@@ -46,7 +47,7 @@ test('View menu shows zoom options', async () => {
   await expect(menu).toBeVisible()
 
   const items = await menu.locator('[role="menuitem"]').allTextContents()
-  expect(items.some((t) => t.includes('Zoom to fit'))).toBe(true)
+  expect(items.some((t) => /Zoom to fit|画面に合わせる/.test(t))).toBe(true)
   expect(items.some((t) => t.includes('Zoom In'))).toBe(true)
   expect(items.some((t) => t.includes('Zoom Out'))).toBe(true)
 
@@ -59,11 +60,11 @@ test('Object menu shows Group/Ungroup/Component', async () => {
   await expect(menu).toBeVisible()
 
   const items = await menu.locator('[role="menuitem"]').allTextContents()
-  expect(items.some((t) => t.includes('Group'))).toBe(true)
-  expect(items.some((t) => t.includes('Ungroup'))).toBe(true)
-  expect(items.some((t) => t.includes('Create component'))).toBe(true)
-  expect(items.some((t) => t.includes('Bring to front'))).toBe(true)
-  expect(items.some((t) => t.includes('Send to back'))).toBe(true)
+  expect(items.some((t) => /Group|グループ化/.test(t))).toBe(true)
+  expect(items.some((t) => /Ungroup|グループ解除/.test(t))).toBe(true)
+  expect(items.some((t) => /Create component|コンポーネントを作成/.test(t))).toBe(true)
+  expect(items.some((t) => /Bring to front|最前面へ/.test(t))).toBe(true)
+  expect(items.some((t) => /Send to back|最背面へ/.test(t))).toBe(true)
 
   await editor.page.keyboard.press('Escape')
 })
@@ -83,7 +84,8 @@ test('Undo via Edit menu works', async () => {
   expect(beforeUndo).toBe(1)
 
   await editor.page.locator('[role="menubar"] [role="menuitem"]', { hasText: 'Edit' }).click()
-  await editor.page.locator('[role="menu"] [role="menuitem"]', { hasText: 'Undo' }).click()
+  // i18n 対応: 英語 "Undo" / 日本語 "元に戻す" のどちらでも click できる locator
+  await editor.page.locator('[role="menu"] [role="menuitem"]', { hasText: /Undo|元に戻す/ }).click()
   await editor.canvas.waitForRender()
 
   const afterUndo = await getStoreStateNumber('selectedIds')
@@ -100,7 +102,7 @@ test('Duplicate via Edit menu works', async () => {
   })
 
   await editor.page.locator('[role="menubar"] [role="menuitem"]', { hasText: 'Edit' }).click()
-  await editor.page.locator('[role="menu"] [role="menuitem"]', { hasText: 'Duplicate' }).click()
+  await editor.page.locator('[role="menu"] [role="menuitem"]', { hasText: /Duplicate|複製/ }).click()
   await editor.canvas.waitForRender()
 
   const countAfter = await editor.page.evaluate(() => {
@@ -114,14 +116,14 @@ test('Duplicate via Edit menu works', async () => {
 
 test('Zoom to fit via View menu works', async () => {
   await editor.page.locator('[role="menubar"] [role="menuitem"]', { hasText: 'View' }).click()
-  await editor.page.locator('[role="menu"] [role="menuitem"]', { hasText: 'Zoom in' }).click()
+  await editor.page.locator('[role="menu"] [role="menuitem"]', { hasText: 'Zoom In' }).click()
   await editor.canvas.waitForRender()
 
   const zoomBefore = await getStoreStateNumber('zoom')
   expect(zoomBefore).toBeGreaterThan(1)
 
   await editor.page.locator('[role="menubar"] [role="menuitem"]', { hasText: 'View' }).click()
-  await editor.page.locator('[role="menu"] [role="menuitem"]', { hasText: 'Zoom to fit' }).click()
+  await editor.page.locator('[role="menu"] [role="menuitem"]', { hasText: /Zoom to fit|画面に合わせる/ }).click()
   await editor.canvas.waitForRender()
 
   const zoomAfter = await getStoreStateNumber('zoom')
