@@ -1,6 +1,6 @@
 import { expect, test, useEditorSetupWithClear } from '#tests/e2e/fixtures'
 
-const editor = useEditorSetupWithClear('/?test')
+const editor = useEditorSetupWithClear('/editor?test')
 
 async function rectangleCount() {
   return editor.page.evaluate(() => {
