@@ -10,14 +10,9 @@ test.describe('account accessibility', () => {
     await cleanState(page)
   })
 
-  test('anonymous state has no critical accessibility violations', async ({ page }) => {
-    await page.goto('/account')
-    await expect(page.getByTestId('account-login-button')).toBeVisible()
-    await waitForVisualReady(page)
-
-    const results = await runA11yScan(page)
-    expectNoCriticalViolations(results)
-  })
+  // PR #141 で /account は auth 必須化された。 anonymous で /account を開くと LP redirect
+  // されるため、 anonymous 向け a11y scan は意味を成さない。 LP 側の a11y は LP 自体の
+  // a11y test で別途検査する。
 
   test('signed-in state has no critical accessibility violations', async ({ page }) => {
     await mockGoogleLogin(page, {

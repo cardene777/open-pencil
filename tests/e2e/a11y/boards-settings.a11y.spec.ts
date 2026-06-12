@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 
 import { runA11yScan, expectNoCriticalViolations } from '#tests/helpers/a11y'
 import { cleanState, seedBoards, seedInvitations } from '#tests/helpers/api-seed'
+import { mockGoogleLogin } from '#tests/helpers/e2e-auth'
 import { waitForVisualReady } from '#tests/helpers/visual'
 
 const boardSettingsDisabledRules = [
@@ -12,6 +13,12 @@ const boardSettingsDisabledRules = [
 test.describe('board settings accessibility', () => {
   test.beforeEach(async ({ page }) => {
     await cleanState(page)
+    // PR #141 で /boards / /board/:id/settings は auth 必須化された。
+    // seedBoards / seedInvitations を成立させるため beforeEach で login する。
+    await mockGoogleLogin(page, {
+      email: 'board-settings-a11y@jfet.co.jp',
+      name: 'Board Settings A11y'
+    })
   })
 
   test('empty invitation state has no critical accessibility violations', async ({ page }) => {
