@@ -774,7 +774,8 @@
     "toastDeleteFail": "No se pudo eliminar el equipo"
   },
   "common": {
-    "home": "Inicio"
+    "home": "Inicio",
+    "openBoard": "Abrir →"
   },
   "inviteAuth": {
     "headTitle": "Aceptar invitación",
@@ -952,5 +953,38 @@
       "exportToastSingular": "{count} miembro exportado",
       "exportToastPlural": "{count} miembros exportados"
     }
+  },
+  "guestDashboard": {
+    "headTitle": "Tus tableros invitados",
+    "guestBadge": "Invitado",
+    "signOut": "Cerrar sesión",
+    "accountAriaLabel": "Menú de cuenta",
+    "welcomeTitle": "Bienvenido, {name}",
+    "welcomeSubtitle": "Te han invitado a {boards} tableros por {inviters} personas.",
+    "boardsHeading": "Tus tableros invitados",
+    "boardsSubheading": "Tableros compartidos contigo por miembros de jfet",
+    "emptyTitle": "Aún no tienes tableros invitados",
+    "emptyDescription": "Cuando alguien te invite a un tablero, aparecerá aquí. Vuelve a abrir el URL de invitación si llegaste por error.",
+    "inviterUnknown": "invitador desconocido",
+    "fromInviter": "de {name}",
+    "untitledBoard": "Tablero sin título",
+    "relativeJustNow": "Hace un momento",
+    "relativeMinutes": "hace {value} min",
+    "relativeHours": "hace {value} h",
+    "relativeDays": "hace {value} d",
+    "roleLabel": {
+      "owner": "PROP.",
+      "editor": "EDITOR",
+      "viewer": "LECTOR",
+      "commenter": "COMENT."
+    }
+  },
+  "permissionDenied": {
+    "headTitle": "Acceso denegado",
+    "headline": "Acceso denegado",
+    "description": "Solo están disponibles los tableros compartidos contigo. Vuelve a abrir el URL de invitación o inicia sesión con otra cuenta.",
+    "blockedPathLabel": "Ruta bloqueada",
+    "ctaPrimary": "Ir a tableros invitados",
+    "ctaSignOut": "Cerrar sesión"
   }
 }

@@ -10,6 +10,7 @@ import {
   type AuthSession,
   type MigrateAnonymousResponse
 } from '@/app/auth/client'
+import { isJfetMember, isGuestUser } from '@/app/auth/email'
 
 export const useAuthStore = defineStore('auth', () => {
   const session = ref<AuthSession | null>(null)
@@ -23,6 +24,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   const user = computed(() => session.value?.user ?? null)
   const isAuthenticated = computed(() => !!session.value?.user.id)
+  const userEmail = computed(() => user.value?.email ?? null)
+  const isJfetUser = computed(() => isJfetMember(userEmail.value))
+  const isGuest = computed(() => !!user.value && isGuestUser(userEmail.value))
 
   async function maybeMigrateAnonymousState() {
     const anonymousId = getAnonymousId()?.trim()
@@ -99,6 +103,9 @@ export const useAuthStore = defineStore('auth', () => {
     logoutPending,
     migrating,
     isAuthenticated,
+    userEmail,
+    isJfetUser,
+    isGuest,
     lastMigration,
     init,
     refreshSession,

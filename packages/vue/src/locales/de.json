@@ -774,7 +774,8 @@
     "toastDeleteFail": "Team konnte nicht gelöscht werden"
   },
   "common": {
-    "home": "Startseite"
+    "home": "Startseite",
+    "openBoard": "Öffnen →"
   },
   "inviteAuth": {
     "headTitle": "Einladung annehmen",
@@ -952,5 +953,38 @@
       "exportToastSingular": "{count} Mitglied exportiert",
       "exportToastPlural": "{count} Mitglieder exportiert"
     }
+  },
+  "guestDashboard": {
+    "headTitle": "Deine eingeladenen Boards",
+    "guestBadge": "Gast",
+    "signOut": "Abmelden",
+    "accountAriaLabel": "Kontomenü",
+    "welcomeTitle": "Willkommen, {name}",
+    "welcomeSubtitle": "Du wurdest zu {boards} Boards von {inviters} Einladenden eingeladen.",
+    "boardsHeading": "Deine eingeladenen Boards",
+    "boardsSubheading": "Mit dir geteilte Boards von jfet-Mitgliedern",
+    "emptyTitle": "Noch keine eingeladenen Boards",
+    "emptyDescription": "Wenn dich jemand zu einem Board einlädt, erscheint es hier. Öffne die Einladungs-URL erneut, falls du versehentlich hier gelandet bist.",
+    "inviterUnknown": "unbekannte Einladende",
+    "fromInviter": "von {name}",
+    "untitledBoard": "Unbenanntes Board",
+    "relativeJustNow": "Gerade eben",
+    "relativeMinutes": "vor {value} Min.",
+    "relativeHours": "vor {value} Std.",
+    "relativeDays": "vor {value} Tagen",
+    "roleLabel": {
+      "owner": "EIGENT.",
+      "editor": "EDITOR",
+      "viewer": "BETR.",
+      "commenter": "KOMM."
+    }
+  },
+  "permissionDenied": {
+    "headTitle": "Zugriff verweigert",
+    "headline": "Zugriff verweigert",
+    "description": "Nur mit dir geteilte Boards sind verfügbar. Öffne die Einladungs-URL erneut oder melde dich mit einem anderen Konto an.",
+    "blockedPathLabel": "Blockierter Pfad",
+    "ctaPrimary": "Zu eingeladenen Boards",
+    "ctaSignOut": "Abmelden"
   }
 }

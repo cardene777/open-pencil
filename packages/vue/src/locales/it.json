@@ -774,7 +774,8 @@
     "toastDeleteFail": "Impossibile eliminare il team"
   },
   "common": {
-    "home": "Home"
+    "home": "Home",
+    "openBoard": "Apri →"
   },
   "inviteAuth": {
     "headTitle": "Accetta invito",
@@ -952,5 +953,38 @@
       "exportToastSingular": "{count} membro esportato",
       "exportToastPlural": "{count} membri esportati"
     }
+  },
+  "guestDashboard": {
+    "headTitle": "Le tue board invitate",
+    "guestBadge": "Ospite",
+    "signOut": "Esci",
+    "accountAriaLabel": "Menu account",
+    "welcomeTitle": "Benvenuto, {name}",
+    "welcomeSubtitle": "Sei stato invitato a {boards} board da {inviters} persone.",
+    "boardsHeading": "Le tue board invitate",
+    "boardsSubheading": "Board condivise con te dai membri jfet",
+    "emptyTitle": "Ancora nessuna board invitata",
+    "emptyDescription": "Quando qualcuno ti invita a una board, apparirà qui. Riapri l'URL di invito se sei arrivato per errore.",
+    "inviterUnknown": "invitante sconosciuto",
+    "fromInviter": "da {name}",
+    "untitledBoard": "Board senza titolo",
+    "relativeJustNow": "Adesso",
+    "relativeMinutes": "{value} min fa",
+    "relativeHours": "{value} h fa",
+    "relativeDays": "{value} g fa",
+    "roleLabel": {
+      "owner": "PROP.",
+      "editor": "EDITOR",
+      "viewer": "LETT.",
+      "commenter": "COMM."
+    }
+  },
+  "permissionDenied": {
+    "headTitle": "Accesso negato",
+    "headline": "Accesso negato",
+    "description": "Sono disponibili solo le board condivise con te. Riapri l'URL di invito o accedi con un altro account.",
+    "blockedPathLabel": "Percorso bloccato",
+    "ctaPrimary": "Vai alle board invitate",
+    "ctaSignOut": "Esci"
   }
 }

@@ -774,7 +774,8 @@
     "toastDeleteFail": "Échec de la suppression de l'équipe"
   },
   "common": {
-    "home": "Accueil"
+    "home": "Accueil",
+    "openBoard": "Ouvrir →"
   },
   "inviteAuth": {
     "headTitle": "Accepter l'invitation",
@@ -952,5 +953,38 @@
       "exportToastSingular": "{count} membre exporté",
       "exportToastPlural": "{count} membres exportés"
     }
+  },
+  "guestDashboard": {
+    "headTitle": "Vos tableaux invités",
+    "guestBadge": "Invité",
+    "signOut": "Se déconnecter",
+    "accountAriaLabel": "Menu compte",
+    "welcomeTitle": "Bienvenue, {name}",
+    "welcomeSubtitle": "Vous avez été invité sur {boards} tableaux par {inviters} personnes.",
+    "boardsHeading": "Vos tableaux invités",
+    "boardsSubheading": "Tableaux partagés avec vous par les membres jfet",
+    "emptyTitle": "Pas encore de tableaux invités",
+    "emptyDescription": "Quand quelqu'un vous invite sur un tableau, il apparaîtra ici. Réouvrez l'URL d'invitation si vous êtes arrivé par erreur.",
+    "inviterUnknown": "invitant inconnu",
+    "fromInviter": "de {name}",
+    "untitledBoard": "Tableau sans titre",
+    "relativeJustNow": "À l'instant",
+    "relativeMinutes": "il y a {value} min",
+    "relativeHours": "il y a {value} h",
+    "relativeDays": "il y a {value} j",
+    "roleLabel": {
+      "owner": "PROP.",
+      "editor": "ÉDITEUR",
+      "viewer": "LECT.",
+      "commenter": "COMM."
+    }
+  },
+  "permissionDenied": {
+    "headTitle": "Accès refusé",
+    "headline": "Accès refusé",
+    "description": "Seuls les tableaux partagés avec vous sont disponibles. Réouvrez l'URL d'invitation ou connectez-vous avec un autre compte.",
+    "blockedPathLabel": "Chemin bloqué",
+    "ctaPrimary": "Aller aux tableaux invités",
+    "ctaSignOut": "Se déconnecter"
   }
 }

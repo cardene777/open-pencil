@@ -32,7 +32,9 @@ import {
   commonMessages,
   inviteAuthMessages,
   saveAndLeaveModalMessages,
-  adminMessages
+  adminMessages,
+  guestDashboardMessages,
+  permissionDeniedMessages
 } from '#vue/i18n/messages'
 
 /**
@@ -84,6 +86,8 @@ export function useI18n() {
     inviteAuth: useStore(inviteAuthMessages),
     saveAndLeaveModal: useStore(saveAndLeaveModalMessages),
     admin: useStore(adminMessages),
+    guestDashboard: useStore(guestDashboardMessages),
+    permissionDenied: useStore(permissionDeniedMessages),
     locale: useStore(locale) as Ref<Locale>,
     availableLocales: AVAILABLE_LOCALES,
     localeLabels: LOCALE_LABELS,

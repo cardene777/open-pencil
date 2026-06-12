@@ -774,7 +774,8 @@
     "toastDeleteFail": "删除团队失败"
   },
   "common": {
-    "home": "首页"
+    "home": "首页",
+    "openBoard": "打开 →"
   },
   "inviteAuth": {
     "headTitle": "接受邀请",
@@ -952,5 +953,38 @@
       "exportToastSingular": "已导出 {count} 位成员",
       "exportToastPlural": "已导出 {count} 位成员"
     }
+  },
+  "guestDashboard": {
+    "headTitle": "受邀的看板",
+    "guestBadge": "访客",
+    "signOut": "退出登录",
+    "accountAriaLabel": "账户菜单",
+    "welcomeTitle": "欢迎, {name}",
+    "welcomeSubtitle": "您已被 {inviters} 人邀请加入 {boards} 个看板。",
+    "boardsHeading": "受邀的看板",
+    "boardsSubheading": "jfet 成员与您共享的看板",
+    "emptyTitle": "暂无受邀看板",
+    "emptyDescription": "当有人邀请您加入看板时, 它将显示在此处。 若您误入此页, 请重新打开邀请 URL。",
+    "inviterUnknown": "未知邀请者",
+    "fromInviter": "来自 {name}",
+    "untitledBoard": "未命名看板",
+    "relativeJustNow": "刚刚",
+    "relativeMinutes": "{value} 分钟前",
+    "relativeHours": "{value} 小时前",
+    "relativeDays": "{value} 天前",
+    "roleLabel": {
+      "owner": "所有者",
+      "editor": "编辑",
+      "viewer": "查看",
+      "commenter": "评论"
+    }
+  },
+  "permissionDenied": {
+    "headTitle": "无访问权限",
+    "headline": "无访问权限",
+    "description": "仅可查看与您共享的看板。 请重新打开邀请 URL, 或使用其他账户登录。",
+    "blockedPathLabel": "被阻止的路径",
+    "ctaPrimary": "前往受邀看板",
+    "ctaSignOut": "退出登录"
   }
 }
