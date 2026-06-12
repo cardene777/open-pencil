@@ -12,8 +12,9 @@ test('tooltips stay hoverable and clickable in WebKit', async () => {
   const strokeCount = await strokeItems.count()
   const strokeAdd = editor.page.getByTestId('stroke-section-add')
   await strokeAdd.hover()
+  // i18n: 英語 "Add stroke" / 日本語 "線を追加" のどちらでも tooltip OK
   await expect(
-    editor.page.locator('[role=tooltip]').filter({ hasText: 'Add stroke' })
+    editor.page.locator('[role=tooltip]').filter({ hasText: /Add stroke|線を追加/ })
   ).toBeVisible()
   await strokeAdd.click()
   await expect(strokeItems).toHaveCount(strokeCount + 1)
@@ -21,7 +22,7 @@ test('tooltips stay hoverable and clickable in WebKit', async () => {
   const effectAdd = editor.page.getByTestId('effects-section-add')
   await effectAdd.hover()
   await expect(
-    editor.page.locator('[role=tooltip]').filter({ hasText: 'Add effect' })
+    editor.page.locator('[role=tooltip]').filter({ hasText: /Add effect|エフェクトを追加/ })
   ).toBeVisible()
   await effectAdd.click()
   await expect(editor.page.getByTestId('effect-item')).toHaveCount(1)
@@ -35,7 +36,7 @@ test('tooltips stay hoverable and clickable in WebKit', async () => {
   const settings = editor.page.getByTestId('provider-settings-trigger')
   await settings.hover()
   await expect(
-    editor.page.locator('[role=tooltip]').filter({ hasText: 'Provider settings' })
+    editor.page.locator('[role=tooltip]').filter({ hasText: /Provider settings|プロバイダー設定/ })
   ).toBeVisible()
   await settings.click()
   await expect(editor.page.getByTestId('provider-settings-provider')).toBeVisible()
