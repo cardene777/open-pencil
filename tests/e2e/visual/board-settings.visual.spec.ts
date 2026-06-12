@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 import { cleanState, seedBoards } from '#tests/helpers/api-seed'
+import { mockGoogleLogin } from '#tests/helpers/e2e-auth'
 import { expectPageScreenshot } from '#tests/helpers/visual'
 
 async function seedInvitations(page: Page, boardId: string, emails: string[]) {
@@ -22,6 +23,12 @@ async function seedInvitations(page: Page, boardId: string, emails: string[]) {
 test.describe('board settings visual regression', () => {
   test.beforeEach(async ({ page }) => {
     await cleanState(page)
+    // PR #141 で /boards / /board/:id/settings は auth 必須化された。
+    // seedBoards / seedInvitations を成立させるため beforeEach で login する。
+    await mockGoogleLogin(page, {
+      email: 'board-settings-visual@jfet.co.jp',
+      name: 'Board Settings Visual'
+    })
   })
 
   test('invitation empty state', async ({ page }) => {

@@ -44,9 +44,6 @@ test.describe('dashboard visual regression', () => {
     await expectPageScreenshot(page, 'dashboard-search.png')
   })
 
-  test('login banner state', async ({ page }) => {
-    await page.goto('/boards')
-    await expect(page.getByTestId('login-banner')).toBeVisible()
-    await expectPageScreenshot(page, 'dashboard-login-banner.png')
-  })
+  // PR #141 で /boards は auth 必須化された。 anonymous で /boards を開くと LP redirect
+  // されるため login-banner は到達不能になった。 該当 visual は削除。
 })
