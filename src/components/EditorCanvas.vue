@@ -132,9 +132,14 @@ const mentionCandidatesLoading = ref(false)
 const activeMentionIndex = ref(0)
 const dismissedMentionKey = ref<string | null>(null)
 
-const boardId = computed(() =>
-  typeof route.query.board === 'string' && route.query.board.length > 0 ? route.query.board : null
-)
+const boardId = computed(() => {
+  // /board/:id route の :id を優先、 無ければ ?board= クエリ (旧形式 backward compat)
+  const paramId = route.params.id
+  if (typeof paramId === 'string' && paramId.length > 0) return paramId
+  return typeof route.query.board === 'string' && route.query.board.length > 0
+    ? route.query.board
+    : null
+})
 const activeMention = computed<ActiveMention | null>(() => {
   const renderVersion = store.state.renderVersion
   void renderVersion
