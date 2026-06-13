@@ -125,6 +125,38 @@ async function loadBoardMetadata(boardId: string) {
   }
 }
 
+let lastLoadedBoardId: string | null = null
+let suppressUploadVersion = -1
+
+/**
+ * boardRoomId watcher から呼ぶ — server DB (SSOT) から最新 document を取得し、 graph を差し替える。
+ * これで招待された collaborator や別端末の owner も同じ design を見られる。
+ * route 解決済の boardId で呼ぶので main.ts の早期 restore より race condition なく動く。
+ */
+async function loadBoardDocument(boardId: string) {
+  if (lastLoadedBoardId === boardId) return
+  lastLoadedBoardId = boardId
+  try {
+    const [{ fetchBoardDocument }, { readFigFile }] = await Promise.all([
+      import('@/app/api/client'),
+      import('@inkly/core/io/formats/fig')
+    ])
+    const remote = await fetchBoardDocument(boardId)
+    if (!remote || remote.bytes.length === 0) return
+
+    const blob = new Blob([remote.bytes], { type: 'application/octet-stream' })
+    const file = new File([blob], `${boardId}.fig`, { type: 'application/octet-stream' })
+    const graph = await readFigFile(file, { populate: 'first-page' })
+
+    const activeStore = getActiveStore()
+    activeStore.replaceGraph(graph)
+    // 直後の sceneVersion +1 を「サーバから取り込んだ反映」扱いにし、 PUT で送り返さない
+    suppressUploadVersion = activeStore.state.sceneVersion
+  } catch (error) {
+    console.warn('[editor] failed to load board document:', error)
+  }
+}
+
 useEventListener(
   document,
   'wheel',
@@ -181,6 +213,7 @@ watch(
     if (collab.state.value.connected && collab.state.value.roomId === roomId) return
     collab.connect(roomId, { seedIfEmpty: true })
     void loadBoardMetadata(roomId)
+    void loadBoardDocument(roomId)
   },
   { immediate: true }
 )
@@ -190,6 +223,8 @@ watch(
   (sceneVersion) => {
     if (!boardRoomId.value || sceneVersion < 0) return
     scheduleBoardPreview(boardRoomId.value)
+    // server から取り込んだ直後の sceneVersion bump は upload しない (loopback 防止)
+    if (sceneVersion === suppressUploadVersion) return
     scheduleBoardDocumentUpload(boardRoomId.value)
   }
 )
