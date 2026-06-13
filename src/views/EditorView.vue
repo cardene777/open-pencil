@@ -132,6 +132,13 @@ let suppressUploadVersion = -1
  * boardRoomId watcher から呼ぶ — server DB (SSOT) から最新 document を取得し、 graph を差し替える。
  * これで招待された collaborator や別端末の owner も同じ design を見られる。
  * route 解決済の boardId で呼ぶので main.ts の早期 restore より race condition なく動く。
+ *
+ * collab 経路と組み合わさるとき ... server 側は旧 `.pen` (= `.fig` binary) を yjs update
+ * format として読み取れないので Y.Doc が空のまま client に届く (PR #210 で上書き保存を抑止)。
+ * その状態で client が `.pen` を decode → `replaceGraph` した場合、 SceneGraph は local には
+ * 入るが Y.Doc には反映されないので他 collaborator に共有されない。 そこで「hub 接続中 +
+ * Y.Doc が空 + decode 済 SceneGraph が non-empty」のときに `syncCurrentDoc()` を呼んで全 node
+ * を yjs に書き込み、 server snapshot 経路で永続化される状態に持ち上げる。
  */
 async function loadBoardDocument(boardId: string) {
   if (lastLoadedBoardId === boardId) return
@@ -173,9 +180,47 @@ async function loadBoardDocument(boardId: string) {
 
     // 直後の sceneVersion +1 を「サーバから取り込んだ反映」扱いにし、 PUT で送り返さない
     suppressUploadVersion = activeStore.state.sceneVersion
+
+    // hub 接続中 + Y.Doc が空 + import 済 SceneGraph 非空 のときに seed 経路を起動。
+    void seedYjsFromImportedGraphIfNeeded(boardId)
   } catch (error) {
     console.warn('[editor] failed to load board document:', error)
   }
+}
+
+/**
+ * `.pen` import 直後に Y.Doc が空 (旧 binary は yjs format でない) なら、 import した
+ * SceneGraph を yjs に seed して collab 経路 + server snapshot に持ち上げる。
+ * hub の syncStep round-trip 完了余地として小さい遅延を挟む (race を許容するが、
+ * 「初回 import + Y.Doc 空」という低リスク経路に限定)。
+ */
+async function seedYjsFromImportedGraphIfNeeded(boardId: string) {
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 800)
+  })
+
+  if (boardRoomId.value !== boardId) return
+  if (!collab.state.value.connected) return
+  if (!collab.hubConnected.value) return
+
+  const ynodes = collab.getYnodes()
+  // hub から実 node が流れていれば ynodes.size > 0、 その場合は seed しない。
+  if (!ynodes || ynodes.size > 0) return
+
+  const activeStore = getActiveStore()
+  // default page + root の 2 node 程度なら「中身なし」とみなして seed しない。
+  let nodeCount = 0
+  for (const _ of activeStore.graph.getAllNodes()) {
+    nodeCount += 1
+    if (nodeCount > 2) break
+  }
+  if (nodeCount <= 2) return
+
+  console.info('[editor] seeding empty Y.Doc with imported .pen content', {
+    boardId,
+    nodes: nodeCount
+  })
+  collab.syncCurrentDoc()
 }
 
 useEventListener(

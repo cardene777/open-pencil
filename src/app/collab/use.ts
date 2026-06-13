@@ -131,6 +131,10 @@ export function useCollab(storeOrGetter: EditorStore | (() => EditorStore)) {
     disconnect,
     shareCurrentDoc,
     syncCurrentDoc: syncAllNodesToYjs,
+    // `.pen` import seed 経路 (EditorView の loadBoardDocument) で「Y.Doc が空かどうか」を
+    // 判定するために runtime.ynodes を読む窓口を公開する。 yjs hub から実 node が流れて
+    // きていれば size > 0、 旧 binary 経路で空 Y.Doc のままなら size === 0。
+    getYnodes: () => runtime.ynodes,
     updateCursor,
     updateSelection,
     setLocalName,
