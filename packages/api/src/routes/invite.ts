@@ -169,7 +169,6 @@ export function createInviteRoutes(options: InviteRoutesOptions): Hono {
   })
 
   app.post('/invite/verify', async (c) => {
-    const anonymousId = resolveAnonymousId(c)
     const body = await c.req.json().catch(() => null)
     const parsed = verifyRequestSchema.safeParse(body)
     if (!parsed.success) {
@@ -209,13 +208,11 @@ export function createInviteRoutes(options: InviteRoutesOptions): Hono {
       )
     }
 
-    if (options.boardStore) {
-      await options.boardStore.addCollaborator(invitation.boardId, {
-        anonymousId,
-        role: invitation.role,
-        invitationId: invitation.id
-      })
-    }
+    // 注意 — ここで anonymous collaborator を作らない。 旧実装は verify するだけで
+    // anonymousId-only collaborator を increasingly 追加していたため、 同じ board に
+    // userId=null 行が大量に残り、 dashboard / document GET の userId match が成立
+    // しなかった。 verify は token の検証だけに留め、 collaborator 化は redeem 経路で
+    // userId 付きで行う。
 
     return c.json({
       valid: true,

@@ -110,6 +110,9 @@ describe('board routes', () => {
       body: JSON.stringify({ token: invite.token })
     })
     expect(verifyResponse.status).toBe(200)
+    // 仕様変更後 verify は token 検証のみで collaborator 化しない (PR #201)。
+    // 招待された人の collaborator 化は redeem 経路で userId 付きで行うため、
+    // verify 直後の board.collaborators は owner だけ含む状態であることを確認する。
 
     const invitationsResponse = await app.request(`/api/boards/${board.id}/invitations`, {
       headers: { 'X-Inkly-Anonymous-Id': ownerId }
@@ -120,12 +123,7 @@ describe('board routes', () => {
       board: expect.objectContaining({
         id: board.id,
         collaborators: expect.arrayContaining([
-          expect.objectContaining({ anonymousId: ownerId, role: 'owner' }),
-          expect.objectContaining({
-            anonymousId: 'anon-guest',
-            role: 'editor',
-            invitationId: invite.invitationId
-          })
+          expect.objectContaining({ anonymousId: ownerId, role: 'owner' })
         ])
       }),
       invitations: [expect.objectContaining({ id: invite.invitationId, boardId: board.id })]
