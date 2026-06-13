@@ -70,6 +70,33 @@ const boardName = computed(() =>
   typeof route.query.name === 'string' && route.query.name.length > 0 ? route.query.name : null
 )
 let previewWriteTimer: ReturnType<typeof setTimeout> | null = null
+let documentUploadTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * board document を server DB (SSOT) に sceneVersion 変更ごと debounce 1.5 秒で upload。
+ * 招待された collaborator が同じ design を読み込むため、 IndexedDB cache とは別 layer で
+ * 確実に server へ書く。 source.ts 内の autosave 経路は idle 時にしか走らないため、
+ * sceneVersion watcher 直結 + 明示 PUT が必要。
+ */
+async function flushBoardDocument(boardId: string) {
+  try {
+    const [{ exportFigFile }, { uploadBoardDocument }] = await Promise.all([
+      import('@inkly/core/io/formats/fig'),
+      import('@/app/api/client')
+    ])
+    const bytes = await exportFigFile(getActiveStore().graph)
+    await uploadBoardDocument(boardId, bytes)
+  } catch (error) {
+    console.warn('[editor] failed to upload board document to server:', error)
+  }
+}
+
+function scheduleBoardDocumentUpload(boardId: string) {
+  if (documentUploadTimer) clearTimeout(documentUploadTimer)
+  documentUploadTimer = setTimeout(() => {
+    void flushBoardDocument(boardId)
+  }, 1500)
+}
 
 function flushBoardPreview(boardId: string) {
   const sceneCanvas = document.querySelector<HTMLCanvasElement>(
@@ -163,6 +190,7 @@ watch(
   (sceneVersion) => {
     if (!boardRoomId.value || sceneVersion < 0) return
     scheduleBoardPreview(boardRoomId.value)
+    scheduleBoardDocumentUpload(boardRoomId.value)
   }
 )
 
@@ -187,7 +215,11 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (previewWriteTimer) clearTimeout(previewWriteTimer)
-  if (boardRoomId.value) flushBoardPreview(boardRoomId.value)
+  if (documentUploadTimer) clearTimeout(documentUploadTimer)
+  if (boardRoomId.value) {
+    flushBoardPreview(boardRoomId.value)
+    void flushBoardDocument(boardRoomId.value)
+  }
 })
 
 onUnmounted(() => {

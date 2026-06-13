@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import { serveStatic } from 'hono/bun'
 
 import { createInklyAuth, type InklyAuth } from './auth/index.js'
+import { createBoardDocumentStore } from './boardDocumentStore.js'
 import { createBoardStore } from './boardStore.js'
 import { resolveApiDatabaseOptions, type ApiDatabase } from './db/client.js'
 import { createMigratedApiDatabase } from './db/migrate.js'
@@ -21,6 +22,7 @@ import { createTestingRoutes } from './routes/testing.js'
 import { createInvitationStore } from './store.js'
 import { resolveJwtSecret } from './token.js'
 import type {
+  BoardDocumentStore,
   BoardStore,
   InternalUserStore,
   InvitationStore,
@@ -47,6 +49,7 @@ export interface CreateApiAppOptions {
   notificationStore?: NotificationStore
   internalUserStore?: InternalUserStore
   pendingInternalInvitationStore?: PendingInternalInvitationStore
+  boardDocumentStore?: BoardDocumentStore
   database?: ApiDatabase
   auth?: InklyAuth
   env?: NodeJS.ProcessEnv
@@ -86,6 +89,8 @@ export async function createApiApp(options: CreateApiAppOptions) {
   const pendingInternalInvitationStore =
     options.pendingInternalInvitationStore ??
     (await createPendingInternalInvitationStore({ database }))
+  const boardDocumentStore =
+    options.boardDocumentStore ?? (await createBoardDocumentStore({ database, now: options.now }))
   const auth =
     options.auth ??
     createInklyAuth({
@@ -133,7 +138,8 @@ export async function createApiApp(options: CreateApiAppOptions) {
       invitationStore: store,
       internalUserStore,
       pendingInternalInvitationStore,
-      notificationStore
+      notificationStore,
+      boardDocumentStore
     })
   )
 

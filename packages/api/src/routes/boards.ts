@@ -2,9 +2,10 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { resolveAnonymousId } from '../anonymousId.js'
-import { isBoardOwner, resolveRequestActor } from '../auth/actor.js'
+import { canAccessBoard, isBoardOwner, resolveRequestActor } from '../auth/actor.js'
 import { getAuthSession, type InklyAuth } from '../auth/index.js'
 import type {
+  BoardDocumentStore,
   BoardStore,
   InternalUserStore,
   InvitationStore,
@@ -40,6 +41,7 @@ export interface BoardRoutesOptions {
   internalUserStore?: InternalUserStore
   pendingInternalInvitationStore?: PendingInternalInvitationStore
   notificationStore?: NotificationStore
+  boardDocumentStore?: BoardDocumentStore
 }
 
 function validationError(message: string): ValidationErrorBody {
@@ -296,6 +298,80 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
     }
 
     return c.json({ added, pending, rejected })
+  })
+
+  /**
+   * board document を一元 SSOT として GET / PUT する。
+   * owner / collaborator (canAccessBoard) のみアクセス可能、
+   * IndexedDB cache はクライアント側 fast-path にとどめ、 ここを server 側真値とする。
+   */
+  app.get('/boards/:id/document', async (c) => {
+    if (!options.boardDocumentStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Document store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!canAccessBoard(board, actor)) {
+      return forbiddenResponse('You do not have access to this board')
+    }
+
+    const document = await options.boardDocumentStore.findDocument(board.id)
+    if (!document) {
+      return Response.json(
+        { error: { code: 'document_not_found', message: 'No document stored yet' } },
+        { status: 404 }
+      )
+    }
+
+    return new Response(document.bytes as unknown as BodyInit, {
+      status: 200,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'content-length': String(document.size),
+        'x-document-updated-at': String(document.updatedAt)
+      }
+    })
+  })
+
+  app.put('/boards/:id/document', async (c) => {
+    if (!options.boardDocumentStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Document store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const session = await getAuthSession(options.auth, c.req.raw)
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!canAccessBoard(board, actor)) {
+      return forbiddenResponse('You do not have access to this board')
+    }
+
+    const buffer = await c.req.arrayBuffer()
+    if (!buffer || buffer.byteLength === 0) {
+      return c.json(validationError('Empty document body'), 400)
+    }
+
+    const record = await options.boardDocumentStore.upsertDocument({
+      boardId: board.id,
+      bytes: new Uint8Array(buffer),
+      updatedByUserId: session?.user.id ?? null
+    })
+
+    return c.json({
+      boardId: record.boardId,
+      size: record.size,
+      updatedAt: record.updatedAt
+    })
   })
 
   return app

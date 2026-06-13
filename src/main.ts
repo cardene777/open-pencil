@@ -42,16 +42,40 @@ if (!IS_TAURI) {
   // the cached file into openFileInNewTab.
   void (async () => {
     try {
-      const [{ loadCachedPen, fileFromCachedPen }, tabsMod] = await Promise.all([
-        import('@/app/document/io/pen-cache'),
-        import('@/app/tabs')
-      ])
+      const [{ loadCachedPen, fileFromCachedPen, savePenToCache }, tabsMod, clientMod] =
+        await Promise.all([
+          import('@/app/document/io/pen-cache'),
+          import('@/app/tabs'),
+          import('@/app/api/client')
+        ])
       // URL から board id を抽出 (/board/:id 形式)、 board に紐付かない場合は 'latest' fallback
       const boardMatch = typeof window !== 'undefined'
         ? window.location.pathname.match(/^\/board\/([^/]+)/)
         : null
       const boardId = boardMatch?.[1] ?? null
-      const cached = await loadCachedPen(boardId)
+
+      let cached = await loadCachedPen(boardId)
+
+      // board id があれば server DB (SSOT) から document を取得し、 cache より新しければ採用。
+      // 招待された人 / 別ブラウザの owner / 同じ board の全 collaborator が
+      // 同じ design を読み込めるようにするため、 IndexedDB cache は server より優先しない。
+      if (boardId) {
+        try {
+          const remote = await clientMod.fetchBoardDocument(boardId)
+          if (remote && (!cached || remote.updatedAt > cached.updatedAt)) {
+            await savePenToCache(
+              `${boardId}.fig`,
+              'application/octet-stream',
+              remote.bytes,
+              boardId
+            )
+            cached = await loadCachedPen(boardId)
+          }
+        } catch (remoteError) {
+          console.warn('[main] server document fetch failed:', remoteError)
+        }
+      }
+
       if (!cached) return
       await tabsMod.openFileInNewTab(fileFromCachedPen(cached), undefined, undefined, {
         skipPersistCache: true

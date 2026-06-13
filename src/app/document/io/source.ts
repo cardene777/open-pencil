@@ -138,6 +138,18 @@ export function createDocumentSourceActions({
         () => savePenToCache(cacheName, 'application/octet-stream', bytes, boardId),
         { version, bytes: bytes.byteLength }
       )
+
+      // board に紐付く場合は server DB にも同時に保存する (SSOT)。
+      // owner / collaborator の autosave が完了すると、 他参加者が次回 open / refresh
+      // でこの blob を読み込んで同じ design を見られる。
+      if (boardId) {
+        try {
+          const { uploadBoardDocument } = await import('@/app/api/client')
+          await uploadBoardDocument(boardId, bytes)
+        } catch (uploadError) {
+          console.warn('[autosave] server document upload failed:', uploadError)
+        }
+      }
       lastCachedFingerprint = nextFingerprint
       lastCachedVersion = version
       state.autosaveStatus = 'saved'

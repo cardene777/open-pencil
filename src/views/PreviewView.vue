@@ -150,7 +150,25 @@ async function loadPreviewDocument() {
   unavailable.value = false
 
   try {
-    const cached = await loadCachedPen(boardId.value)
+    let cached = await loadCachedPen(boardId.value)
+    // server DB を SSOT として優先取得。 招待された collaborator も同じ design を読める。
+    try {
+      const { fetchBoardDocument } = await import('@/app/api/client')
+      const { savePenToCache } = await import('@/app/document/io/pen-cache')
+      const remote = await fetchBoardDocument(boardId.value)
+      if (remote && (!cached || remote.updatedAt > cached.updatedAt)) {
+        await savePenToCache(
+          `${boardId.value}.fig`,
+          'application/octet-stream',
+          remote.bytes,
+          boardId.value
+        )
+        cached = await loadCachedPen(boardId.value)
+      }
+    } catch (remoteError) {
+      console.warn('[preview] server document fetch failed:', remoteError)
+    }
+
     if (!cached) {
       unavailable.value = true
       return

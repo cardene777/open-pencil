@@ -221,6 +221,30 @@ export interface PendingInternalInvitationStore {
 }
 
 /**
+ * board document を SSOT として DB に持つ store。 owner / collaborator 双方が
+ * 同じ source を読み書きするため API + DB に集約する。
+ */
+export interface BoardDocumentRecord {
+  boardId: string
+  bytes: Uint8Array
+  size: number
+  updatedAt: number
+  updatedByUserId: string | null
+}
+
+export interface UpsertBoardDocumentInput {
+  boardId: string
+  bytes: Uint8Array
+  updatedByUserId: string | null
+}
+
+export interface BoardDocumentStore {
+  findDocument(boardId: string): Promise<BoardDocumentRecord | null>
+  upsertDocument(input: UpsertBoardDocumentInput): Promise<BoardDocumentRecord>
+  deleteDocument(boardId: string): Promise<void>
+}
+
+/**
  * domain 判定ヘルパー (caller 側で利用)
  */
 export function isInternalDomainEmail(email: string): boolean {

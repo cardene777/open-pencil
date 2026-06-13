@@ -177,6 +177,46 @@ export async function apiRequest<T>(input: string, init: RequestInit = {}): Prom
   return data as T
 }
 
+/**
+ * board の document blob を server DB から取得する。 404 = 未保存 (新規 board) なので null を返す。
+ */
+export async function fetchBoardDocument(boardId: string): Promise<{
+  bytes: Uint8Array
+  updatedAt: number
+} | null> {
+  const response = await fetch(BOARD_API_ENDPOINTS.document(boardId), {
+    credentials: 'include',
+    headers: buildHeaders({})
+  })
+
+  if (response.status === 404) return null
+  if (!response.ok) {
+    throw new Error(`Failed to fetch board document (HTTP ${response.status})`)
+  }
+
+  const updatedAt = Number(response.headers.get('x-document-updated-at')) || Date.now()
+  const buffer = await response.arrayBuffer()
+  return { bytes: new Uint8Array(buffer), updatedAt }
+}
+
+/**
+ * board の document blob を server DB に保存する。 owner / collaborator の autosave 経路から呼ぶ。
+ */
+export async function uploadBoardDocument(boardId: string, bytes: Uint8Array): Promise<void> {
+  const response = await fetch(BOARD_API_ENDPOINTS.document(boardId), {
+    method: 'PUT',
+    credentials: 'include',
+    headers: buildHeaders({
+      headers: { 'content-type': 'application/octet-stream' }
+    }),
+    body: bytes
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload board document (HTTP ${response.status})`)
+  }
+}
+
 export function inviteUser(input: InviteUserInput) {
   return apiRequest<InviteUserResponse>(BOARD_API_ENDPOINTS.invite, {
     method: 'POST',

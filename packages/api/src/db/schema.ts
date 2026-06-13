@@ -156,6 +156,24 @@ export const internalUsers = sqliteTable(
   ]
 )
 
+export const boardDocuments = sqliteTable(
+  'board_documents',
+  {
+    boardId: text('board_id')
+      .primaryKey()
+      .references(() => boards.id, { onDelete: 'cascade' }),
+    // .fig binary blob (Uint8Array). owner / collaborator が同じ source を読むため
+    // server DB を SSOT とする。 IndexedDB cache は high-priority read 用の fast-path。
+    bytes: text('bytes').notNull(),
+    size: integer('size', { mode: 'number' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'number' }).notNull(),
+    updatedByUserId: text('updated_by_user_id').references(() => users.id, {
+      onDelete: 'set null'
+    })
+  },
+  (table) => [index('board_documents_updated_at_idx').on(table.updatedAt)]
+)
+
 export const pendingInternalInvitations = sqliteTable(
   'pending_internal_invitations',
   {
