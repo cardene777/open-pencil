@@ -271,6 +271,13 @@ export function createBoardEditorLocation(board: Board) {
   }
 }
 
+export function createBoardPreviewLocation(boardId: string, startFrameId?: string | null) {
+  return {
+    path: `/board/${boardId}/preview`,
+    query: startFrameId ? { startFrame: startFrameId } : {}
+  }
+}
+
 export async function listBoards() {
   const response = await apiRequest<{ boards: Board[] }>(BOARD_API_ENDPOINTS.boards)
   return response.boards

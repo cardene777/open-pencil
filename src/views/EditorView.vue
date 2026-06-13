@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useEventListener, useUrlSearchParams } from '@vueuse/core'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 import { SplitterGroup, SplitterPanel, SplitterResizeHandle } from 'reka-ui'
 
@@ -9,6 +9,8 @@ import { useViewportKind, formatShortcut, useI18n } from '@inkly/vue'
 import { useKeyboard } from '@/app/shell/keyboard/use'
 import { loadEditorLayout, saveEditorLayout } from '@/app/shell/layout-storage'
 import { openFileFromPath, useMenu } from '@/app/shell/menu/use'
+import { createBoardPreviewLocation, listBoards } from '@/app/api/client'
+import { clearActiveBoard, setActiveBoard, activeBoard } from '@/app/boards/active'
 import { writeBoardPreview } from '@/app/boards/preview'
 import { useCollab, COLLAB_KEY } from '@/app/collab/use'
 import { connectAutomation } from '@/app/automation/bridge/server'
@@ -29,17 +31,20 @@ import PropertiesPanel from '@/components/PropertiesPanel.vue'
 import SafariBanner from '@/components/SafariBanner.vue'
 import SaveAndLeaveModal from '@/components/SaveAndLeaveModal.vue'
 import TabBar from '@/components/TabBar.vue'
+import { persistPrototypePreviewDocument } from '@/app/prototype/document'
+import { resolvePrototypeStartFrameId } from '@/app/prototype/frames'
 import Tip from '@/components/ui/Tip.vue'
 import Toolbar from '@/components/Toolbar/Toolbar.vue'
 
 const route = useRoute()
+const router = useRouter()
 const params = useUrlSearchParams('history')
 const showChrome = !('no-chrome' in params)
 
 const createdInitialTab = tabCount() === 0
 const firstTab = createdInitialTab ? createTab() : (activeTab.value ?? createTab())
 const store = useEditorStore()
-const { dialogs } = useI18n()
+const { dialogs, prototype: prototypeT } = useI18n()
 const { isMobile } = useViewportKind()
 
 if (createdInitialTab && route.meta.demo && !('test' in params)) {
@@ -67,7 +72,9 @@ const boardName = computed(() =>
 let previewWriteTimer: ReturnType<typeof setTimeout> | null = null
 
 function flushBoardPreview(boardId: string) {
-  const sceneCanvas = document.querySelector<HTMLCanvasElement>('[data-test-id="scene-canvas-element"]')
+  const sceneCanvas = document.querySelector<HTMLCanvasElement>(
+    '[data-test-id="scene-canvas-element"]'
+  )
   if (!sceneCanvas || sceneCanvas.width === 0 || sceneCanvas.height === 0) return
   writeBoardPreview(boardId, sceneCanvas.toDataURL('image/png'))
 }
@@ -79,6 +86,16 @@ function scheduleBoardPreview(boardId: string) {
       flushBoardPreview(boardId)
     })
   }, 50)
+}
+
+async function loadBoardMetadata(boardId: string) {
+  try {
+    const boards = await listBoards()
+    setActiveBoard(boards.find((board) => board.id === boardId) ?? null)
+  } catch (error) {
+    console.warn('[board]', 'failed to load board metadata', error)
+    clearActiveBoard(boardId)
+  }
 }
 
 useEventListener(
@@ -131,10 +148,12 @@ watch(
     if (previousRoomId) {
       flushBoardPreview(previousRoomId)
       if (collab.state.value.roomId === previousRoomId) collab.disconnect()
+      clearActiveBoard(previousRoomId)
     }
     if (!roomId) return
     if (collab.state.value.connected && collab.state.value.roomId === roomId) return
     collab.connect(roomId, { seedIfEmpty: true })
+    void loadBoardMetadata(roomId)
   },
   { immediate: true }
 )
@@ -189,6 +208,17 @@ function handleBackToDashboard(event: MouseEvent) {
   event.preventDefault()
   saveModalOpen.value = true
 }
+
+const playStartFrameId = computed(() => {
+  void store.state.sceneVersion
+  return activeBoard.value?.startFrameId ?? resolvePrototypeStartFrameId(store.graph)
+})
+
+async function openPreview() {
+  if (!boardRoomId.value || !playStartFrameId.value) return
+  await persistPrototypePreviewDocument(boardRoomId.value, store)
+  await router.push(createBoardPreviewLocation(boardRoomId.value, playStartFrameId.value))
+}
 </script>
 
 <template>
@@ -215,7 +245,17 @@ function handleBackToDashboard(event: MouseEvent) {
           {{ store.state.documentName }}
         </span>
       </div>
-      <span v-if="boardRoomId" class="text-[11px] text-muted">Board {{ boardRoomId }}</span>
+      <div class="flex items-center gap-2">
+        <button
+          v-if="boardRoomId && playStartFrameId"
+          data-test-id="editor-play-button"
+          class="cursor-pointer rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
+          @click="openPreview"
+        >
+          {{ prototypeT.play }}
+        </button>
+        <span v-if="boardRoomId" class="text-[11px] text-muted">Board {{ boardRoomId }}</span>
+      </div>
     </div>
     <SaveAndLeaveModal v-model:open="saveModalOpen" :document-name="store.state.documentName" />
 

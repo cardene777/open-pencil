@@ -12,6 +12,7 @@ export {
   commandMessages,
   toolMessages,
   panelMessages,
+  prototypeMessages,
   pageMessages,
   dialogMessages
 } from '#vue/i18n/messages'

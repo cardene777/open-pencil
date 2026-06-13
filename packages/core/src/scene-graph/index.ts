@@ -1,6 +1,7 @@
 export * from './snap'
 export * from './spatial-index'
 export { UndoManager, type UndoEntry, type UndoManagerOptions } from './undo'
+export { hitTest, hitTestDeep, hitTestFrame } from './hit-test'
 
 import { createNanoEvents } from 'nanoevents'
 

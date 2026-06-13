@@ -331,6 +331,47 @@ export const panelMessages = i18n('panels', {
   colorHexInput: 'Color hex value'
 })
 
+export const prototypeMessages = i18n('prototype', {
+  panelTitle: 'Prototype',
+  addReaction: 'Add reaction',
+  reaction: params('Reaction {index}'),
+  trigger: 'Trigger',
+  triggerOnClick: 'On click',
+  triggerOnHover: 'On hover',
+  triggerOnMouseDown: 'On mouse down',
+  triggerAfterDelay: 'After delay',
+  action: 'Action',
+  actionNavigate: 'Navigate',
+  actionOpenOverlay: 'Open overlay',
+  actionCloseOverlay: 'Close overlay',
+  actionBack: 'Back',
+  actionExternalUrl: 'Open URL',
+  targetFrame: 'Target frame',
+  externalUrl: 'External URL',
+  transition: 'Transition',
+  transitionInstant: 'Instant',
+  transitionDissolve: 'Dissolve',
+  transitionSlideLeft: 'Slide left',
+  transitionSlideRight: 'Slide right',
+  delayMs: 'Delay (ms)',
+  transitionDurationMs: 'Duration (ms)',
+  deleteReaction: 'Delete',
+  moveUp: 'Move up',
+  moveDown: 'Move down',
+  startFrameLabel: 'Start frame',
+  setAsStartFrame: 'Set as start frame',
+  openInPreview: 'Open in preview',
+  play: 'Play',
+  back: 'Back',
+  resetToStart: 'Reset to start',
+  close: 'Close',
+  noFrames: 'No frames on this page',
+  noSelection: 'Select a frame to edit prototype reactions.',
+  noTargetFrame: 'No target frame',
+  loadingPreview: 'Loading preview…',
+  previewUnavailable: 'Preview unavailable'
+})
+
 export const variableTypeMessages = i18n('variableTypes', {
   color: 'Color',
   colorHint: 'Paint values',

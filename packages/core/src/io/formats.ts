@@ -3,6 +3,7 @@ import { sceneNodeToJSX, selectionToJSX } from '#core/design-jsx'
 import { exportFigFile, parseFigFile } from './formats/fig'
 import { parsePenFile } from './formats/pen'
 import { headlessRenderNodes, renderNodesToImage, type RasterExportFormat } from './formats/raster'
+import { buildSiteExportFiles, zipSiteExportFiles } from './formats/site'
 import { renderNodesToSVG } from './formats/svg'
 import { extractExportGraph, findPageId } from './subgraph'
 import type {
@@ -13,6 +14,7 @@ import type {
   IOFormatAdapter,
   JSXExportOptions,
   RasterExportOptions,
+  SiteExportOptions,
   SVGExportOptions
 } from './types'
 
@@ -320,6 +322,32 @@ export const jsxFormat: IOFormatAdapter = {
   }
 }
 
+export const siteFormat: IOFormatAdapter = {
+  id: 'site',
+  label: 'Site',
+  role: 'derived-export',
+  category: 'document',
+  extensions: ['zip'],
+  mimeTypes: ['application/zip'],
+  support: {
+    exportDocument: true
+  },
+  exportOptions: {
+    scale: false,
+    quality: false
+  },
+  async exportContent(request, options?: SiteExportOptions): Promise<ExportResult> {
+    const files = buildSiteExportFiles(request.graph, options)
+    const data = zipSiteExportFiles(files)
+    return {
+      format: 'site',
+      mimeType: 'application/zip',
+      extension: 'zip',
+      data
+    }
+  }
+}
+
 export const BUILTIN_IO_FORMATS: IOFormatAdapter[] = [
   figFormat,
   penFormat,
@@ -328,5 +356,6 @@ export const BUILTIN_IO_FORMATS: IOFormatAdapter[] = [
   webpFormat,
   svgFormat,
   pdfFormat,
-  jsxFormat
+  jsxFormat,
+  siteFormat
 ]

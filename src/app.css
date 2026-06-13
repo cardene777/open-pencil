@@ -144,3 +144,50 @@ input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
   display: none;
 }
+
+.prototype-transition-instant {
+  transform: translate3d(0, 0, 0);
+}
+
+.prototype-transition-dissolve {
+  animation: prototype-dissolve 180ms ease-out;
+}
+
+.prototype-transition-slideLeft {
+  animation: prototype-slide-left 220ms ease-out;
+}
+
+.prototype-transition-slideRight {
+  animation: prototype-slide-right 220ms ease-out;
+}
+
+@keyframes prototype-dissolve {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes prototype-slide-left {
+  from {
+    opacity: 0.82;
+    transform: translate3d(18px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes prototype-slide-right {
+  from {
+    opacity: 0.82;
+    transform: translate3d(-18px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}

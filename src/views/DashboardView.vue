@@ -273,7 +273,7 @@ onMounted(async () => {
           >
             <icon-lucide-bell class="size-5 text-accent" />
             <span class="font-medium">{{ dashboard.quickActions.notifications }}</span>
-            <span class="text-xs text-muted">{{ dashboard.quickActions.notificationsHint({ count: totalUnread }) }}</span>
+            <span class="text-xs text-muted">{{ typeof dashboard.quickActions.notificationsHint === 'function' ? dashboard.quickActions.notificationsHint({ count: totalUnread }) : '' }}</span>
           </RouterLink>
         </div>
       </section>

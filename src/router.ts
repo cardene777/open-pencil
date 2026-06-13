@@ -27,22 +27,21 @@ const PROTECTED_PATH_PREFIXES = [
 // guest user (jfet.co.jp ドメイン外) に対して禁止する path 群。
 // 招待された board だけが見える環境にするため、 これらは PermissionDeniedView に redirect。
 // `/dashboard` と `/board/:id` (招待された board のエディタ) は guest でも開ける。
-const GUEST_FORBIDDEN_PATH_PREFIXES = [
-  '/boards',
-  '/notifications',
-  '/account',
-  '/admin'
-]
+const GUEST_FORBIDDEN_PATH_PREFIXES = ['/boards', '/notifications', '/account', '/admin']
 
 function isForbiddenForGuest(path: string): boolean {
   return GUEST_FORBIDDEN_PATH_PREFIXES.some((prefix) =>
-    prefix.endsWith('/') ? path.startsWith(prefix) : path === prefix || path.startsWith(`${prefix}/`)
+    prefix.endsWith('/')
+      ? path.startsWith(prefix)
+      : path === prefix || path.startsWith(`${prefix}/`)
   )
 }
 
 function isProtectedPath(path: string): boolean {
   return PROTECTED_PATH_PREFIXES.some((prefix) =>
-    prefix.endsWith('/') ? path.startsWith(prefix) : path === prefix || path.startsWith(`${prefix}/`)
+    prefix.endsWith('/')
+      ? path.startsWith(prefix)
+      : path === prefix || path.startsWith(`${prefix}/`)
   )
 }
 
@@ -57,6 +56,7 @@ const router = createRouter({
     { path: '/notifications', component: () => import('./views/NotificationsView.vue') },
     { path: '/account', component: () => import('./views/AccountView.vue') },
     { path: '/board/:id', component: () => import('./views/EditorView.vue') },
+    { path: '/board/:id/preview', component: () => import('./views/PreviewView.vue') },
     { path: '/board/:id/settings', component: () => import('./views/BoardSettingsView.vue') },
     { path: '/invite/:token', component: () => import('./views/InviteRedirectView.vue') },
     { path: '/login/guest', component: () => import('./views/GuestLoginView.vue') },
