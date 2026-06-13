@@ -73,6 +73,16 @@ function dedupKey(peer: RemotePeer): string | null {
   return `${name}::${c.r.toFixed(2)},${c.g.toFixed(2)},${c.b.toFixed(2)}`
 }
 
+/**
+ * lerp state / UI v-for key 用の安定 ID。 dedup key があれば優先し (= 同 user が
+ * tab1 / tab2 を行き来しても安定)、 なければ clientId にフォールバック。 これがないと
+ * dedup で勝つ peer が tab 切替で frame 毎に変わり、 lerp cache key が無効化されて
+ * cursor が瞬間ジャンプ (カクつき) するため。
+ */
+export function stableRemotePeerId(peer: RemotePeer): string {
+  return dedupKey(peer) ?? `clientId:${peer.clientId}`
+}
+
 interface BuildRemotePeersOptions {
   activityTracker?: PeerActivityTracker
   now?: () => number
@@ -157,9 +167,10 @@ export function remotePeersToCursors(peers: RemotePeer[], currentPageId: string)
     .map((p) => {
       const cursor = p.cursor as NonNullable<RemotePeer['cursor']>
       return {
-        // peerId は lerp 補間の cache key として利用 (yjs awareness clientID は number、
-        // cache key は string に正規化したい)
-        peerId: String(p.clientId),
+        // peerId は lerp 補間の cache key として利用。 dedup が効いた場合に同 user
+        // の clientId が tab 切替で頻繁に変わるとカクつくので、 stableRemotePeerId
+        // (userId 優先 → name+color → clientId) で安定化する。
+        peerId: stableRemotePeerId(p),
         pageId: cursor.pageId,
         name: p.name,
         color: p.color,

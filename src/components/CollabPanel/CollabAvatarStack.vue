@@ -3,6 +3,7 @@ import { colorToCSS } from '@inkly/core/color'
 
 import Tip from '@/components/ui/Tip.vue'
 import { initials } from '@/app/shell/ui'
+import { stableRemotePeerId } from '@/app/collab/awareness'
 import { useCollabPanelContext } from '@/components/CollabPanel/context'
 import { useI18n } from '@inkly/vue'
 
@@ -24,7 +25,7 @@ const { dialogs } = useI18n()
 
     <Tip
       v-for="peer in collab.peers"
-      :key="peer.clientId"
+      :key="stableRemotePeerId(peer)"
       :label="
         collab.followingPeer === peer.clientId
           ? dialogs.followingPeerStop({ name: peer.name })
