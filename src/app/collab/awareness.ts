@@ -18,17 +18,80 @@ type CursorState = {
   zoom?: number
 }
 
+/**
+ * cursor / selection の更新が観測されてからこの時間経過した peer を idle 扱いする。
+ * UI 側で半透明表示の根拠になる (見ているけど操作していない user の視覚的区別)。
+ */
+export const PEER_IDLE_THRESHOLD_MS = 15_000
+
+/**
+ * peer の最終活動時刻 tracker。 clientId → last activity ts。
+ * connect (re-share) ごとに新規の Map を作る運用のため、 module level state ではなく
+ * factory で作る pure な closure として返す。
+ */
+export interface PeerActivityTracker {
+  recordActivity(clientId: number): void
+  getLastActivity(clientId: number): number | null
+  prune(activeClientIds: Set<number>): void
+  reset(): void
+}
+
+export function createPeerActivityTracker(now: () => number = Date.now): PeerActivityTracker {
+  const lastActivity = new Map<number, number>()
+  return {
+    recordActivity(clientId: number) {
+      lastActivity.set(clientId, now())
+    },
+    getLastActivity(clientId: number) {
+      return lastActivity.get(clientId) ?? null
+    },
+    prune(activeClientIds: Set<number>) {
+      for (const id of lastActivity.keys()) {
+        if (!activeClientIds.has(id)) lastActivity.delete(id)
+      }
+    },
+    reset() {
+      lastActivity.clear()
+    }
+  }
+}
+
+/**
+ * 同じ user の peer 重複を dedup するキー。 sign-in 済 user は同じ name + color に
+ * なる前提 (awareness の `user.name` / `user.color` は session ごとに固定)、 別端末
+ * で複数 tab を開いたときも同 user とみなしてまとめる。
+ *
+ * `Anonymous` や名前空 (匿名) の peer は dedup せず別人扱いする (合議できないため)。
+ */
+function dedupKey(peer: RemotePeer): string | null {
+  const name = peer.name?.trim()
+  if (!name || name === 'Anonymous') return null
+  // color は { r,g,b,a } の小数なので key 化のため文字列化。
+  const c = peer.color
+  return `${name}::${c.r.toFixed(2)},${c.g.toFixed(2)},${c.b.toFixed(2)}`
+}
+
+interface BuildRemotePeersOptions {
+  activityTracker?: PeerActivityTracker
+  now?: () => number
+  idleThresholdMs?: number
+}
+
 export function buildRemotePeers(
   states: Map<number, Record<string, unknown>>,
-  localClientId: number
+  localClientId: number,
+  options: BuildRemotePeersOptions = {}
 ): RemotePeer[] {
-  const peers: RemotePeer[] = []
+  const tracker = options.activityTracker
+  const now = options.now ?? Date.now
+  const idleThreshold = options.idleThresholdMs ?? PEER_IDLE_THRESHOLD_MS
+  const raw: RemotePeer[] = []
 
   states.forEach((peerState, clientId) => {
     if (clientId === localClientId) return
     const user = peerState.user as { name?: string; color?: Color } | undefined
     if (!user) return
-    peers.push({
+    raw.push({
       clientId,
       name: user.name || 'Anonymous',
       color: user.color || PEER_COLORS[clientId % PEER_COLORS.length],
@@ -37,7 +100,50 @@ export function buildRemotePeers(
     })
   })
 
-  return peers
+  // 同一 user (name + color 一致) の重複を最新活動 peer 1 件にまとめる。
+  // tracker が無いと last activity 比較ができないので、 その場合は cursor を持つ
+  // peer (= 現に動いている方) を優先、 さらに同条件なら clientId 大 (新接続) を優先。
+  const byKey = new Map<string, RemotePeer>()
+  const standalone: RemotePeer[] = []
+  for (const peer of raw) {
+    const key = dedupKey(peer)
+    if (!key) {
+      standalone.push(peer)
+      continue
+    }
+    const existing = byKey.get(key)
+    if (!existing) {
+      byKey.set(key, peer)
+      continue
+    }
+    if (peerActivityScore(peer, tracker) > peerActivityScore(existing, tracker)) {
+      byKey.set(key, peer)
+    }
+  }
+
+  const deduped = [...byKey.values(), ...standalone]
+
+  // idle 判定。 tracker があれば lastActivity が threshold を超えた peer を idle、
+  // tracker が無ければ cursor が無い peer を idle 扱い (保守的 fallback)。
+  return deduped.map((peer) => {
+    const isIdle = tracker
+      ? (() => {
+          const last = tracker.getLastActivity(peer.clientId)
+          if (last == null) return true
+          return now() - last > idleThreshold
+        })()
+      : !peer.cursor
+    return { ...peer, isIdle }
+  })
+}
+
+function peerActivityScore(peer: RemotePeer, tracker?: PeerActivityTracker): number {
+  // tracker がある場合は last activity ts、 無ければ「cursor を持つ + clientId」
+  // という保守的 ranking。
+  if (tracker) {
+    return tracker.getLastActivity(peer.clientId) ?? 0
+  }
+  return (peer.cursor ? 1_000_000 : 0) + peer.clientId
 }
 
 export function remotePeersToCursors(peers: RemotePeer[], currentPageId: string) {

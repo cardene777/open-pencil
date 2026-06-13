@@ -1,7 +1,11 @@
 import type { Ref } from 'vue'
 import type { Awareness } from 'y-protocols/awareness'
 
-import { buildRemotePeers, remotePeersToCursors } from '@/app/collab/awareness'
+import {
+  buildRemotePeers,
+  createPeerActivityTracker,
+  remotePeersToCursors
+} from '@/app/collab/awareness'
 import type { CollabState } from '@/app/collab/types'
 import type { EditorStore } from '@/app/editor/active-store'
 
@@ -167,6 +171,12 @@ export function createLocalAwarenessActions({
   getStore,
   getAwareness
 }: LocalAwarenessOptions) {
+  // peer ごとの activity 観測 ... cursor / selection の変化を検知して
+  // 「動いていた最後の時刻」を記録、 buildRemotePeers の idle 判定に渡す。
+  const activityTracker = createPeerActivityTracker()
+  const lastObservedCursor = new Map<number, string>()
+  const lastObservedSelection = new Map<number, string>()
+
   function broadcastAwareness() {
     const awareness = getAwareness()
     if (!awareness) return
@@ -193,10 +203,38 @@ export function createLocalAwarenessActions({
     if (!awareness) return
 
     const store = getStore()
-    const peers = buildRemotePeers(
-      awareness.getStates() as Map<number, Record<string, unknown>>,
-      awareness.clientID
-    )
+    const rawStates = awareness.getStates() as Map<number, Record<string, unknown>>
+
+    // 現 awareness state を巡回し、 cursor / selection が前回観測時と変化していたら
+    // activity tracker に記録する。 これで idle 判定が「cursor / selection が動いた最後の時刻」
+    // ベースで動く。 切断 / 復帰の re-broadcast は cursor signature が同じなので
+    // ノイズで idle が活性化しない。
+    const activeClientIds = new Set<number>()
+    rawStates.forEach((peerState, clientId) => {
+      if (clientId === awareness.clientID) return
+      activeClientIds.add(clientId)
+      const cursor = peerState.cursor as { x: number; y: number; pageId: string } | undefined
+      const cursorSig = cursor ? `${cursor.pageId}:${cursor.x},${cursor.y}` : ''
+      const selectionSig = JSON.stringify(peerState.selection ?? null)
+      const prevCursor = lastObservedCursor.get(clientId)
+      const prevSelection = lastObservedSelection.get(clientId)
+      if (prevCursor === undefined || prevCursor !== cursorSig) {
+        activityTracker.recordActivity(clientId)
+        lastObservedCursor.set(clientId, cursorSig)
+      } else if (prevSelection !== selectionSig) {
+        activityTracker.recordActivity(clientId)
+      }
+      lastObservedSelection.set(clientId, selectionSig)
+    })
+    activityTracker.prune(activeClientIds)
+    for (const id of lastObservedCursor.keys()) {
+      if (!activeClientIds.has(id)) lastObservedCursor.delete(id)
+    }
+    for (const id of lastObservedSelection.keys()) {
+      if (!activeClientIds.has(id)) lastObservedSelection.delete(id)
+    }
+
+    const peers = buildRemotePeers(rawStates, awareness.clientID, { activityTracker })
 
     state.value.peers = peers
     const nextCursors = remotePeersToCursors(peers, store.state.currentPageId)
