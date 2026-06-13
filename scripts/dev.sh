@@ -36,7 +36,8 @@ kill_port_listeners() {
   local port="$1"
   local label="$2"
   local pids
-  pids=$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -Fp 2>/dev/null | sed -n 's/^p//p')
+  # pipefail + listener なしで lsof が exit 1 を返すと set -e が止まるので明示的に握りつぶす
+  pids=$( { lsof -nP -iTCP:"$port" -sTCP:LISTEN -Fp 2>/dev/null || true; } | sed -n 's/^p//p' )
   if [ -z "$pids" ]; then
     return
   fi
@@ -51,7 +52,8 @@ kill_port_listeners() {
   done
   # SIGTERM 後 SIGKILL に escalate しないと bun が握り続けるケースあり
   sleep 1
-  pids=$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -Fp 2>/dev/null | sed -n 's/^p//p')
+  # pipefail + listener なしで lsof が exit 1 を返すと set -e が止まるので明示的に握りつぶす
+  pids=$( { lsof -nP -iTCP:"$port" -sTCP:LISTEN -Fp 2>/dev/null || true; } | sed -n 's/^p//p' )
   for pid in $pids; do
     if [ "$pid" = "$$" ]; then
       continue
