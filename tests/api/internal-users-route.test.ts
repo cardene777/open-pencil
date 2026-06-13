@@ -119,7 +119,7 @@ describe('GET /api/internal-users', () => {
     appDb.close()
   })
 
-  test('validates empty query', async () => {
+  test('returns top N members when query is empty (default suggestion list)', async () => {
     const database = await createTestApiDatabase()
     const { app, database: appDb } = await createTestApiApp({
       secret: TEST_API_SECRET,
@@ -127,9 +127,14 @@ describe('GET /api/internal-users', () => {
       auth: buildMockSessionAuth(buildSession('owner-user', 'owner@jfet.co.jp'))
     })
 
-    const response = await app.request('/api/internal-users?q=')
+    const responseEmpty = await app.request('/api/internal-users?q=')
+    expect(responseEmpty.status).toBe(200)
+    const bodyEmpty = (await responseEmpty.json()) as { users: unknown[] }
+    expect(Array.isArray(bodyEmpty.users)).toBe(true)
 
-    expect(response.status).toBe(400)
+    const responseMissing = await app.request('/api/internal-users')
+    expect(responseMissing.status).toBe(200)
+
     appDb.close()
   })
 

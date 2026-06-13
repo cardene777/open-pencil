@@ -86,12 +86,10 @@ const filteredSuggestResults = computed(() =>
       !excludedCollaboratorUserIds.value.has(user.id)
   )
 )
-const normalizedQuery = computed(() => normalizeShareEmail(inputValue.value))
 const showSuggestDropdown = computed(
   () =>
     suggestOpen.value &&
     Boolean(boardId) &&
-    normalizedQuery.value.length > 0 &&
     (suggestLoading.value || filteredSuggestResults.value.length > 0)
 )
 const canSubmit = computed(() => {
@@ -147,20 +145,28 @@ const runSuggestSearch = useDebounceFn(async (query: string, version: number) =>
   }
 }, 200)
 
-watch(inputValue, (value) => {
-  const query = value.trim()
-  suggestRequestVersion.value += 1
-  const version = suggestRequestVersion.value
-
-  if (!query || !boardId) {
+function triggerSuggestFetch(query: string) {
+  if (!boardId) {
     suggestResults.value = []
     suggestLoading.value = false
     return
   }
-
+  suggestRequestVersion.value += 1
+  const version = suggestRequestVersion.value
   suggestLoading.value = true
   suggestOpen.value = true
   void runSuggestSearch(query, version)
+}
+
+watch(inputValue, (value) => {
+  triggerSuggestFetch(value.trim())
+})
+
+watch([open, () => boardId], ([isOpen, currentBoardId]) => {
+  if (!isOpen || !currentBoardId) return
+  // Modal を開いた瞬間に sign-up 済み jfet user の上位 N 名を空 query で prefetch。
+  // chip 入力 field を focus すれば即 dropdown が見える状態にする。
+  triggerSuggestFetch('')
 })
 
 onClickOutside(suggestRoot, () => {

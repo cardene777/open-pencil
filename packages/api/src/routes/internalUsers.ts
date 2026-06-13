@@ -6,7 +6,9 @@ import type { InternalUserStore } from '../types.js'
 import { isInternalDomainEmail } from '../types.js'
 
 const searchInternalUsersSchema = z.object({
-  q: z.string().trim().min(1).max(50),
+  // q 未指定 = ShareModal の初期表示で「sign-up 済みの jfet user 上位 N 件」を要求するケース。
+  // 空 query を許容して内部 store が全件 (上位 N 件) を返す経路に流す。
+  q: z.string().trim().max(50).optional().default(''),
   limit: z.coerce.number().int().min(1).max(50).default(20)
 })
 

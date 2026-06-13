@@ -192,19 +192,18 @@ export function shareBoard(boardId: string, input: ShareBoardInput) {
 }
 
 export function searchInternalUsers(query: string, limit?: number) {
+  // 空 query も許容 = ShareModal 初期表示で sign-up 済み jfet user の上位 N 名を取得する経路。
   const normalizedQuery = query.trim()
-  if (!normalizedQuery) {
-    return Promise.resolve({ users: [] satisfies InternalUserSummary[] })
-  }
+  const params = new URLSearchParams()
+  if (normalizedQuery) params.set('q', normalizedQuery)
+  if (typeof limit === 'number') params.set('limit', String(limit))
 
-  const params = new URLSearchParams({ q: normalizedQuery })
-  if (typeof limit === 'number') {
-    params.set('limit', String(limit))
-  }
+  const queryString = params.toString()
+  const endpoint = queryString
+    ? `${BOARD_API_ENDPOINTS.internalUsers}?${queryString}`
+    : BOARD_API_ENDPOINTS.internalUsers
 
-  return apiRequest<{ users: InternalUserSummary[] }>(
-    `${BOARD_API_ENDPOINTS.internalUsers}?${params.toString()}`
-  )
+  return apiRequest<{ users: InternalUserSummary[] }>(endpoint)
 }
 
 export function verifyInvitation(token: string) {

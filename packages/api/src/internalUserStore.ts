@@ -87,10 +87,21 @@ export async function createInternalUserStore(
     },
     async searchInternalUsersByPrefix(query: string, limit = 20) {
       const normalizedQuery = query.trim().toLowerCase()
-      if (!normalizedQuery) return []
-
-      const escapedQuery = `${escapeLikePattern(normalizedQuery)}%`
       const maxResults = Math.min(Math.max(limit, 1), 50)
+      const escapedQuery = `${escapeLikePattern(normalizedQuery)}%`
+
+      // query が空でも sign-up 済みの jfet user を上位 N 名返す。
+      // ShareModal を開いてすぐに候補一覧が見えるユーザー体験 (figma 同様) のため必要。
+      const whereClause = normalizedQuery
+        ? and(
+            isNotNull(internalUsers.userId),
+            or(
+              sql`${users.email} LIKE ${escapedQuery} ESCAPE '\\' COLLATE NOCASE`,
+              sql`${users.name} LIKE ${escapedQuery} ESCAPE '\\' COLLATE NOCASE`
+            )
+          )
+        : isNotNull(internalUsers.userId)
+
       const rows = await database.db
         .select({
           id: users.id,
@@ -99,15 +110,7 @@ export async function createInternalUserStore(
         })
         .from(internalUsers)
         .innerJoin(users, eq(users.id, internalUsers.userId))
-        .where(
-          and(
-            isNotNull(internalUsers.userId),
-            or(
-              sql`${users.email} LIKE ${escapedQuery} ESCAPE '\\' COLLATE NOCASE`,
-              sql`${users.name} LIKE ${escapedQuery} ESCAPE '\\' COLLATE NOCASE`
-            )
-          )
-        )
+        .where(whereClause)
         .orderBy(asc(users.email))
         .limit(maxResults)
         .all()
