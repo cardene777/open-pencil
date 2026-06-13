@@ -11,6 +11,14 @@ export interface BoardCollaborator {
   role: InvitationRole | 'owner'
   addedAt: number
   invitationId: string | null
+  /**
+   * userId 経由で users table を join lookup した表示名。 sign-in 済 user の場合のみ非 null。
+   */
+  displayName: string | null
+  /**
+   * 同様に users.email を join lookup した値。
+   */
+  email: string | null
 }
 
 export interface Board {
@@ -28,6 +36,11 @@ export interface Invitation {
   id: string
   boardId: string
   sentToEmailHash: string
+  /**
+   * 招待発行時に入力された email の平文。 旧 invitation (migration 0013 以前) は null。
+   * dashboard 表示専用、 検索 / 一致判定は `sentToEmailHash` を使う。
+   */
+  sentToEmail: string | null
   role: InvitationRole
   createdAt: number
   expiresAt: number

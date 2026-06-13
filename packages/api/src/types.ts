@@ -23,6 +23,12 @@ export interface InvitationRecord {
   id: string
   boardId: string
   sentToEmailHash: string
+  /**
+   * 招待発行時に入力された email の平文。 旧 invitation (migration 0013 以前) は null。
+   * dashboard / share UI で「招待先メアド」を表示するためだけに使う。 一致判定 / 検索は
+   * `sentToEmailHash` を使う。
+   */
+  sentToEmail: string | null
   role: InvitationRole
   createdAt: number
   expiresAt: number
@@ -34,6 +40,11 @@ export interface InvitationRecord {
 export interface CreateInvitationInput {
   boardId: string
   sentToEmailHash: string
+  /**
+   * 招待発行時の平文 email。 hash 化された `sentToEmailHash` と並行して保存し、 dashboard
+   * 上の表示用に使う。 nullable は旧経路 (test 等の hash 直渡し) との後方互換のため。
+   */
+  sentToEmail?: string | null
   role: InvitationRole
   expiresAt: number
 }
@@ -63,6 +74,15 @@ export interface BoardCollaboratorRecord {
   role: InvitationRole | 'owner'
   addedAt: number
   invitationId: string | null
+  /**
+   * userId 経由で users table を join lookup した name (sign-in 済 user の場合のみ非 null)。
+   * dashboard の collaborator 表示で「userId 生表示」を避けるための display 用。
+   */
+  displayName: string | null
+  /**
+   * 同様に users.email を join lookup した値、 sign-in 済 user の場合のみ非 null。
+   */
+  email: string | null
 }
 
 export interface BoardRecord {

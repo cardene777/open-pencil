@@ -92,6 +92,13 @@
       "when": 1781329770615,
       "tag": "0012_curved_killmonger",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1781348322256,
+      "tag": "0013_tricky_butterfly",
+      "breakpoints": true
     }
   ]
 }

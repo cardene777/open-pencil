@@ -2,7 +2,7 @@ import { asc, desc, eq, inArray, or } from 'drizzle-orm'
 
 import type { ApiDatabase } from './db/client.js'
 import { createMigratedApiDatabase } from './db/migrate.js'
-import { boards, collaborators } from './db/schema.js'
+import { boards, collaborators, users } from './db/schema.js'
 import type {
   AddBoardCollaboratorInput,
   BoardCollaboratorRecord,
@@ -16,14 +16,48 @@ export interface CreateBoardStoreOptions {
   now?: () => number
 }
 
-function mapCollaborator(row: typeof collaborators.$inferSelect): BoardCollaboratorRecord {
+interface UserDisplayInfo {
+  name: string
+  email: string
+}
+
+function mapCollaborator(
+  row: typeof collaborators.$inferSelect,
+  userInfo: Map<string, UserDisplayInfo>
+): BoardCollaboratorRecord {
+  const display = row.userId ? userInfo.get(row.userId) : null
   return {
     anonymousId: row.anonymousId,
     userId: row.userId,
     role: row.role,
     addedAt: row.addedAt,
-    invitationId: row.invitationId
+    invitationId: row.invitationId,
+    displayName: display?.name ?? null,
+    email: display?.email ?? null
   }
+}
+
+/**
+ * collaborator rows に紐付く `userId` の users table 行を bulk lookup する。
+ * UI で「userId raw 表示」ではなく name / email を表示する display 用 enrichment。
+ * userId が null の anonymous collaborator は lookup 不要。
+ */
+async function loadUserDisplayInfo(
+  database: ApiDatabase,
+  userIds: Array<string | null>
+): Promise<Map<string, UserDisplayInfo>> {
+  const distinct = Array.from(new Set(userIds.filter((id): id is string => typeof id === 'string')))
+  if (distinct.length === 0) return new Map()
+  const rows = await database.db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(users)
+    .where(inArray(users.id, distinct))
+    .all()
+  const map = new Map<string, UserDisplayInfo>()
+  for (const row of rows) {
+    map.set(row.id, { name: row.name, email: row.email })
+  }
+  return map
 }
 
 function createRecordMapper(database: ApiDatabase) {
@@ -35,6 +69,11 @@ function createRecordMapper(database: ApiDatabase) {
       .orderBy(asc(collaborators.addedAt))
       .all()
 
+    const userInfo = await loadUserDisplayInfo(
+      database,
+      collaboratorRows.map((c) => c.userId)
+    )
+
     return {
       id: row.id,
       name: row.name,
@@ -43,7 +82,7 @@ function createRecordMapper(database: ApiDatabase) {
       startFrameId: row.startFrameId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      collaborators: collaboratorRows.map(mapCollaborator)
+      collaborators: collaboratorRows.map((c) => mapCollaborator(c, userInfo))
     }
   }
 }
@@ -81,10 +120,15 @@ async function mapBoardRows(
     .orderBy(asc(collaborators.addedAt))
     .all()
 
+  const userInfo = await loadUserDisplayInfo(
+    database,
+    collaboratorRows.map((c) => c.userId)
+  )
+
   const collaboratorsByBoardId = new Map<string, BoardCollaboratorRecord[]>()
   for (const collaborator of collaboratorRows) {
     const records = collaboratorsByBoardId.get(collaborator.boardId) ?? []
-    records.push(mapCollaborator(collaborator))
+    records.push(mapCollaborator(collaborator, userInfo))
     collaboratorsByBoardId.set(collaborator.boardId, records)
   }
 

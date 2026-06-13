@@ -18,6 +18,13 @@ export const invitations = sqliteTable(
     id: text('id').primaryKey(),
     boardId: text('board_id').notNull(),
     sentToEmailHash: text('sent_to_email_hash').notNull(),
+    /**
+     * 招待発行時に入力された email の平文。 dashboard で「招待先メアド」を表示するため
+     * の display 用。 sentToEmailHash は検索 / 一致判定用 (PII 漏洩リスクを下げるため
+     * hash で保持) で、 本列は表示のみに使う。 旧 invitation は null で残るので
+     * nullable にする (migration 0013 で追加)。
+     */
+    sentToEmail: text('sent_to_email'),
     role: text('role').$type<InvitationRole>().notNull(),
     createdAt: integer('created_at', { mode: 'number' }).notNull(),
     expiresAt: integer('expires_at', { mode: 'number' }).notNull(),
