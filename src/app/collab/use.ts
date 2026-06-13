@@ -82,6 +82,7 @@ export function useCollab(storeOrGetter: EditorStore | (() => EditorStore)) {
   // login/logout で cursor 表示名と color を user identity に追従させる。
   // user.name が空になった (logout) なら storedName (localStorage) に fallback、
   // color は user.id 優先、 未 login 時は anonymous_id にfallback。
+  // userId は真の dedup key として awareness に載せる (`buildRemotePeers` で優先利用)。
   watch(
     () => auth.user,
     (user) => {
@@ -91,6 +92,7 @@ export function useCollab(storeOrGetter: EditorStore | (() => EditorStore)) {
       }
       const nextColor = colorFromIdentity(user?.id ?? null, getAnonymousId())
       state.value.localColor = nextColor
+      state.value.localUserId = user?.id ?? null
       broadcastAwareness()
     },
     { immediate: false }

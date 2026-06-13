@@ -190,7 +190,10 @@ export function createLocalAwarenessActions({
     if (!awareness) return
     awareness.setLocalStateField('user', {
       name: state.value.localName,
-      color: state.value.localColor
+      color: state.value.localColor,
+      // sign-in 済みなら userId を載せ、 真の dedup を成立させる
+      // (`buildRemotePeers` が name+color より優先で userId で識別)。
+      userId: state.value.localUserId
     })
   }
 

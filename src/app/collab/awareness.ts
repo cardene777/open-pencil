@@ -57,16 +57,18 @@ export function createPeerActivityTracker(now: () => number = Date.now): PeerAct
 }
 
 /**
- * 同じ user の peer 重複を dedup するキー。 sign-in 済 user は同じ name + color に
- * なる前提 (awareness の `user.name` / `user.color` は session ごとに固定)、 別端末
- * で複数 tab を開いたときも同 user とみなしてまとめる。
- *
- * `Anonymous` や名前空 (匿名) の peer は dedup せず別人扱いする (合議できないため)。
+ * 同じ user の peer 重複を dedup するキー。 優先順位 ...
+ *   1. sign-in user の `user.id` が乗っている場合 ... `userId:<id>` を使う。
+ *      偶然同名の別人 (例 alice@a.example と alice@b.example) でも別 user.id なので
+ *      dedup しない。 これが真の dedup 経路。
+ *   2. fallback ... `name + color` (PR #214 既存経路)。 未 sign-in / 旧 client が
+ *      awareness state に userId を載せていない場合に動く。
+ *   3. `Anonymous` / 名前空 + userId なし ... null を返して dedup しない (別人扱い)。
  */
 function dedupKey(peer: RemotePeer): string | null {
+  if (peer.userId) return `userId:${peer.userId}`
   const name = peer.name?.trim()
   if (!name || name === 'Anonymous') return null
-  // color は { r,g,b,a } の小数なので key 化のため文字列化。
   const c = peer.color
   return `${name}::${c.r.toFixed(2)},${c.g.toFixed(2)},${c.b.toFixed(2)}`
 }
@@ -89,12 +91,15 @@ export function buildRemotePeers(
 
   states.forEach((peerState, clientId) => {
     if (clientId === localClientId) return
-    const user = peerState.user as { name?: string; color?: Color } | undefined
+    const user = peerState.user as
+      | { name?: string; color?: Color; userId?: string | null }
+      | undefined
     if (!user) return
     raw.push({
       clientId,
       name: user.name || 'Anonymous',
       color: user.color || PEER_COLORS[clientId % PEER_COLORS.length],
+      userId: user.userId ?? null,
       cursor: peerState.cursor as RemotePeer['cursor'],
       selection: peerState.selection as string[]
     })
