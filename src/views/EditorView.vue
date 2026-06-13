@@ -253,6 +253,10 @@ watch(
     scheduleBoardPreview(boardRoomId.value)
     // server から取り込んだ直後の sceneVersion bump は upload しない (loopback 防止)
     if (sceneVersion === suppressUploadVersion) return
+    // yjs hub に接続中は server hub の compaction routine が board_documents snapshot を
+    // 書き込むため、 PUT 全文経路は重複 IO になる。 hub provider 未起動 (一時 share room や
+    // 接続失敗 fallback 状態) のときだけ PUT 経路を使う。
+    if (collab.hubConnected.value) return
     scheduleBoardDocumentUpload(boardRoomId.value)
   }
 )

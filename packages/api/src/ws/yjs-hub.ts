@@ -31,6 +31,13 @@ const COMPACTION_INTERVAL_MS = 60 * 60 * 1000
 const VERSION_KEEP_COUNT = 50
 
 /**
+ * persist throttle ... DB への append-only insert は連続 drag 中に大量発火する。
+ * 100ms 単位で yjs `mergeUpdates` で coalesce してから 1 insert に集約する。
+ * broadcast (client → client) は throttle しない (latency 最優先)。
+ */
+const PERSIST_THROTTLE_MS = 100
+
+/**
  * close codes (RFC 4400-4500 域を独自用途で利用)
  */
 export const YJS_HUB_CLOSE_CODE = {
@@ -55,6 +62,11 @@ interface BoardRoom {
   clients: Set<YjsSocket>
   pendingUpdateCount: number
   lastSnapshotAt: number
+  /**
+   * persist 用 coalesce buffer ... (update bytes, userId) を 100ms 単位で 1 insert に集約。
+   */
+  persistBuffer: { updates: Uint8Array[]; userId: string | null }
+  persistTimer: ReturnType<typeof setTimeout> | null
 }
 
 export interface YjsHubServer {
@@ -109,19 +121,37 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
   const randomId = options.randomId ?? (() => crypto.randomUUID())
   const rooms = new Map<string, BoardRoom>()
 
-  async function persistUpdate(room: BoardRoom, update: Uint8Array, userId: string | null) {
+  async function flushPersistBuffer(room: BoardRoom) {
+    room.persistTimer = null
+    const { updates, userId } = room.persistBuffer
+    if (updates.length === 0) return
+    room.persistBuffer = { updates: [], userId: null }
+    const merged = updates.length === 1 ? updates[0] : Y.mergeUpdates(updates)
     try {
       await options.boardDocumentUpdateStore.appendUpdate({
         boardId: room.boardId,
-        update,
+        update: merged,
         createdByUserId: userId
       })
       room.pendingUpdateCount += 1
     } catch (error) {
       log(`persist update failed board=${room.boardId}: ${stringifyError(error)}`)
     }
-
     await maybeCompact(room)
+  }
+
+  function schedulePersist(room: BoardRoom, update: Uint8Array, userId: string | null) {
+    room.persistBuffer.updates.push(update)
+    // user 単位の trace を残したいが coalesce 内で複数 user が混在する場合は null に倒す
+    if (room.persistBuffer.updates.length === 1) {
+      room.persistBuffer.userId = userId
+    } else if (room.persistBuffer.userId !== userId) {
+      room.persistBuffer.userId = null
+    }
+    if (room.persistTimer) return
+    room.persistTimer = setTimeout(() => {
+      void flushPersistBuffer(room)
+    }, PERSIST_THROTTLE_MS)
   }
 
   async function persistSnapshot(room: BoardRoom) {
@@ -161,7 +191,8 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
     const existing = rooms.get(boardId)
     if (existing) return existing
 
-    const ydoc = new Y.Doc()
+    // gc: true (default) で削除済 struct を回収させる。 update size と memory が縮む。
+    const ydoc = new Y.Doc({ gc: true })
     const awareness = new awarenessProtocol.Awareness(ydoc)
 
     // 既存 snapshot を Y.Doc にロードする経路。 board_documents (最新 snapshot 1 行) を
@@ -200,7 +231,9 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
       awareness,
       clients: new Set<YjsSocket>(),
       pendingUpdateCount: 0,
-      lastSnapshotAt: now()
+      lastSnapshotAt: now(),
+      persistBuffer: { updates: [], userId: null },
+      persistTimer: null
     }
 
     awareness.on(
@@ -240,7 +273,7 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
 
       const originSocket = origin as YjsSocket | null
       const userId = originSocket?.data.userId ?? null
-      void persistUpdate(room, update, userId)
+      schedulePersist(room, update, userId)
     })
 
     rooms.set(boardId, room)
@@ -249,6 +282,11 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
 
   async function disposeRoom(room: BoardRoom) {
     if (room.clients.size > 0) return
+    if (room.persistTimer) {
+      clearTimeout(room.persistTimer)
+      room.persistTimer = null
+    }
+    await flushPersistBuffer(room)
     await persistSnapshot(room)
     room.awareness.destroy()
     room.ydoc.destroy()
@@ -373,6 +411,11 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
     async destroy() {
       for (const room of rooms.values()) {
         room.clients.clear()
+        if (room.persistTimer) {
+          clearTimeout(room.persistTimer)
+          room.persistTimer = null
+        }
+        await flushPersistBuffer(room)
         await persistSnapshot(room)
         room.awareness.destroy()
         room.ydoc.destroy()

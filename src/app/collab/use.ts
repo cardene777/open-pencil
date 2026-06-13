@@ -91,6 +91,16 @@ export function useCollab(storeOrGetter: EditorStore | (() => EditorStore)) {
 
   tryOnScopeDispose(disconnect)
 
+  // hub provider が socket OPEN な間 true。 EditorView 側で
+  // 「hub 接続中は autosave PUT 全文経路を skip する」judge に使う。
+  // state.value.connected と roomId の変化を Vue が追えるように依存に含める
+  // (hubProvider 自体は ref でないため connected の再評価 trigger として使う)。
+  const hubConnected = computed(() => {
+    void state.value.connected
+    void state.value.roomId
+    return Boolean(runtime.hubProvider?.isConnected())
+  })
+
   return {
     state,
     remotePeers,
@@ -103,6 +113,7 @@ export function useCollab(storeOrGetter: EditorStore | (() => EditorStore)) {
     updateSelection,
     setLocalName,
     followPeer,
-    tickFollow
+    tickFollow,
+    hubConnected
   }
 }

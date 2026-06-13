@@ -163,6 +163,8 @@ export async function createApiApp(options: CreateApiAppOptions) {
       pendingInternalInvitationStore,
       notificationStore,
       boardDocumentStore,
+      boardDocumentUpdateStore,
+      boardDocumentVersionStore,
       boardPinStore,
       boardPreviewStore
     })
