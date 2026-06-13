@@ -147,6 +147,7 @@ export const toolMessages = i18n('tools', {
   star: 'Star',
   pen: 'Pen',
   text: 'Text',
+  sticky: 'Sticky note',
   hand: 'Hand'
 })
 

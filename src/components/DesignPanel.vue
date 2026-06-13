@@ -12,6 +12,7 @@ import FillSection from './properties/FillSection.vue'
 import LayoutSection from './properties/LayoutSection/LayoutSection.vue'
 import PageSection from './properties/PageSection.vue'
 import PositionSection from './properties/PositionSection.vue'
+import StickySection from './properties/StickySection.vue'
 import StrokeSection from './properties/StrokeSection.vue'
 import TypographySection from './properties/TypographySection.vue'
 import VariablesSection from './properties/VariablesSection.vue'
@@ -98,6 +99,7 @@ const { panels } = useI18n()
 
     <PositionSection />
     <LayoutSection />
+    <StickySection />
     <AppearanceSection />
     <TypographySection v-if="node.type === 'TEXT'" />
     <FillSection />

@@ -14,6 +14,7 @@ import IconPenTool from '~icons/lucide/pen-tool'
 import IconRows from '~icons/lucide/rows-3'
 import IconSquare from '~icons/lucide/square'
 import IconStar from '~icons/lucide/star'
+import IconStickyNote from '~icons/lucide/sticky-note'
 import IconTriangle from '~icons/lucide/triangle'
 import IconType from '~icons/lucide/type'
 
@@ -30,6 +31,7 @@ export const toolIcons: Record<Tool, Component> = {
   STAR: IconStar,
   PEN: IconPenTool,
   TEXT: IconType,
+  STICKY: IconStickyNote,
   HAND: IconHand
 }
 
