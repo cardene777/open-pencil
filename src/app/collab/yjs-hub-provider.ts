@@ -3,7 +3,7 @@ import type { Awareness } from 'y-protocols/awareness'
 import * as syncProtocol from 'y-protocols/sync'
 import { createEncoder, length as encoderLength, toUint8Array } from 'lib0/encoding'
 import { createDecoder } from 'lib0/decoding'
-import type * as Y from 'yjs'
+import * as Y from 'yjs'
 
 /**
  * server-mediated yjs sync provider。 server 上の `yjs-hub` と 1 board = 1 room で
@@ -18,6 +18,21 @@ const YJS_TAG_SYNC = 0x00
 const YJS_TAG_AWARENESS = 0x01
 
 const RECONNECT_BACKOFFS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000, 60_000] as const
+
+/**
+ * 1 frame (~16ms) 単位で yjs update を coalesce する。
+ * drag 中など連続編集で update が 1 frame 内に複数発火するケースで、
+ * 全て まとめて 1 message で送れば network frame 数を 1/N に削減できる。
+ * yjs `mergeUpdates` は 2 つの update を 1 update に merge できる正規 API。
+ */
+const UPDATE_COALESCE_MS = 16
+
+/**
+ * cursor / 選択の awareness は最大 30 fps (33 ms cap) で間引く。
+ * mousemove は秒 100+ 発火するため throttle なしで送ると帯域が無駄に消費される。
+ * server hub が all-peer fan-out するため、 client 数 N で N^2 オーダーで増える。
+ */
+const AWARENESS_THROTTLE_MS = 33
 
 const REMOTE_HUB_ORIGIN = Symbol('inkly-hub-remote')
 
@@ -123,11 +138,45 @@ export function connectYjsHubProvider(options: YjsHubProviderOptions): YjsHubPro
     socket.send(copy.buffer)
   }
 
+  // update coalesce buffer
+  let pendingUpdates: Uint8Array[] = []
+  let pendingUpdateTimer: ReturnType<typeof setTimeout> | null = null
+
+  function flushPendingUpdates() {
+    pendingUpdateTimer = null
+    if (pendingUpdates.length === 0) return
+    const merged =
+      pendingUpdates.length === 1 ? pendingUpdates[0] : Y.mergeUpdates(pendingUpdates)
+    pendingUpdates = []
+    const encoder = createEncoder()
+    syncProtocol.writeUpdate(encoder, merged)
+    sendIfOpen(wrap(YJS_TAG_SYNC, toUint8Array(encoder)))
+  }
+
   function broadcastUpdateToHub(update: Uint8Array, origin: unknown) {
     if (origin === REMOTE_HUB_ORIGIN) return
-    const encoder = createEncoder()
-    syncProtocol.writeUpdate(encoder, update)
-    sendIfOpen(wrap(YJS_TAG_SYNC, toUint8Array(encoder)))
+    pendingUpdates.push(update)
+    if (pendingUpdateTimer) return
+    pendingUpdateTimer = setTimeout(flushPendingUpdates, UPDATE_COALESCE_MS)
+  }
+
+  // awareness throttle ... 連続変更の最後の値だけを送るために trailing-edge throttle にする。
+  let pendingAwarenessClients: Set<number> = new Set()
+  let pendingAwarenessTimer: ReturnType<typeof setTimeout> | null = null
+  let lastAwarenessSentAt = 0
+
+  function flushPendingAwareness() {
+    pendingAwarenessTimer = null
+    lastAwarenessSentAt = Date.now()
+    if (pendingAwarenessClients.size === 0) return
+    const clients = Array.from(pendingAwarenessClients)
+    pendingAwarenessClients = new Set()
+    try {
+      const update = awarenessProtocol.encodeAwarenessUpdate(options.awareness, clients)
+      sendIfOpen(wrap(YJS_TAG_AWARENESS, update))
+    } catch (error) {
+      console.warn('[collab] hub awareness encode failed:', error)
+    }
   }
 
   function broadcastAwarenessToHub(
@@ -135,10 +184,19 @@ export function connectYjsHubProvider(options: YjsHubProviderOptions): YjsHubPro
     origin: unknown
   ) {
     if (origin === REMOTE_HUB_ORIGIN) return
-    const changedClients = [...added, ...updated, ...removed]
-    if (changedClients.length === 0) return
-    const update = awarenessProtocol.encodeAwarenessUpdate(options.awareness, changedClients)
-    sendIfOpen(wrap(YJS_TAG_AWARENESS, update))
+    for (const id of added) pendingAwarenessClients.add(id)
+    for (const id of updated) pendingAwarenessClients.add(id)
+    for (const id of removed) pendingAwarenessClients.add(id)
+    if (pendingAwarenessClients.size === 0) return
+
+    const elapsed = Date.now() - lastAwarenessSentAt
+    if (elapsed >= AWARENESS_THROTTLE_MS) {
+      // throttle window を超えていれば即時 send
+      flushPendingAwareness()
+      return
+    }
+    if (pendingAwarenessTimer) return
+    pendingAwarenessTimer = setTimeout(flushPendingAwareness, AWARENESS_THROTTLE_MS - elapsed)
   }
 
   function handleMessage(event: MessageEvent<ArrayBuffer | Blob | string>) {
@@ -262,6 +320,16 @@ export function connectYjsHubProvider(options: YjsHubProviderOptions): YjsHubPro
     if (reconnectTimer) {
       clearTimeout(reconnectTimer)
       reconnectTimer = null
+    }
+    if (pendingUpdateTimer) {
+      clearTimeout(pendingUpdateTimer)
+      pendingUpdateTimer = null
+      pendingUpdates = []
+    }
+    if (pendingAwarenessTimer) {
+      clearTimeout(pendingAwarenessTimer)
+      pendingAwarenessTimer = null
+      pendingAwarenessClients = new Set()
     }
     if (socket) {
       try {

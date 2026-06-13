@@ -6,6 +6,8 @@ import { canAccessBoard, isBoardOwner, resolveRequestActor } from '../auth/actor
 import { getAuthSession, type InklyAuth } from '../auth/index.js'
 import type {
   BoardDocumentStore,
+  BoardDocumentUpdateStore,
+  BoardDocumentVersionStore,
   BoardPinStore,
   BoardPreviewStore,
   BoardStore,
@@ -49,6 +51,8 @@ export interface BoardRoutesOptions {
   pendingInternalInvitationStore?: PendingInternalInvitationStore
   notificationStore?: NotificationStore
   boardDocumentStore?: BoardDocumentStore
+  boardDocumentUpdateStore?: BoardDocumentUpdateStore
+  boardDocumentVersionStore?: BoardDocumentVersionStore
   boardPinStore?: BoardPinStore
   boardPreviewStore?: BoardPreviewStore
 }
@@ -532,6 +536,80 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
       boardId: record.boardId,
       size: record.size,
       updatedAt: record.updatedAt
+    })
+  })
+
+  /**
+   * Realtime Collab Phase 3 ... 巻き戻し UI 用 endpoint。
+   * GET ... 過去 snapshot 一覧 (最大 50 件)、 board access 必須
+   * POST restore ... 指定 version の state を `board_documents` snapshot に書き戻し、
+   *   旧 update vector は全削除する。 owner のみ実行可能 (破壊的)。
+   */
+  app.get('/boards/:id/document-versions', async (c) => {
+    if (!options.boardDocumentVersionStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Version store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!canAccessBoard(board, actor)) {
+      return forbiddenResponse('You do not have access to this board')
+    }
+
+    const versions = await options.boardDocumentVersionStore.listVersionsForBoard(board.id, 50)
+    return c.json({
+      versions: versions.map((v) => ({
+        id: v.id,
+        createdAt: v.createdAt,
+        size: v.size,
+        label: v.label
+      }))
+    })
+  })
+
+  app.post('/boards/:id/document-versions/:versionId/restore', async (c) => {
+    if (
+      !options.boardDocumentVersionStore ||
+      !options.boardDocumentStore ||
+      !options.boardDocumentUpdateStore
+    ) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Version store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!isBoardOwner(board, actor)) {
+      return forbiddenResponse('Only the creator can restore document versions')
+    }
+
+    const versions = await options.boardDocumentVersionStore.listVersionsForBoard(board.id, 50)
+    const target = versions.find((v) => v.id === c.req.param('versionId'))
+    if (!target) {
+      return notFoundResponse('version_not_found', 'Version not found')
+    }
+
+    // 復元 ... 指定 snapshot を `board_documents` に書き戻し、 未反映の append-only update を
+    // 全て削除する。 接続中の hub client は次回 syncStep1 で snapshot を取り直す。
+    const session = await getAuthSession(options.auth, c.req.raw)
+    await options.boardDocumentStore.upsertDocument({
+      boardId: board.id,
+      bytes: target.state,
+      updatedByUserId: session?.user.id ?? null
+    })
+    await options.boardDocumentUpdateStore.deleteUpdatesOlderThan(board.id, Date.now() + 1)
+
+    return c.json({
+      restored: { id: target.id, createdAt: target.createdAt }
     })
   })
 

@@ -244,7 +244,9 @@ export function connectCollabSession({
     whenSynced?: Promise<unknown>
   }
   const persistenceReady = persistence.whenSynced ?? Promise.resolve()
-  const transportReady = hubProviderReady ?? p2pProvider?.ready ?? Promise.resolve(null)
+  const transportReady: Promise<{ synced: boolean } | { peerCount: number } | null> =
+    hubProviderReady ??
+    (runtime.provider ? runtime.provider.ready : Promise.resolve(null))
   void Promise.all([transportReady, persistenceReady]).then(([info]) => {
     if (!runtime.ydoc || !runtime.ynodes) return
     const isEmpty = runtime.ynodes.size === 0

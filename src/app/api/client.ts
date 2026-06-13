@@ -293,6 +293,31 @@ export async function unpinBoard(boardId: string): Promise<void> {
   })
 }
 
+export interface BoardDocumentVersion {
+  id: string
+  createdAt: number
+  size: number
+  label: string | null
+}
+
+export async function fetchBoardDocumentVersions(boardId: string): Promise<BoardDocumentVersion[]> {
+  const response = await apiRequest<{ versions: BoardDocumentVersion[] }>(
+    BOARD_API_ENDPOINTS.documentVersions(boardId)
+  )
+  return response.versions
+}
+
+export async function restoreBoardDocumentVersion(
+  boardId: string,
+  versionId: string
+): Promise<{ id: string; createdAt: number }> {
+  const response = await apiRequest<{ restored: { id: string; createdAt: number } }>(
+    BOARD_API_ENDPOINTS.documentVersionRestore(boardId, versionId),
+    { method: 'POST' }
+  )
+  return response.restored
+}
+
 export function inviteUser(input: InviteUserInput) {
   return apiRequest<InviteUserResponse>(BOARD_API_ENDPOINTS.invite, {
     method: 'POST',

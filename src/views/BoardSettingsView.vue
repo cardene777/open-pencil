@@ -20,8 +20,11 @@ import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import ShareModal from '@/components/ShareModal.vue'
 import {
   createBoardEditorLocation,
+  fetchBoardDocumentVersions,
   listInvitations,
+  restoreBoardDocumentVersion,
   revokeInvitation,
+  type BoardDocumentVersion,
   type BoardInvitationsResponse
 } from '@/app/api/client'
 import { toast } from '@/app/shell/ui'
@@ -106,6 +109,56 @@ function onInvitationCreated() {
   void loadBoardSettings()
 }
 
+const versions = ref<BoardDocumentVersion[]>([])
+const versionsLoading = ref(false)
+const versionsError = ref('')
+const restoreOpen = ref(false)
+const restoreTarget = ref<BoardDocumentVersion | null>(null)
+
+async function loadVersions() {
+  if (!boardId.value) return
+  versionsLoading.value = true
+  versionsError.value = ''
+  try {
+    versions.value = await fetchBoardDocumentVersions(boardId.value)
+  } catch (error) {
+    versionsError.value = error instanceof Error ? error.message : 'Failed to load versions'
+  } finally {
+    versionsLoading.value = false
+  }
+}
+
+function requestRestore(version: BoardDocumentVersion) {
+  restoreTarget.value = version
+  restoreOpen.value = true
+}
+
+async function confirmRestore() {
+  const version = restoreTarget.value
+  restoreOpen.value = false
+  restoreTarget.value = null
+  if (!version || !boardId.value) return
+  try {
+    await restoreBoardDocumentVersion(boardId.value, version.id)
+    await loadVersions()
+    toast.info('Restored snapshot from history')
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to restore version'
+    toast.error(message)
+  }
+}
+
+function formatVersionTime(timestamp: number) {
+  const date = new Date(timestamp)
+  return date.toLocaleString()
+}
+
+function formatVersionSize(size: number) {
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1024 / 1024).toFixed(2)} MB`
+}
+
 function openBoard() {
   if (!payload.value) return
   void router.push(createBoardEditorLocation(payload.value.board))
@@ -113,6 +166,7 @@ function openBoard() {
 
 onMounted(() => {
   void loadBoardSettings()
+  void loadVersions()
 })
 </script>
 
@@ -284,6 +338,59 @@ onMounted(() => {
             </li>
           </ul>
         </section>
+
+        <section
+          data-test-id="board-document-history"
+          class="rounded-[28px] border border-white/8 bg-panel/85 p-6 shadow-2xl backdrop-blur-xl"
+        >
+          <header class="mb-4 flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-semibold text-surface">Document history</h2>
+              <p class="mt-1 text-xs text-muted">
+                hub が自動で snapshot を 50 世代保持します。 owner のみ復元できます。
+              </p>
+            </div>
+            <button
+              type="button"
+              class="cursor-pointer rounded-xl border border-border bg-canvas px-3 py-2 text-xs text-surface transition-colors hover:bg-hover"
+              @click="loadVersions"
+            >
+              Reload
+            </button>
+          </header>
+
+          <p v-if="versionsLoading" class="text-xs text-muted">Loading versions…</p>
+          <p v-else-if="versionsError" class="text-xs text-red-400">{{ versionsError }}</p>
+          <p v-else-if="versions.length === 0" class="text-xs text-muted">
+            まだ snapshot がありません。 hub が定期的に snapshot を作成します。
+          </p>
+          <ul v-else class="flex flex-col gap-2">
+            <li
+              v-for="version in versions"
+              :key="version.id"
+              data-test-id="board-document-version-item"
+              class="flex items-center justify-between rounded-2xl border border-border bg-canvas/70 px-4 py-3"
+            >
+              <div>
+                <p class="text-sm font-medium text-surface">
+                  {{ formatVersionTime(version.createdAt) }}
+                </p>
+                <p class="text-[11px] text-muted">
+                  {{ formatVersionSize(version.size) }} · id {{ version.id.slice(0, 8) }}
+                  <span v-if="version.label"> · {{ version.label }}</span>
+                </p>
+              </div>
+              <button
+                type="button"
+                data-test-id="board-document-version-restore"
+                class="cursor-pointer rounded-lg border border-border bg-canvas px-3 py-1.5 text-xs text-surface transition-colors hover:bg-hover"
+                @click="requestRestore(version)"
+              >
+                Restore
+              </button>
+            </li>
+          </ul>
+        </section>
       </template>
     </div>
 
@@ -332,6 +439,46 @@ onMounted(() => {
               @click="confirmRevoke"
             >
               {{ boardSettingsT.revokeDialogConfirm }}
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialogPortal>
+    </AlertDialogRoot>
+
+    <AlertDialogRoot :open="restoreOpen">
+      <AlertDialogPortal>
+        <AlertDialogOverlay :class="cls.overlay" @click="restoreOpen = false" />
+        <AlertDialogContent
+          data-test-id="board-restore-dialog"
+          :class="cls.content"
+          @escape-key-down="restoreOpen = false"
+        >
+          <AlertDialogTitle :class="cls.title">Restore from snapshot</AlertDialogTitle>
+          <AlertDialogDescription :class="cls.description">
+            この snapshot で board を上書きします。 これ以後の編集 (append-only update vector) は
+            破棄されます。 owner のみ実行できます。
+          </AlertDialogDescription>
+
+          <div class="mt-4 rounded-xl border border-border bg-canvas/70 p-3 text-xs text-muted">
+            <span v-if="restoreTarget">
+              {{ formatVersionTime(restoreTarget.createdAt) }} ·
+              {{ formatVersionSize(restoreTarget.size) }}
+            </span>
+          </div>
+
+          <div class="mt-5 flex justify-end gap-2">
+            <AlertDialogCancel
+              class="rounded-md border border-border bg-canvas px-3 py-1.5 text-xs text-muted transition-colors hover:bg-hover hover:text-surface"
+              @click="restoreOpen = false"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-test-id="board-restore-confirm"
+              class="rounded-md bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-red-500/90"
+              @click="confirmRestore"
+            >
+              Restore
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
