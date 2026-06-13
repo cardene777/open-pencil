@@ -54,11 +54,15 @@ const onlineCountText = computed(() =>
             v-for="peer in hud.collabPeers"
             :key="peer.clientId"
             class="flex cursor-pointer items-center gap-2 rounded-md px-0.5 py-0.5 select-none active:bg-hover"
+            :class="peer.isIdle ? 'opacity-50' : ''"
             @click="hud.toggleFollowPeer(peer.clientId)"
           >
             <div
               class="flex size-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white"
-              :class="hud.followingPeer === peer.clientId ? 'ring-2 ring-white/40' : ''"
+              :class="[
+                hud.followingPeer === peer.clientId ? 'ring-2 ring-white/40' : '',
+                peer.isIdle ? 'grayscale' : ''
+              ]"
               :style="{ background: colorToCSS(peer.color) }"
             >
               {{ initials(peer.name) }}

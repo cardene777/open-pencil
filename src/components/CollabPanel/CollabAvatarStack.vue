@@ -34,11 +34,12 @@ const { dialogs } = useI18n()
       <div
         data-test-id="collab-peer-avatar"
         class="flex size-6 cursor-pointer items-center justify-center rounded-full border-2 text-[10px] font-semibold text-white transition-all"
-        :class="
+        :class="[
           collab.followingPeer === peer.clientId
             ? 'border-white ring-2 ring-white/40'
-            : 'border-panel'
-        "
+            : 'border-panel',
+          peer.isIdle ? 'opacity-40 grayscale' : ''
+        ]"
         :style="{ background: colorToCSS(peer.color) }"
         @click="collab.toggleFollowPeer(peer.clientId)"
       >

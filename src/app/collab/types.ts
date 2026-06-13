@@ -6,6 +6,12 @@ export interface RemotePeer {
   color: Color
   cursor?: { x: number; y: number; pageId: string }
   selection?: string[]
+  /**
+   * 一定時間 (`PEER_IDLE_THRESHOLD_MS`) 以上 cursor / selection 更新が観測されていない
+   * peer は idle 扱いにし、 UI 側で半透明表示にする。 awareness で「見ているけれど
+   * 操作していない user」を視覚的に区別する用途。
+   */
+  isIdle?: boolean
 }
 
 export interface CollabState {
