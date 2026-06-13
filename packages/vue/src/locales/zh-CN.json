@@ -701,7 +701,12 @@
     "toastShareAdded": "{count} 人已直接加入看板。",
     "toastSharePending": "{count} 人待处理，将在首次登录后加入。",
     "toastShareRejected": "{count} 个外部地址，请改用邀请链接。",
-    "toastShareFail": "无法共享看板"
+    "toastShareFail": "无法共享看板",
+    "recipientsLabel": "收件人",
+    "recipientsPlaceholder": "输入邮箱并按空格添加",
+    "recipientsHint": "按空格、逗号或回车将其转为标签。",
+    "recipientsInvalidNotice": "{count} 项不是有效的邮箱地址。",
+    "recipientsExternalNotice": "{count} 个外部地址会收到邀请链接。"
   },
   "common": {
     "home": "首页",

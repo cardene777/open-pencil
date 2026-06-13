@@ -701,7 +701,12 @@
     "toastShareAdded": "{count} добавлено на доску напрямую.",
     "toastSharePending": "{count} в ожидании — они присоединятся после первого входа.",
     "toastShareRejected": "{count} внешних адресов — вместо этого используйте ссылку-приглашение.",
-    "toastShareFail": "Не удалось открыть доступ к доске"
+    "toastShareFail": "Не удалось открыть доступ к доске",
+    "recipientsLabel": "Получатели",
+    "recipientsPlaceholder": "Введите e-mail и нажмите пробел",
+    "recipientsHint": "Пробел, запятая или Enter превращает адрес в чип.",
+    "recipientsInvalidNotice": "{count} записей не являются корректными e-mail.",
+    "recipientsExternalNotice": "{count} внешних адресов получат пригласительную ссылку."
   },
   "common": {
     "home": "Главная",

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { onClickOutside, useClipboard, useDebounceFn } from '@vueuse/core'
 import {
   DialogContent,
@@ -12,9 +12,8 @@ import {
 
 import { useI18n } from '@inkly/vue'
 
-import AppInput from '@/components/ui/AppInput.vue'
-import { isValidEmail } from '@/app/auth/email'
-import { normalizeShareEmail, partitionShareEmails, parseShareEmailChips } from '@/app/boards/share'
+import { isJfetMember, isValidEmail } from '@/app/auth/email'
+import { normalizeShareEmail, partitionShareChips, parseShareEmailChips } from '@/app/boards/share'
 import {
   inviteUser,
   listInvitations,
@@ -40,15 +39,15 @@ const { boardId, boardName = '', boardCollaborators } = defineProps<{
 
 const { shareModal: shareModalT } = useI18n()
 
-const internalEmailInput = ref('')
-const suggestQuery = ref('')
+const inputRef = ref<HTMLInputElement | null>(null)
+const inputValue = ref('')
+const chipText = ref('')
 const suggestResults = ref<InternalUserSummary[]>([])
 const suggestLoading = ref(false)
 const suggestOpen = ref(false)
 const suggestRoot = ref<HTMLElement | null>(null)
 const suggestRequestVersion = ref(0)
 const fallbackCollaborators = ref<BoardCollaborator[] | null>(null)
-const externalEmail = ref('')
 const role = ref<InvitationRole>('editor')
 const loading = ref(false)
 const invitationUrl = ref('')
@@ -63,13 +62,12 @@ const dialogDescriptionText = computed(() =>
   shareModalT.value.dialogDescription({ boardName: resolvedBoardName.value })
 )
 
-const internalChips = computed(() => parseShareEmailChips(internalEmailInput.value))
-const invalidInternalEmails = computed(() =>
-  internalChips.value.filter((chip) => !chip.valid).map((chip) => chip.value)
-)
-const selectedInternalEmails = computed(
-  () => new Set(internalChips.value.map((chip) => chip.value))
-)
+const chips = computed(() => parseShareEmailChips(chipText.value))
+const selectedEmails = computed(() => new Set(chips.value.map((chip) => chip.value)))
+const buckets = computed(() => partitionShareChips({ chips: chips.value }))
+const invalidCount = computed(() => buckets.value.invalid.length)
+const externalCount = computed(() => buckets.value.external.length)
+
 const effectiveBoardCollaborators = computed(
   () => boardCollaborators ?? fallbackCollaborators.value ?? []
 )
@@ -84,59 +82,41 @@ const excludedCollaboratorUserIds = computed(
 const filteredSuggestResults = computed(() =>
   suggestResults.value.filter(
     (user) =>
-      !selectedInternalEmails.value.has(user.email) &&
+      !selectedEmails.value.has(user.email) &&
       !excludedCollaboratorUserIds.value.has(user.id)
   )
 )
-const normalizedSuggestEmail = computed(() => normalizeShareEmail(suggestQuery.value))
-const canAddManualChip = computed(
-  () =>
-    normalizedSuggestEmail.value.length > 0 &&
-    isValidEmail(normalizedSuggestEmail.value) &&
-    !selectedInternalEmails.value.has(normalizedSuggestEmail.value)
-)
+const normalizedQuery = computed(() => normalizeShareEmail(inputValue.value))
 const showSuggestDropdown = computed(
   () =>
     suggestOpen.value &&
     Boolean(boardId) &&
-    suggestQuery.value.trim().length > 0 &&
-    (suggestLoading.value || filteredSuggestResults.value.length > 0 || !canAddManualChip.value)
-)
-const normalizedExternalEmail = computed(() => externalEmail.value.trim().toLowerCase())
-const externalEmailError = computed(() => {
-  if (normalizedExternalEmail.value.length === 0) return ''
-  if (!isValidEmail(normalizedExternalEmail.value)) return shareModalT.value.emailInvalid
-  return ''
-})
-const shareTargets = computed(() =>
-  partitionShareEmails({
-    internalEmails: internalChips.value.map((chip) => chip.value),
-    externalEmail: normalizedExternalEmail.value
-  })
-)
-const hasShareInput = computed(
-  () => internalChips.value.length > 0 || normalizedExternalEmail.value.length > 0
+    normalizedQuery.value.length > 0 &&
+    (suggestLoading.value || filteredSuggestResults.value.length > 0)
 )
 const canSubmit = computed(() => {
-  if (!boardId || loading.value || !hasShareInput.value) return false
-  if (invalidInternalEmails.value.length > 0) return false
-  return externalEmailError.value.length === 0
+  if (!boardId || loading.value) return false
+  if (chips.value.length === 0) return false
+  if (invalidCount.value > 0) return false
+  return buckets.value.internal.length > 0 || buckets.value.external.length > 0
 })
 
-watch(open, (value) => {
-  if (value) return
-  internalEmailInput.value = ''
-  suggestQuery.value = ''
+function resetForm() {
+  inputValue.value = ''
+  chipText.value = ''
   suggestResults.value = []
   suggestLoading.value = false
   suggestOpen.value = false
   suggestRequestVersion.value += 1
   fallbackCollaborators.value = null
-  externalEmail.value = ''
   role.value = 'editor'
   invitationUrl.value = ''
   errorMessage.value = ''
   loading.value = false
+}
+
+watch(open, (value) => {
+  if (!value) resetForm()
 })
 
 watch([open, () => boardId, () => boardCollaborators], async ([isOpen, currentBoardId]) => {
@@ -167,7 +147,7 @@ const runSuggestSearch = useDebounceFn(async (query: string, version: number) =>
   }
 }, 200)
 
-watch(suggestQuery, (value) => {
+watch(inputValue, (value) => {
   const query = value.trim()
   suggestRequestVersion.value += 1
   const version = suggestRequestVersion.value
@@ -187,8 +167,97 @@ onClickOutside(suggestRoot, () => {
   suggestOpen.value = false
 })
 
+function setChipValues(values: string[]) {
+  chipText.value = values.join('\n')
+}
+
+function appendChipFromValue(value: string) {
+  const normalized = normalizeShareEmail(value)
+  if (!normalized) return false
+
+  const next = chips.value.map((chip) => chip.value)
+  if (next.includes(normalized)) return false
+  next.push(normalized)
+  setChipValues(next)
+  return true
+}
+
+function flushTypedToChip() {
+  const raw = inputValue.value
+  if (!raw.trim()) {
+    inputValue.value = ''
+    return false
+  }
+
+  const added = appendChipFromValue(raw)
+  if (added) {
+    inputValue.value = ''
+    suggestResults.value = []
+    suggestLoading.value = false
+    suggestOpen.value = false
+    suggestRequestVersion.value += 1
+  }
+  return added
+}
+
+function appendChipFromSuggestion(user: InternalUserSummary) {
+  const added = appendChipFromValue(user.email)
+  if (added) {
+    inputValue.value = ''
+    suggestResults.value = []
+    suggestLoading.value = false
+    suggestOpen.value = false
+    suggestRequestVersion.value += 1
+  }
+  void nextTick(() => {
+    inputRef.value?.focus()
+  })
+}
+
+function onInputKeydown(event: KeyboardEvent) {
+  if (event.key === 'Enter' || event.key === ',') {
+    event.preventDefault()
+    flushTypedToChip()
+    return
+  }
+
+  if (event.key === ' ') {
+    if (!inputValue.value.trim()) return
+    event.preventDefault()
+    flushTypedToChip()
+    return
+  }
+
+  if (event.key === 'Backspace' && inputValue.value === '' && chips.value.length > 0) {
+    event.preventDefault()
+    setChipValues(chips.value.slice(0, -1).map((chip) => chip.value))
+  }
+}
+
+function onInputBlur() {
+  flushTypedToChip()
+}
+
+function removeChip(index: number) {
+  setChipValues(chips.value.filter((_, chipIndex) => chipIndex !== index).map((chip) => chip.value))
+}
+
+function reportShareResponse(response: Awaited<ReturnType<typeof shareBoard>>) {
+  if (response.added.length > 0) {
+    toast.info(shareModalT.value.toastShareAdded({ count: response.added.length }))
+  }
+  if (response.pending.length > 0) {
+    toast.info(shareModalT.value.toastSharePending({ count: response.pending.length }))
+  }
+  if (response.rejected.length > 0) {
+    toast.warning(shareModalT.value.toastShareRejected({ count: response.rejected.length }))
+  }
+}
+
 async function onSubmit() {
+  flushTypedToChip()
   if (!boardId || !canSubmit.value) return
+
   loading.value = true
   errorMessage.value = ''
   invitationUrl.value = ''
@@ -197,10 +266,10 @@ async function onSubmit() {
   let firstError = ''
 
   try {
-    if (shareTargets.value.internal.length > 0) {
+    if (buckets.value.internal.length > 0) {
       try {
         const response = await shareBoard(boardId, {
-          emails: shareTargets.value.internal,
+          emails: buckets.value.internal,
           role: role.value
         })
         hasSuccess = true
@@ -212,13 +281,10 @@ async function onSubmit() {
       }
     }
 
-    if (shareTargets.value.external.length > 0) {
+    if (buckets.value.external.length > 0) {
       try {
-        const invitation = await inviteUser({
-          email: shareTargets.value.external[0] ?? '',
-          boardId,
-          role: role.value
-        })
+        const externalEmail = buckets.value.external[0] ?? ''
+        const invitation = await inviteUser({ email: externalEmail, boardId, role: role.value })
         invitationUrl.value = new URL(invitation.url, window.location.origin).toString()
         hasSuccess = true
         toast.info(shareModalT.value.toastInvitationCreated)
@@ -231,8 +297,8 @@ async function onSubmit() {
 
     if (hasSuccess) {
       emit('created')
-      internalEmailInput.value = ''
-      externalEmail.value = ''
+      setChipValues([])
+      inputValue.value = ''
     }
 
     errorMessage.value = hasSuccess ? '' : firstError
@@ -260,64 +326,22 @@ async function shareInvitationUrl() {
       url: invitationUrl.value
     })
   } catch (error) {
-    // ユーザーキャンセル時の AbortError は無視、 他はトーストに出す
     if (error instanceof Error && error.name !== 'AbortError') {
       toast.error(error.message)
     }
   }
 }
 
-function setInternalChipValues(emails: string[]) {
-  internalEmailInput.value = emails.join('\n')
+function chipKind(value: string): 'internal' | 'external' | 'invalid' {
+  if (!isValidEmail(value)) return 'invalid'
+  if (isJfetMember(value)) return 'internal'
+  return 'external'
 }
 
-function appendInternalChip(email: string) {
-  const normalizedEmail = normalizeShareEmail(email)
-  if (!normalizedEmail) return
-
-  const nextEmails = internalChips.value.map((chip) => chip.value)
-  if (nextEmails.includes(normalizedEmail)) return
-
-  nextEmails.push(normalizedEmail)
-  setInternalChipValues(nextEmails)
-  suggestQuery.value = ''
-  suggestResults.value = []
-  suggestLoading.value = false
-  suggestOpen.value = false
-  suggestRequestVersion.value += 1
-}
-
-function addManualInternalChip() {
-  if (!canAddManualChip.value) return
-  appendInternalChip(normalizedSuggestEmail.value)
-}
-
-function selectSuggestedUser(user: InternalUserSummary) {
-  appendInternalChip(user.email)
-}
-
-function onSuggestEnter(event: KeyboardEvent) {
-  if (!canAddManualChip.value) return
-  event.preventDefault()
-  addManualInternalChip()
-}
-
-function removeInternalChip(index: number) {
-  setInternalChipValues(
-    internalChips.value.filter((_, chipIndex) => chipIndex !== index).map((chip) => chip.value)
-  )
-}
-
-function reportShareResponse(response: Awaited<ReturnType<typeof shareBoard>>) {
-  if (response.added.length > 0) {
-    toast.info(shareModalT.value.toastShareAdded({ count: response.added.length }))
-  }
-  if (response.pending.length > 0) {
-    toast.info(shareModalT.value.toastSharePending({ count: response.pending.length }))
-  }
-  if (response.rejected.length > 0) {
-    toast.warning(shareModalT.value.toastShareRejected({ count: response.rejected.length }))
-  }
+const chipStyles: Record<'internal' | 'external' | 'invalid', string> = {
+  internal: 'border-accent/40 bg-accent/15 text-surface',
+  external: 'border-emerald-400/30 bg-emerald-500/15 text-emerald-50',
+  invalid: 'border-red-500/40 bg-red-500/15 text-red-100'
 }
 </script>
 
@@ -339,24 +363,54 @@ function reportShareResponse(response: Awaited<ReturnType<typeof shareBoard>>) {
             {{ shareModalT.boardMissingNotice }}
           </div>
 
-          <label class="block space-y-1.5">
+          <div ref="suggestRoot" class="space-y-1.5">
             <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
-              {{ shareModalT.internalEmailsLabel }}
+              {{ shareModalT.recipientsLabel }}
             </span>
-            <div ref="suggestRoot" class="relative space-y-2">
-              <AppInput
-                v-model="suggestQuery"
-                test-id="share-internal-suggest-input"
-                type="search"
-                :placeholder="shareModalT.internalSuggestPlaceholder"
+
+            <div
+              data-test-id="share-recipients-field"
+              class="relative flex min-h-[3rem] flex-wrap items-center gap-2 rounded-xl border border-border bg-input px-2 py-2 transition-colors focus-within:border-accent"
+              @click="inputRef?.focus()"
+            >
+              <div
+                v-for="(chip, index) in chips"
+                :key="chip.value"
+                :data-test-id="`share-recipient-chip-${index}`"
+                :class="[
+                  'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs',
+                  chipStyles[chipKind(chip.value)]
+                ]"
+              >
+                <span>{{ chip.value }}</span>
+                <button
+                  type="button"
+                  class="cursor-pointer rounded-full text-[10px] opacity-70 transition-opacity hover:opacity-100"
+                  :aria-label="`${shareModalT.internalChipRemove} ${chip.value}`"
+                  :disabled="loading"
+                  @click.stop="removeChip(index)"
+                >
+                  ×
+                </button>
+              </div>
+
+              <input
+                ref="inputRef"
+                v-model="inputValue"
+                data-test-id="share-recipients-input"
+                type="text"
+                autocomplete="off"
+                class="min-w-[10rem] flex-1 bg-transparent text-sm text-surface outline-none placeholder:text-muted disabled:cursor-not-allowed disabled:opacity-60"
+                :placeholder="chips.length === 0 ? shareModalT.recipientsPlaceholder : ''"
                 :disabled="loading || !boardId"
+                @keydown="onInputKeydown"
+                @blur="onInputBlur"
                 @focus="suggestOpen = true"
-                @enter="onSuggestEnter"
               />
 
               <div
                 v-if="showSuggestDropdown"
-                class="absolute z-50 w-full overflow-hidden rounded-xl border border-border bg-panel shadow-2xl"
+                class="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-border bg-panel shadow-2xl"
               >
                 <div v-if="suggestLoading" class="px-3 py-2 text-xs text-muted">
                   {{ shareModalT.internalSuggestLoading }}
@@ -371,10 +425,10 @@ function reportShareResponse(response: Awaited<ReturnType<typeof shareBoard>>) {
                   v-for="user in filteredSuggestResults"
                   :key="user.id"
                   type="button"
-                  :data-test-id="`share-internal-suggest-item-${user.id}`"
+                  :data-test-id="`share-recipient-suggest-${user.id}`"
                   class="flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-hover"
                   @mousedown.prevent
-                  @click="selectSuggestedUser(user)"
+                  @click="appendChipFromSuggestion(user)"
                 >
                   <div class="min-w-0">
                     <p class="truncate text-sm text-surface">{{ user.name }}</p>
@@ -382,83 +436,25 @@ function reportShareResponse(response: Awaited<ReturnType<typeof shareBoard>>) {
                   </div>
                 </button>
               </div>
-
-              <div v-if="internalChips.length > 0" class="flex flex-wrap gap-2">
-                <div
-                  v-for="(chip, index) in internalChips"
-                  :key="chip.value"
-                  :data-test-id="`share-internal-chip-${index}`"
-                  :class="[
-                    'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs',
-                    chip.valid
-                      ? 'border-white/10 bg-canvas/70 text-surface'
-                      : 'border-red-500/30 bg-red-500/10 text-red-100'
-                  ]"
-                >
-                  <span>{{ chip.value }}</span>
-                  <button
-                    type="button"
-                    class="cursor-pointer rounded-full text-[10px] text-muted transition-colors hover:text-surface"
-                    :aria-label="`${shareModalT.internalChipRemove} ${chip.value}`"
-                    :disabled="loading"
-                    @click="removeInternalChip(index)"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between gap-3">
-                <p class="text-xs text-muted">{{ shareModalT.internalSuggestHint }}</p>
-                <button
-                  type="button"
-                  data-test-id="share-internal-add-manual"
-                  class="cursor-pointer rounded-md border border-border bg-canvas px-2.5 py-1.5 text-[11px] text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
-                  :disabled="loading || !boardId || !canAddManualChip"
-                  @click="addManualInternalChip"
-                >
-                  {{ shareModalT.internalManualAdd }}
-                </button>
-              </div>
-
-              <textarea
-                v-model="internalEmailInput"
-                data-test-id="share-internal-emails-input"
-                rows="3"
-                :placeholder="shareModalT.internalEmailsPlaceholder"
-                :disabled="loading || !boardId"
-                class="min-h-24 w-full rounded border border-border bg-input px-3 py-2 text-sm text-surface outline-none transition-colors placeholder:text-muted focus:border-accent disabled:cursor-not-allowed disabled:opacity-60"
-              />
             </div>
-            <p class="text-xs text-muted">{{ shareModalT.internalEmailsHint }}</p>
-          </label>
 
-          <div
-            v-if="invalidInternalEmails.length > 0"
-            class="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-100"
-          >
-            {{ shareModalT.emailInvalid }}
+            <p class="text-xs text-muted">{{ shareModalT.recipientsHint }}</p>
           </div>
 
-          <label data-test-id="share-external-email-input" class="block space-y-1.5">
-            <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
-              {{ shareModalT.externalEmailLabel }}
-            </span>
-            <AppInput
-              v-model="externalEmail"
-              test-id="share-email-input"
-              type="email"
-              :placeholder="shareModalT.emailPlaceholder"
-              :disabled="loading || !boardId"
-            />
-          </label>
-
           <div
-            v-if="externalEmail.length > 0 && externalEmailError"
-            data-test-id="share-email-error"
+            v-if="invalidCount > 0"
+            data-test-id="share-recipients-invalid"
             class="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-100"
           >
-            {{ externalEmailError }}
+            {{ shareModalT.recipientsInvalidNotice({ count: invalidCount }) }}
+          </div>
+
+          <div
+            v-if="externalCount > 0"
+            data-test-id="share-recipients-external"
+            class="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-100"
+          >
+            {{ shareModalT.recipientsExternalNotice({ count: externalCount }) }}
           </div>
 
           <label class="block space-y-1.5">

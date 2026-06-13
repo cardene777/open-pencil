@@ -29,10 +29,12 @@ async function shareWithInternalAndExternal(
     internalEmails: string[]
   }
 ) {
-  await page
-    .getByTestId('share-internal-emails-input')
-    .fill(input.internalEmails.join('\n'))
-  await page.getByTestId('share-email-input').fill(input.externalEmail)
+  // 統一 chip 入力 UI ... internal / external を区別せず、 email をスペースで chip 化する
+  const input_field = page.getByTestId('share-recipients-input')
+  for (const email of [...input.internalEmails, input.externalEmail]) {
+    await input_field.fill(email)
+    await input_field.press(' ')
+  }
   await page.getByTestId('share-submit').click()
 }
 
@@ -41,14 +43,13 @@ test.describe('jfet share ui smoke', () => {
     await cleanState(page)
   })
 
-  test('multi-select share reports added, pending, and rejected results', async ({
+  test('unified chip input routes internal direct-add and external invitation in one submit', async ({
     browser,
     page
   }) => {
     const ownerEmail = `owner-${Date.now()}@jfet.co.jp`
     const existingEmail = `existing-${Date.now()}@jfet.co.jp`
     const pendingEmail = `pending-${Date.now()}@jfet.co.jp`
-    const rejectedEmail = `rejected-${Date.now()}@external.test`
     const externalInviteEmail = `invite-${Date.now()}@external.test`
     const boardName = `Share Smoke ${Date.now()}`
 
@@ -57,13 +58,12 @@ test.describe('jfet share ui smoke', () => {
     await createBoardAndOpenShare(page, boardName)
 
     await shareWithInternalAndExternal(page, {
-      internalEmails: [existingEmail, pendingEmail, rejectedEmail],
+      internalEmails: [existingEmail, pendingEmail],
       externalEmail: externalInviteEmail
     })
 
     await expectToast(page, '1 added directly to the board.')
     await expectToast(page, '1 pending — they will join after first sign-in.')
-    await expectToast(page, '1 external addresses — use the invitation link instead.')
 
     const invitationUrl = (await page.getByTestId('share-link-output').textContent())?.trim() ?? ''
     expect(invitationUrl).toMatch(/^http:\/\/localhost:1420\/invite\//)

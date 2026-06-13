@@ -701,7 +701,12 @@
     "toastShareAdded": "{count} aggiunti direttamente alla bacheca.",
     "toastSharePending": "{count} in attesa: entreranno dopo il primo accesso.",
     "toastShareRejected": "{count} indirizzi esterni: usa invece il link di invito.",
-    "toastShareFail": "Impossibile condividere la bacheca"
+    "toastShareFail": "Impossibile condividere la bacheca",
+    "recipientsLabel": "Destinatari",
+    "recipientsPlaceholder": "Scrivi un'\\''email e premi spazio",
+    "recipientsHint": "Premi spazio, virgola o Invio per trasformarla in chip.",
+    "recipientsInvalidNotice": "{count} voci non sono email valide.",
+    "recipientsExternalNotice": "{count} indirizzi esterni riceveranno un link di invito."
   },
   "common": {
     "home": "Home",

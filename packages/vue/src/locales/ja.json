@@ -701,7 +701,12 @@
     "toastShareAdded": "{count} 件をボードに直接追加しました。",
     "toastSharePending": "{count} 件は保留中です。初回サインイン後に参加できます。",
     "toastShareRejected": "{count} 件は外部アドレスです。代わりに招待リンクを使ってください。",
-    "toastShareFail": "ボードを共有できませんでした"
+    "toastShareFail": "ボードを共有できませんでした",
+    "recipientsLabel": "宛先",
+    "recipientsPlaceholder": "メールアドレスを入力してスペースで追加",
+    "recipientsHint": "スペース、 カンマ、 Enter のいずれかで chip 化されます。",
+    "recipientsInvalidNotice": "{count} 件はメール形式ではありません。",
+    "recipientsExternalNotice": "{count} 件は外部宛で招待リンクを送ります。"
   },
   "common": {
     "home": "トップ",

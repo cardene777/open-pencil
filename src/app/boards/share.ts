@@ -55,6 +55,39 @@ export function partitionShareEmails(input: PartitionShareEmailsInput): ShareEma
   }
 }
 
+/**
+ * 統一 chip 入力から内部 (jfet) / 外部 / 不正をまとめて振り分ける。
+ * 1 入力 field 経由の chip 群を、 share API へ渡す前段で純粋関数として振り分ける。
+ */
+export interface PartitionShareChipsInput {
+  chips: ShareEmailChip[]
+}
+export interface ShareChipBuckets {
+  internal: string[]
+  external: string[]
+  invalid: string[]
+}
+export function partitionShareChips(input: PartitionShareChipsInput): ShareChipBuckets {
+  const internal: string[] = []
+  const external: string[] = []
+  const invalid: string[] = []
+
+  for (const chip of input.chips) {
+    if (!chip.valid) {
+      invalid.push(chip.value)
+      continue
+    }
+    if (isJfetMember(chip.value)) internal.push(chip.value)
+    else external.push(chip.value)
+  }
+
+  return {
+    internal: dedupeEmails(internal),
+    external: dedupeEmails(external),
+    invalid
+  }
+}
+
 function dedupeEmails(emails: string[]) {
   const seen = new Set<string>()
   const normalized: string[] = []

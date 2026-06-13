@@ -701,7 +701,12 @@
     "toastShareAdded": "{count} direkt zum Board hinzugefügt.",
     "toastSharePending": "{count} ausstehend — Beitritt nach der ersten Anmeldung.",
     "toastShareRejected": "{count} externe Adressen — stattdessen den Einladungslink verwenden.",
-    "toastShareFail": "Board konnte nicht geteilt werden"
+    "toastShareFail": "Board konnte nicht geteilt werden",
+    "recipientsLabel": "Empfänger",
+    "recipientsPlaceholder": "E-Mail eingeben und Leertaste drücken",
+    "recipientsHint": "Drücke Leertaste, Komma oder Enter, um die Adresse als Chip festzulegen.",
+    "recipientsInvalidNotice": "{count} Einträge sind keine gültigen E-Mail-Adressen.",
+    "recipientsExternalNotice": "{count} externe Adressen erhalten einen Einladungslink."
   },
   "common": {
     "home": "Startseite",

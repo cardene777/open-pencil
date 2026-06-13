@@ -701,7 +701,12 @@
     "toastShareAdded": "{count} añadidos directamente al tablero.",
     "toastSharePending": "{count} pendientes: se unirán tras iniciar sesión por primera vez.",
     "toastShareRejected": "{count} direcciones externas: usa el enlace de invitación en su lugar.",
-    "toastShareFail": "No se pudo compartir el tablero"
+    "toastShareFail": "No se pudo compartir el tablero",
+    "recipientsLabel": "Destinatarios",
+    "recipientsPlaceholder": "Escribe un correo y pulsa espacio",
+    "recipientsHint": "Pulsa espacio, coma o Enter para convertirlo en chip.",
+    "recipientsInvalidNotice": "{count} entradas no son direcciones de correo válidas.",
+    "recipientsExternalNotice": "{count} direcciones externas recibirán un enlace de invitación."
   },
   "common": {
     "home": "Inicio",

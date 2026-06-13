@@ -701,7 +701,12 @@
     "toastShareAdded": "{count} dodano bezpośrednio do tablicy.",
     "toastSharePending": "{count} oczekuje — dołączą po pierwszym logowaniu.",
     "toastShareRejected": "{count} to adresy zewnętrzne — użyj zamiast tego linku z zaproszeniem.",
-    "toastShareFail": "Nie udało się udostępnić tablicy"
+    "toastShareFail": "Nie udało się udostępnić tablicy",
+    "recipientsLabel": "Adresaci",
+    "recipientsPlaceholder": "Wpisz e-mail i naciśnij spację",
+    "recipientsHint": "Naciśnij spację, przecinek lub Enter, aby zamienić w chip.",
+    "recipientsInvalidNotice": "{count} wpisów nie jest poprawnymi adresami e-mail.",
+    "recipientsExternalNotice": "{count} adresów zewnętrznych otrzyma link z zaproszeniem."
   },
   "common": {
     "home": "Strona główna",

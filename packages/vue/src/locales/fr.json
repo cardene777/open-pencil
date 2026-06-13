@@ -701,7 +701,12 @@
     "toastShareAdded": "{count} ajoutés directement au tableau.",
     "toastSharePending": "{count} en attente — ils rejoindront après leur première connexion.",
     "toastShareRejected": "{count} adresses externes — utilisez plutôt le lien d’invitation.",
-    "toastShareFail": "Impossible de partager le tableau"
+    "toastShareFail": "Impossible de partager le tableau",
+    "recipientsLabel": "Destinataires",
+    "recipientsPlaceholder": "Saisis un e-mail puis espace pour ajouter",
+    "recipientsHint": "Appuie sur espace, virgule ou Entrée pour transformer l'\\''e-mail en puce.",
+    "recipientsInvalidNotice": "{count} entrées ne sont pas des e-mails valides.",
+    "recipientsExternalNotice": "{count} adresses externes recevront un lien d'\\''invitation."
   },
   "common": {
     "home": "Accueil",

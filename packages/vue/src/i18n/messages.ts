@@ -768,7 +768,12 @@ export const shareModalMessages = i18n('shareModal', {
   toastShareAdded: params('{count} added directly to the board.'),
   toastSharePending: params('{count} pending — they will join after first sign-in.'),
   toastShareRejected: params('{count} external addresses — use the invitation link instead.'),
-  toastShareFail: 'Failed to share the board'
+  toastShareFail: 'Failed to share the board',
+  recipientsLabel: 'Recipients',
+  recipientsPlaceholder: 'Type an email and press space to add',
+  recipientsHint: 'Press space, comma, or Enter to turn the email into a chip.',
+  recipientsInvalidNotice: params('{count} entries are not valid email addresses.'),
+  recipientsExternalNotice: params('{count} external addresses will receive an invitation link.')
 })
 
 export const fontSettingsMessages = i18n('fontSettings', {

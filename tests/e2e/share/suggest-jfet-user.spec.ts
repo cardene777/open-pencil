@@ -50,10 +50,10 @@ test.describe('jfet share suggest ui', () => {
     await mockGoogleLogin(page, { email: ownerEmail, name: 'Owner User' })
     await createBoardAndOpenShare(page, `Suggest Board ${Date.now()}`)
 
-    await page.getByTestId('share-internal-suggest-input').fill('al')
+    await page.getByTestId('share-recipients-input').fill('al')
 
-    await expect(page.getByTestId(`share-internal-suggest-item-${alice.userId}`)).toBeVisible()
-    await expect(page.getByTestId(`share-internal-suggest-item-${alex.userId}`)).toBeVisible()
+    await expect(page.getByTestId(`share-recipient-suggest-${alice.userId}`)).toBeVisible()
+    await expect(page.getByTestId(`share-recipient-suggest-${alex.userId}`)).toBeVisible()
   })
 
   test('selecting a suggestion creates a chip and submit adds collaborator', async ({
@@ -67,10 +67,10 @@ test.describe('jfet share suggest ui', () => {
     await mockGoogleLogin(page, { email: ownerEmail, name: 'Owner User' })
     await createBoardAndOpenShare(page, `Select Board ${Date.now()}`)
 
-    await page.getByTestId('share-internal-suggest-input').fill('alice')
-    await page.getByTestId(`share-internal-suggest-item-${candidate.userId}`).click()
+    await page.getByTestId('share-recipients-input').fill('alice')
+    await page.getByTestId(`share-recipient-suggest-${candidate.userId}`).click()
 
-    await expect(page.getByTestId('share-internal-chip-0')).toContainText(candidateEmail)
+    await expect(page.getByTestId('share-recipient-chip-0')).toContainText(candidateEmail)
 
     await page.getByTestId('share-submit').click()
     await expectToast(page, '1 added directly to the board.')
@@ -86,7 +86,8 @@ test.describe('jfet share suggest ui', () => {
     await mockGoogleLogin(page, { email: ownerEmail, name: 'Owner User' })
     const { boardId } = await createBoardAndOpenShare(page, `Exclude Board ${Date.now()}`)
 
-    await page.getByTestId('share-internal-emails-input').fill(collaboratorEmail)
+    await page.getByTestId('share-recipients-input').fill(collaboratorEmail)
+    await page.getByTestId('share-recipients-input').press(' ')
     await page.getByTestId('share-submit').click()
     await expectToast(page, '1 added directly to the board.')
 
@@ -94,13 +95,13 @@ test.describe('jfet share suggest ui', () => {
     await page.getByTestId('board-settings-share-button').click()
     await expect(page.getByTestId('share-modal')).toBeVisible()
 
-    await page.getByTestId('share-internal-suggest-input').fill('a')
+    await page.getByTestId('share-recipients-input').fill('a')
 
     await expect(
-      page.getByTestId(`share-internal-suggest-item-${visibleUser.userId}`)
+      page.getByTestId(`share-recipient-suggest-${visibleUser.userId}`)
     ).toBeVisible()
     await expect(
-      page.getByTestId(`share-internal-suggest-item-${collaborator.userId}`)
+      page.getByTestId(`share-recipient-suggest-${collaborator.userId}`)
     ).toHaveCount(0)
   })
 })
