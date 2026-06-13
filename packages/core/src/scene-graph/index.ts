@@ -1,5 +1,6 @@
 export * from './snap'
 export * from './spatial-index'
+export * from './sticky'
 export { UndoManager, type UndoEntry, type UndoManagerOptions } from './undo'
 export { hitTest, hitTestDeep, hitTestFrame } from './hit-test'
 

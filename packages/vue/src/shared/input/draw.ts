@@ -1,5 +1,10 @@
 import { DEFAULT_TEXT_HEIGHT, DEFAULT_TEXT_WIDTH } from '@inkly/core/constants'
 import type { Editor } from '@inkly/core/editor'
+import {
+  createStickyNote,
+  STICKY_NOTE_DEFAULT_HEIGHT,
+  STICKY_NOTE_DEFAULT_WIDTH
+} from '@inkly/core/scene-graph'
 
 import { TOOL_TO_NODE } from '#vue/shared/input/types'
 import type { DragDraw, DragState } from '#vue/shared/input/types'
@@ -9,6 +14,32 @@ export function startTextTool(cx: number, cy: number, editor: Editor) {
   editor.graph.updateNode(nodeId, { text: '' })
   editor.select([nodeId])
   editor.startTextEditing(nodeId)
+  editor.setTool('SELECT')
+  editor.requestRender()
+}
+
+/**
+ * Sticky note tool ... canvas 上の click 位置を中心に 240x240 の付箋を作成、
+ * 即時に text 編集モードへ遷移する。 collab 経路は `editor.graph.updateNode`
+ * を経由するため yjs sync で他 client にも broadcast される。
+ *
+ * miro 互換 ... click 1 回で作成完了、 drag の概念なし、 デフォルト yellow。
+ * 色変更は properties panel に表示される sticky color picker から行う。
+ */
+export function startStickyTool(cx: number, cy: number, editor: Editor) {
+  // click 位置を中心とする
+  const x = cx - STICKY_NOTE_DEFAULT_WIDTH / 2
+  const y = cy - STICKY_NOTE_DEFAULT_HEIGHT / 2
+  const { rectId, textId } = editor.undo.runBatch('Create sticky note', () =>
+    createStickyNote(editor.graph, editor.state.currentPageId, {
+      x,
+      y,
+      color: 'yellow'
+    })
+  )
+  editor.select([rectId])
+  // 中身を即時編集できるよう child TEXT を edit mode に
+  editor.startTextEditing(textId)
   editor.setTool('SELECT')
   editor.requestRender()
 }
