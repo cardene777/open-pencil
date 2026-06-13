@@ -121,11 +121,15 @@ function createSceneNodeFromProps(
 ): SceneNode {
   const type = (props.type as NodeType) ?? 'GROUP'
   const childIds = Array.isArray(props.childIds) ? [...(props.childIds as string[])] : []
+  // visible が ynodes 側で undefined (古い snapshot や field 落ち) のときは true で fallback。
+  // false は明示の hide 意図なので保持する (#205 ... invitee で frame が消える bug の防止)。
+  const visible = props.visible === undefined ? true : props.visible
   const node = {
     ...props,
     id,
     type,
-    childIds
+    childIds,
+    visible
   } as SceneNode
   return node
 }

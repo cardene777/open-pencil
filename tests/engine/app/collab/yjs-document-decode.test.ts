@@ -85,6 +85,35 @@ describe('decodeBoardDocumentBytes', () => {
     expect(Array.from(graph.images.get('hash-b') ?? [])).toEqual([9, 8, 7])
   })
 
+  test('visible field 未設定 (古い snapshot) は true で復元される (#205)', () => {
+    const ydoc = new Y.Doc()
+    const ynodes = ydoc.getMap<Y.Map<unknown>>('nodes')
+
+    const root = new Y.Map<unknown>()
+    root.set('type', 'DOCUMENT')
+    ynodes.set('root-4', root)
+
+    // visible を明示設定しない (古い board snapshot 想定)。
+    const frame = new Y.Map<unknown>()
+    frame.set('type', 'FRAME')
+    frame.set('parentId', 'root-4')
+    ynodes.set('frame-4', frame)
+
+    // 明示 false の Frame は保持される。
+    const hiddenFrame = new Y.Map<unknown>()
+    hiddenFrame.set('type', 'FRAME')
+    hiddenFrame.set('parentId', 'root-4')
+    hiddenFrame.set('visible', false)
+    ynodes.set('frame-4-hidden', hiddenFrame)
+
+    const bytes = Y.encodeStateAsUpdate(ydoc)
+    const graph = decodeBoardDocumentBytes(bytes)
+    expect(graph).not.toBeNull()
+    if (!graph) return
+    expect(graph.nodes.get('frame-4')?.visible).toBe(true)
+    expect(graph.nodes.get('frame-4-hidden')?.visible).toBe(false)
+  })
+
   test('deep child-first chain でも O(N) で復元 (BFS 二乗化なし)', () => {
     const ydoc = new Y.Doc()
     const ynodes = ydoc.getMap<Y.Map<unknown>>('nodes')

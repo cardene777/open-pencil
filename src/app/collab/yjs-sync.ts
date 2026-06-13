@@ -287,6 +287,11 @@ export function createYjsGraphSync({
     setSuppressYjsEvents(false)
   }
 
+  // parent が graph に未到達のまま add イベントが届いた node を保留する。
+  // 別の event で parent が来た後にまとめて再試行する (#205 ... event 非決定順で
+  // child 先行 add → drop → invitee 側で frame が消える bug の防止)。
+  const pendingAdds = new Map<string, Y.Map<unknown>>()
+
   function applyYjsToGraph(events: Y.YEvent<Y.Map<unknown>>[]) {
     const store = getStore()
     const ynodes = getYnodes()
@@ -299,6 +304,7 @@ export function createYjsGraphSync({
             if (ynode) applyYnodeToGraph(key, ynode)
           } else if (change.action === 'delete') {
             store.graph.deleteNode(key)
+            pendingAdds.delete(key)
           }
         }
       } else if (event.target.parent === ynodes) {
@@ -307,6 +313,26 @@ export function createYjsGraphSync({
           const ynode = ynodes.get(nodeId)
           if (ynode) applyYnodeToGraph(nodeId, ynode)
         }
+      }
+    }
+
+    // この batch で parent が出来た保留 node があれば再試行する (収束まで loop)。
+    if (pendingAdds.size > 0) flushPendingAdds()
+  }
+
+  function flushPendingAdds() {
+    let progress = true
+    while (progress && pendingAdds.size > 0) {
+      progress = false
+      // Map iteration 中の delete は ES 仕様で safe (現在 key より前は影響しない)、
+      // 値のコピーは作らない。 applyYnodeToGraph は parent が graph に存在すれば
+      // pendingAdds.delete を呼ぶので size 差分で前進判定する。
+      const snapshot: Array<[string, Y.Map<unknown>]> = []
+      for (const entry of pendingAdds) snapshot.push(entry)
+      for (const [nodeId, ynode] of snapshot) {
+        const sizeBefore = pendingAdds.size
+        applyYnodeToGraph(nodeId, ynode)
+        if (pendingAdds.size !== sizeBefore) progress = true
       }
     }
   }
@@ -325,8 +351,16 @@ export function createYjsGraphSync({
     const existing = store.graph.getNode(nodeId)
     const props = yNodeToProps(ynode)
 
+    // visible が remote から undefined (=field 自体無し or 古い snapshot) で届いた
+    // ケースは true に正規化する (#205 ... invitee 側で false 解釈されて layer が
+    // 閉じる症状の防止)。 false は明示意図 (ユーザーが hide した layer) なので保持。
+    if (props.visible === undefined) {
+      props.visible = true
+    }
+
     if (existing) {
       store.graph.updateNode(nodeId, props as Partial<SceneNode>)
+      pendingAdds.delete(nodeId)
       return
     }
 
@@ -337,7 +371,14 @@ export function createYjsGraphSync({
       store.graph.nodes.delete(node.id)
       node.id = nodeId
       store.graph.nodes.set(nodeId, node)
+      pendingAdds.delete(nodeId)
+      return
     }
+
+    // parent が未到達なら保留する。 後続 event で parent が到来したら flushPendingAdds
+    // で再試行する。 これがないと yjs add イベントが非決定順で届いた時に child node
+    // が永久に drop される (#205 の主因)。
+    pendingAdds.set(nodeId, ynode)
   }
 
   return { syncNodeToYjs, syncAllNodesToYjs, applyYjsToGraph }
