@@ -287,6 +287,59 @@ export interface BoardPreviewStore {
 }
 
 /**
+ * yjs update vector を append-only で保持する store (Realtime Collab Phase 2)。
+ * board 単位で大量の delta を貯めるため、 compaction で snapshot 化後に
+ * before time より古い update を削除する経路を持つ。
+ */
+export interface BoardDocumentUpdateRecord {
+  id: string
+  boardId: string
+  update: Uint8Array
+  size: number
+  createdAt: number
+  createdByUserId: string | null
+}
+
+export interface AppendBoardDocumentUpdateInput {
+  boardId: string
+  update: Uint8Array
+  createdByUserId: string | null
+}
+
+export interface BoardDocumentUpdateStore {
+  appendUpdate(input: AppendBoardDocumentUpdateInput): Promise<BoardDocumentUpdateRecord>
+  listUpdatesSince(boardId: string, sinceCreatedAt: number): Promise<BoardDocumentUpdateRecord[]>
+  countUpdatesForBoard(boardId: string): Promise<number>
+  deleteUpdatesOlderThan(boardId: string, beforeCreatedAt: number): Promise<number>
+}
+
+/**
+ * 過去 snapshot の履歴を保持する store。 巻き戻し UI / 監査用。
+ * label は user が任意に付ける名前 (auto snapshot は null)。
+ */
+export interface BoardDocumentVersionRecord {
+  id: string
+  boardId: string
+  state: Uint8Array
+  size: number
+  createdAt: number
+  label: string | null
+}
+
+export interface CreateBoardDocumentVersionInput {
+  boardId: string
+  state: Uint8Array
+  label: string | null
+}
+
+export interface BoardDocumentVersionStore {
+  createVersion(input: CreateBoardDocumentVersionInput): Promise<BoardDocumentVersionRecord>
+  listVersionsForBoard(boardId: string, limit?: number): Promise<BoardDocumentVersionRecord[]>
+  findLatestVersion(boardId: string): Promise<BoardDocumentVersionRecord | null>
+  pruneOldVersions(boardId: string, keepCount: number): Promise<number>
+}
+
+/**
  * domain 判定ヘルパー (caller 側で利用)
  */
 export function isInternalDomainEmail(email: string): boolean {

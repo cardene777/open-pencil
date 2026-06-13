@@ -4,6 +4,8 @@ import { serveStatic } from 'hono/bun'
 
 import { createInklyAuth, type InklyAuth } from './auth/index.js'
 import { createBoardDocumentStore } from './boardDocumentStore.js'
+import { createBoardDocumentUpdateStore } from './boardDocumentUpdateStore.js'
+import { createBoardDocumentVersionStore } from './boardDocumentVersionStore.js'
 import { createBoardPinStore } from './boardPinStore.js'
 import { createBoardPreviewStore } from './boardPreviewStore.js'
 import { createBoardStore } from './boardStore.js'
@@ -25,6 +27,8 @@ import { createInvitationStore } from './store.js'
 import { resolveJwtSecret } from './token.js'
 import type {
   BoardDocumentStore,
+  BoardDocumentUpdateStore,
+  BoardDocumentVersionStore,
   BoardPinStore,
   BoardPreviewStore,
   BoardStore,
@@ -39,6 +43,7 @@ import {
   type NotificationSocketData
 } from './ws/notifications.js'
 import { createSignalingServer, type SignalingPeerData } from './ws/signaling.js'
+import { createYjsHubServer, type YjsSocketData } from './ws/yjs-hub.js'
 
 export const API_HOST = '127.0.0.1'
 export const API_PORT = 3001
@@ -54,6 +59,8 @@ export interface CreateApiAppOptions {
   internalUserStore?: InternalUserStore
   pendingInternalInvitationStore?: PendingInternalInvitationStore
   boardDocumentStore?: BoardDocumentStore
+  boardDocumentUpdateStore?: BoardDocumentUpdateStore
+  boardDocumentVersionStore?: BoardDocumentVersionStore
   boardPinStore?: BoardPinStore
   boardPreviewStore?: BoardPreviewStore
   database?: ApiDatabase
@@ -97,6 +104,12 @@ export async function createApiApp(options: CreateApiAppOptions) {
     (await createPendingInternalInvitationStore({ database }))
   const boardDocumentStore =
     options.boardDocumentStore ?? (await createBoardDocumentStore({ database, now: options.now }))
+  const boardDocumentUpdateStore =
+    options.boardDocumentUpdateStore ??
+    (await createBoardDocumentUpdateStore({ database, now: options.now }))
+  const boardDocumentVersionStore =
+    options.boardDocumentVersionStore ??
+    (await createBoardDocumentVersionStore({ database, now: options.now }))
   const boardPinStore =
     options.boardPinStore ?? (await createBoardPinStore({ database, now: options.now }))
   const boardPreviewStore =
@@ -193,7 +206,17 @@ export async function createApiApp(options: CreateApiAppOptions) {
     app.get('*', serveStatic({ path: `${spaRoot}/index.html` }))
   }
 
-  return { app, store, boardStore, notificationStore, database, auth }
+  return {
+    app,
+    store,
+    boardStore,
+    notificationStore,
+    database,
+    auth,
+    boardDocumentStore,
+    boardDocumentUpdateStore,
+    boardDocumentVersionStore
+  }
 }
 
 export async function startApiServer(options: Partial<StartApiServerOptions> = {}) {
@@ -202,7 +225,17 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
   const host = options.host ?? env.INKLY_API_HOST ?? API_HOST
   const requestedPort = options.port ?? Number(env.PORT ?? env.INKLY_API_PORT ?? API_PORT)
   let onNotificationCreated: ((notification: NotificationRecord) => void) | undefined
-  const { app, store, boardStore, notificationStore, database, auth } = await createApiApp({
+  const {
+    app,
+    store,
+    boardStore,
+    notificationStore,
+    database,
+    auth,
+    boardDocumentStore,
+    boardDocumentUpdateStore,
+    boardDocumentVersionStore
+  } = await createApiApp({
     boardStore: options.boardStore,
     notificationStore: options.notificationStore,
     database: options.database,
@@ -217,6 +250,14 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
   })
   const signaling = createSignalingServer()
   const notifications = createNotificationWebSocketServer(auth)
+  const yjsHub = createYjsHubServer({
+    auth,
+    boardStore,
+    boardDocumentStore,
+    boardDocumentUpdateStore,
+    boardDocumentVersionStore,
+    now: options.now
+  })
   onNotificationCreated = (notification) => {
     notifications.pushNotification(notification)
   }
@@ -234,40 +275,73 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
     timer.unref?.()
   }
 
+  type AnySocketData = SignalingPeerData | NotificationSocketData | YjsSocketData
+
+  function isYjsSocket(data: AnySocketData): data is YjsSocketData {
+    return 'boardId' in data
+  }
+  function isSignalingSocket(data: AnySocketData): data is SignalingPeerData {
+    return 'roomId' in data
+  }
+
   const createServer = (port: number) =>
-    Bun.serve<SignalingPeerData | NotificationSocketData>({
+    Bun.serve<AnySocketData>({
       hostname: host,
       port,
       async fetch(request, server) {
-        const signalingResponse = signaling.handleRequest(request, server)
+        const signalingResponse = signaling.handleRequest(
+          request,
+          server as unknown as Parameters<typeof signaling.handleRequest>[1]
+        )
         if (signalingResponse !== null) return signalingResponse
-        const notificationsResponse = await notifications.handleRequest(request, server)
+        const notificationsResponse = await notifications.handleRequest(
+          request,
+          server as unknown as Parameters<typeof notifications.handleRequest>[1]
+        )
         if (notificationsResponse !== null) return notificationsResponse
+        const yjsResponse = await yjsHub.handleRequest(
+          request,
+          server as unknown as Parameters<typeof yjsHub.handleRequest>[1]
+        )
+        if (yjsResponse !== null) return yjsResponse
         return app.fetch(request)
       },
       websocket: {
-        open(socket: ServerWebSocket<SignalingPeerData | NotificationSocketData>) {
-          if ('roomId' in socket.data) {
+        async open(socket: ServerWebSocket<AnySocketData>) {
+          if (isYjsSocket(socket.data)) {
+            await yjsHub.open(socket as ServerWebSocket<YjsSocketData>)
+            return
+          }
+          if (isSignalingSocket(socket.data)) {
             signaling.websocket.open?.(socket as ServerWebSocket<SignalingPeerData>)
             return
           }
-
           notifications.open(socket as ServerWebSocket<NotificationSocketData>)
         },
-        message(socket: ServerWebSocket<SignalingPeerData | NotificationSocketData>, message) {
-          if ('roomId' in socket.data) {
+        async message(socket: ServerWebSocket<AnySocketData>, message) {
+          if (isYjsSocket(socket.data)) {
+            await yjsHub.message(socket as ServerWebSocket<YjsSocketData>, message)
+            return
+          }
+          if (isSignalingSocket(socket.data)) {
             signaling.websocket.message?.(socket as ServerWebSocket<SignalingPeerData>, message)
           }
         },
-        close(socket: ServerWebSocket<SignalingPeerData | NotificationSocketData>, code, reason) {
-          if ('roomId' in socket.data) {
+        async close(socket: ServerWebSocket<AnySocketData>, code, reason) {
+          if (isYjsSocket(socket.data)) {
+            await yjsHub.close(socket as ServerWebSocket<YjsSocketData>)
+            return
+          }
+          if (isSignalingSocket(socket.data)) {
             signaling.websocket.close?.(socket as ServerWebSocket<SignalingPeerData>, code, reason)
             return
           }
-
           notifications.close(socket as ServerWebSocket<NotificationSocketData>)
         }
-      }
+      },
+      // yjs hub は binary frame を扱うため publishToSelf / 圧縮等は default 設定で OK、
+      // bun は ArrayBuffer / Uint8Array をそのまま send/recv できる。
+      maxPayloadLength: 1024 * 1024
     })
 
   let port = requestedPort
