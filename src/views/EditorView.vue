@@ -142,7 +142,10 @@ async function loadBoardDocument(boardId: string) {
       import('@inkly/core/io/formats/fig')
     ])
     const remote = await fetchBoardDocument(boardId)
-    if (!remote || remote.bytes.length === 0) return
+    if (!remote || remote.bytes.length === 0) {
+      console.info('[editor] no server document for board', boardId)
+      return
+    }
 
     const blob = new Blob([remote.bytes], { type: 'application/octet-stream' })
     const file = new File([blob], `${boardId}.fig`, { type: 'application/octet-stream' })
@@ -150,6 +153,24 @@ async function loadBoardDocument(boardId: string) {
 
     const activeStore = getActiveStore()
     activeStore.replaceGraph(graph)
+
+    // boards API から取った board.name を documentName に反映、 breadcrumb の identifier 表示を消す。
+    // activeBoard は loadBoardMetadata で同 watcher 経路から先に解決される。
+    if (activeBoard.value?.name) {
+      activeStore.state.documentName = activeBoard.value.name
+    }
+
+    // canvas renderer が遅延 mount している場合に備え、 明示的に再描画 + 全体 fit を要求する
+    // (replaceGraph 内部の requestRender だけだと canvas mount 前の場合 silently drop される)
+    activeStore.requestRender()
+    requestAnimationFrame(() => {
+      try {
+        activeStore.zoomToFit?.()
+      } catch {
+        // zoomToFit が無い editor 実装に備える silent fallback
+      }
+    })
+
     // 直後の sceneVersion +1 を「サーバから取り込んだ反映」扱いにし、 PUT で送り返さない
     suppressUploadVersion = activeStore.state.sceneVersion
   } catch (error) {
@@ -212,8 +233,12 @@ watch(
     if (!roomId) return
     if (collab.state.value.connected && collab.state.value.roomId === roomId) return
     collab.connect(roomId, { seedIfEmpty: true })
-    void loadBoardMetadata(roomId)
-    void loadBoardDocument(roomId)
+    // metadata (board.name) を先に解決してから document を取り込み、 取り込み後に
+    // documentName を board.name で書き換える経路を保証する
+    void (async () => {
+      await loadBoardMetadata(roomId)
+      await loadBoardDocument(roomId)
+    })()
   },
   { immediate: true }
 )
