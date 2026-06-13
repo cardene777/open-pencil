@@ -67,6 +67,18 @@ interface BoardRoom {
    */
   persistBuffer: { updates: Uint8Array[]; userId: string | null }
   persistTimer: ReturnType<typeof setTimeout> | null
+  /**
+   * board_documents.bytes が yjs update format で読めなかったかどうか。
+   * 旧 .fig binary が DB に入っている board では true になり、 client 由来の
+   * 編集が一切来ないまま room を閉じても snapshot で上書きしない (元 .fig 保護)。
+   */
+  initialSnapshotWasIncompatible: boolean
+  /**
+   * room を作成してから client 由来の編集 (`ydoc.on('update')` で origin が socket)
+   * が 1 件以上あったかどうか。 false のまま room を閉じる場合は yjs 経由で
+   * 一切の編集がないので snapshot 書き戻し不要 (空 Y.Doc 上書き事故防止)。
+   */
+  mutatedByClient: boolean
 }
 
 export interface YjsHubServer {
@@ -85,6 +97,15 @@ export interface YjsHubServer {
    * test fixture 用 ... 内部状態確認のため room 数を返す。
    */
   getRoomCount: () => number
+  /**
+   * test fixture 用 ... room を強制的に load して内部状態を 1 回読む。
+   * `mutatedByClient` / `initialSnapshotWasIncompatible` の guard 経路を
+   * unit test で検査するための窓口、 本番経路 (`open`) は使わない。
+   */
+  __testLoadRoomState: (boardId: string) => Promise<{
+    mutatedByClient: boolean
+    initialSnapshotWasIncompatible: boolean
+  }>
 }
 
 export interface CreateYjsHubServerOptions {
@@ -155,6 +176,15 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
   }
 
   async function persistSnapshot(room: BoardRoom) {
+    // client 由来の編集が一度も来ていない場合は空 Y.Doc を書き戻さない。
+    // 1) 旧 .fig binary が DB に入っている board ... yjs 形式でないので initial
+    //    load で applyUpdate が失敗し空 Y.Doc になる、 そのまま snapshot を書くと
+    //    元 .fig binary を空 yjs state で上書きしてしまい「アップロードした
+    //    document が再アクセス時に消える」事故になる。
+    // 2) 空 board に閲覧者だけが入室してすぐ抜けたケース ... 編集ゼロなので
+    //    pendingUpdateCount === 0、 何も書き戻すべきものがない。
+    if (!room.mutatedByClient) return
+
     const state = Y.encodeStateAsUpdate(room.ydoc)
     try {
       await options.boardDocumentVersionStore.createVersion({
@@ -164,7 +194,7 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
       })
       await options.boardDocumentVersionStore.pruneOldVersions(room.boardId, VERSION_KEEP_COUNT)
 
-      // .fig binary を最新 snapshot として保持。 旧 GET /document 経路と互換。
+      // 最新 yjs snapshot として保持。 旧 GET /document 経路と互換。
       await options.boardDocumentStore.upsertDocument({
         boardId: room.boardId,
         bytes: state,
@@ -197,6 +227,7 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
 
     // 既存 snapshot を Y.Doc にロードする経路。 board_documents (最新 snapshot 1 行) を
     // base にし、 以降の board_document_updates を applyUpdate する。
+    let initialSnapshotWasIncompatible = false
     try {
       const documentRow = await options.boardDocumentStore.findDocument(boardId)
       if (documentRow?.bytes && documentRow.bytes.length > 0) {
@@ -207,6 +238,9 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
           // その場合は Y.Doc を空のまま使い (新 board と同じ挙動)、 編集が始まると
           // 新規 update が積まれる。 既存 .fig content は別経路 GET /document で
           // 引き続き読めるので互換性に影響しない。
+          // initialSnapshotWasIncompatible を立てて、 close 時の上書き保存を抑止する
+          // (mutatedByClient が立たない限り空 Y.Doc で上書きしない方針)。
+          initialSnapshotWasIncompatible = true
           log(
             `board=${boardId} snapshot was not yjs format, starting empty Y.Doc (${stringifyError(error)})`
           )
@@ -233,7 +267,9 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
       pendingUpdateCount: 0,
       lastSnapshotAt: now(),
       persistBuffer: { updates: [], userId: null },
-      persistTimer: null
+      persistTimer: null,
+      initialSnapshotWasIncompatible,
+      mutatedByClient: false
     }
 
     awareness.on(
@@ -271,9 +307,19 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
         }
       }
 
-      const originSocket = origin as YjsSocket | null
-      const userId = originSocket?.data.userId ?? null
-      schedulePersist(room, update, userId)
+      // origin が socket の場合 = client 由来の編集。 server 起動時の initial
+      // applyUpdate (origin = 'initial-snapshot' / 'update-replay' という文字列)
+      // と区別したいので socket reference 一致で判定する。 これで snapshot 書き戻し
+      // 判定 (`mutatedByClient`) が「ユーザーが本当に編集したか」と一致する。
+      // initial / replay 経路の update は appendUpdate しない (既に DB にあるので
+      // 二重保存になりかつ再起動のたびに同 update を積み増す事故を防ぐ)。
+      const originSocket = room.clients.has(origin as YjsSocket)
+        ? (origin as YjsSocket)
+        : null
+      if (originSocket == null) return
+
+      room.mutatedByClient = true
+      schedulePersist(room, update, originSocket.data.userId)
     })
 
     rooms.set(boardId, room)
@@ -424,6 +470,13 @@ export function createYjsHubServer(options: CreateYjsHubServerOptions): YjsHubSe
     },
     getRoomCount() {
       return rooms.size
+    },
+    async __testLoadRoomState(boardId: string) {
+      const room = await loadRoom(boardId)
+      return {
+        mutatedByClient: room.mutatedByClient,
+        initialSnapshotWasIncompatible: room.initialSnapshotWasIncompatible
+      }
     }
   }
 }
