@@ -137,6 +137,44 @@ describe('invitation store', () => {
     database.close()
   })
 
+  test('createInvitation stores sentToEmail when provided and exposes it on read', async () => {
+    const database = await createTestApiDatabase()
+    const store = await createInvitationStore({ database })
+    const hash = 'e'.repeat(64)
+    const future = Date.now() + 60_000
+
+    const created = await store.createInvitation({
+      boardId: 'board-display-email',
+      sentToEmailHash: hash,
+      sentToEmail: 'alice@example.com',
+      role: 'editor',
+      expiresAt: future
+    })
+
+    expect(created.sentToEmail).toBe('alice@example.com')
+    const refreshed = await store.findInvitation(created.id)
+    expect(refreshed?.sentToEmail).toBe('alice@example.com')
+
+    database.close()
+  })
+
+  test('createInvitation without sentToEmail keeps the column null (旧経路互換)', async () => {
+    const database = await createTestApiDatabase()
+    const store = await createInvitationStore({ database })
+    const hash = 'f'.repeat(64)
+    const future = Date.now() + 60_000
+
+    const created = await store.createInvitation({
+      boardId: 'board-legacy',
+      sentToEmailHash: hash,
+      role: 'editor',
+      expiresAt: future
+    })
+
+    expect(created.sentToEmail).toBeNull()
+    database.close()
+  })
+
   test('createInvitation does not revoke invitations for different email on same board', async () => {
     // 同 board でも email hash が異なれば別 user、 旧招待を触らない。
     const database = await createTestApiDatabase()

@@ -260,6 +260,13 @@ onMounted(() => {
                         ? boardSettingsT.editorInvite
                         : boardSettingsT.viewerInvite
                     }}
+                    <span
+                      v-if="invitation.sentToEmail"
+                      data-test-id="invitation-recipient-email"
+                      class="ml-2 inline-flex items-center rounded-full border border-border bg-canvas/60 px-2 py-0.5 text-[10px] font-normal text-muted"
+                    >
+                      {{ invitation.sentToEmail }}
+                    </span>
                   </p>
                   <p class="break-all text-xs text-muted">
                     {{ invitationUrl(invitation.token) }}
@@ -321,9 +328,21 @@ onMounted(() => {
               "
               class="flex items-center justify-between rounded-2xl border border-border bg-canvas/70 px-4 py-3"
             >
-              <div>
-                <p class="text-sm font-medium text-surface">
-                  {{ collaborator.userId ?? collaborator.anonymousId ?? '—' }}
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-sm font-medium text-surface">
+                  {{
+                    collaborator.displayName ??
+                    collaborator.email ??
+                    collaborator.userId ??
+                    collaborator.anonymousId ??
+                    '—'
+                  }}
+                </p>
+                <p
+                  v-if="collaborator.email && collaborator.email !== collaborator.displayName"
+                  class="truncate text-[11px] text-muted"
+                >
+                  {{ collaborator.email }}
                 </p>
                 <p class="text-[11px] text-muted">
                   {{ boardSettingsT.addedPrefix }}

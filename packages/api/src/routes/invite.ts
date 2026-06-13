@@ -99,6 +99,7 @@ export function createInviteRoutes(options: InviteRoutesOptions): Hono {
     const invitation = await options.store.createInvitation({
       boardId: parsed.data.boardId,
       sentToEmailHash,
+      sentToEmail: parsed.data.email,
       role: parsed.data.role,
       expiresAt
     })

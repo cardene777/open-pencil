@@ -1,0 +1,1 @@
+ALTER TABLE `invitations` ADD `sent_to_email` text;
