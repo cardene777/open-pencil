@@ -398,7 +398,9 @@
     "you": "Vous",
     "youSuffix": "vous",
     "followingPeerStop": "Suit {name} (cliquer pour arrêter)",
-    "clickToFollowPeer": "Cliquer pour suivre {name}"
+    "clickToFollowPeer": "Cliquer pour suivre {name}",
+    "peerActive": "Actif",
+    "peerIdle": "Inactif"
   },
   "variableTypes": {
     "color": "Couleur",

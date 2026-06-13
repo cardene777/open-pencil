@@ -398,7 +398,9 @@
     "you": "Ty",
     "youSuffix": "ty",
     "followingPeerStop": "Obserwujesz {name} (kliknij, aby zatrzymać)",
-    "clickToFollowPeer": "Kliknij, aby obserwować {name}"
+    "clickToFollowPeer": "Kliknij, aby obserwować {name}",
+    "peerActive": "Aktywny",
+    "peerIdle": "Nieaktywny"
   },
   "variableTypes": {
     "color": "Kolor",

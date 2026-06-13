@@ -398,7 +398,9 @@
     "you": "あなた",
     "youSuffix": "あなた",
     "followingPeerStop": "{name} をフォロー中 (クリックで停止)",
-    "clickToFollowPeer": "{name} をフォロー"
+    "clickToFollowPeer": "{name} をフォロー",
+    "peerActive": "アクティブ",
+    "peerIdle": "離席中"
   },
   "variableTypes": {
     "color": "色",

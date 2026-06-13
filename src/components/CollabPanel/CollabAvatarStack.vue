@@ -23,16 +23,26 @@ const boardId = computed(() =>
 // 1 度だけ fetch して、 popover で「user.id しか awareness に乗っていない peer」
 // にも email を表示できるようにする (board 招待された collaborator のみ閲覧可能、
 // awareness で email 平文を撒かない設計)。
+// fetch は boardId 切替時のみ実行する。 peer 数変動 (join/leave/cursor) では
+// 再 fetch しない (PR #231 review MAJOR ... peer count 変動毎に invitation
+// 再 fetch する DoS 経路の防止)。
 const userEmailById = ref<Map<string, string>>(new Map())
+// 「現在 fetch している boardId」を識別する version 値。 board 切替中に in-flight
+// な fetch が遅延 resolve しても、 version mismatch で stale 応答を破棄する
+// (PR #231 review MAJOR ... cross-board email leak 防止)。
+let activeFetchBoardId: string | null = null
 
-async function refreshEmailMap() {
-  if (!boardId.value) {
-    userEmailById.value = new Map()
-    return
-  }
+async function refreshEmailMap(targetBoardId: string) {
+  // 古い board の map を即時 clear (新 board の応答が来るまで stale を見せない)。
+  userEmailById.value = new Map()
+  activeFetchBoardId = targetBoardId
+  if (!targetBoardId) return
   try {
     const { listInvitations } = await import('@/app/api/client')
-    const response = await listInvitations(boardId.value)
+    const response = await listInvitations(targetBoardId)
+    // fetch 中に board 切替が起きていれば応答は破棄する。
+    if (activeFetchBoardId !== targetBoardId) return
+    if (boardId.value !== targetBoardId) return
     const map = new Map<string, string>()
     for (const collaborator of response.board.collaborators) {
       if (collaborator.userId && collaborator.email) {
@@ -42,25 +52,41 @@ async function refreshEmailMap() {
     userEmailById.value = map
   } catch {
     // 招待権限がない閲覧者は listInvitations が 403 を返すため silent fallback。
-    userEmailById.value = new Map()
+    if (activeFetchBoardId === targetBoardId) {
+      userEmailById.value = new Map()
+    }
   }
 }
 
-watch(boardId, () => void refreshEmailMap(), { immediate: true })
 watch(
-  () => collab.peers.length,
-  () => void refreshEmailMap()
+  boardId,
+  (newId) => {
+    void refreshEmailMap(newId)
+  },
+  { immediate: true }
 )
 
-// active を上、 idle を下に並べる。 sort は安定 (vue が key で再 mount しない
-// 限り chip 位置がチラつかない、 stableRemotePeerId が key で fixed)。
-const sortedPeers = computed<RemotePeer[]>(() => {
-  return [...collab.peers].sort((a, b) => {
-    const aIdle = a.isIdle ? 1 : 0
-    const bIdle = b.isIdle ? 1 : 0
-    return aIdle - bIdle
-  })
-})
+// peer 並び順用の signature。 peer 数 / id / idle flag に変化があった時のみ再 sort
+// する。 cursor / selection awareness の頻繁更新では再計算しない
+// (PR #231 review MINOR ... awareness cadence sort 過剰の防止)。
+const peersOrderSignature = computed(() =>
+  collab.peers
+    .map((p) => `${stableRemotePeerId(p)}:${p.isIdle ? '1' : '0'}`)
+    .join('|')
+)
+
+const sortedPeers = ref<RemotePeer[]>([])
+watch(
+  peersOrderSignature,
+  () => {
+    sortedPeers.value = [...collab.peers].sort((a, b) => {
+      const aIdle = a.isIdle ? 1 : 0
+      const bIdle = b.isIdle ? 1 : 0
+      return aIdle - bIdle
+    })
+  },
+  { immediate: true }
+)
 
 function emailFor(peer: RemotePeer): string | null {
   if (!peer.userId) return null

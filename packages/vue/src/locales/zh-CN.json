@@ -398,7 +398,9 @@
     "you": "你",
     "youSuffix": "你",
     "followingPeerStop": "正在跟随 {name}（点击停止）",
-    "clickToFollowPeer": "点击跟随 {name}"
+    "clickToFollowPeer": "点击跟随 {name}",
+    "peerActive": "活跃",
+    "peerIdle": "离开"
   },
   "variableTypes": {
     "color": "颜色",
