@@ -692,6 +692,8 @@
     "internalSuggestHint": "Выберите подсказку или добавьте полный email вручную.",
     "internalSuggestLoading": "Поиск внутренних участников…",
     "internalSuggestEmpty": "Подходящие внутренние участники не найдены.",
+    "internalSuggestAlreadyMember": "Уже участник",
+    "internalSuggestAlreadySelected": "Уже выбран",
     "internalManualAdd": "Добавить вручную",
     "internalEmailsPlaceholder": "alice@jfet.co.jp, bob@jfet.co.jp",
     "internalEmailsHint": "Разделяйте адреса запятыми, пробелами или переводами строки.",

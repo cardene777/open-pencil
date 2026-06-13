@@ -759,6 +759,8 @@ export const shareModalMessages = i18n('shareModal', {
   internalSuggestHint: 'Select a suggestion or add a full email manually.',
   internalSuggestLoading: 'Searching internal members…',
   internalSuggestEmpty: 'No matching internal members.',
+  internalSuggestAlreadyMember: 'Already a member',
+  internalSuggestAlreadySelected: 'Already selected',
   internalManualAdd: 'Add manually',
   internalEmailsPlaceholder: 'alice@jfet.co.jp, bob@jfet.co.jp',
   internalEmailsHint: 'Separate addresses with commas, spaces, or newlines.',

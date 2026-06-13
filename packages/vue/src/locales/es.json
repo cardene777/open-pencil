@@ -692,6 +692,8 @@
     "internalSuggestHint": "Selecciona una sugerencia o agrega manualmente un correo completo.",
     "internalSuggestLoading": "Buscando miembros internos…",
     "internalSuggestEmpty": "No hay miembros internos coincidentes.",
+    "internalSuggestAlreadyMember": "Ya es miembro",
+    "internalSuggestAlreadySelected": "Ya seleccionado",
     "internalManualAdd": "Agregar manualmente",
     "internalEmailsPlaceholder": "alice@jfet.co.jp, bob@jfet.co.jp",
     "internalEmailsHint": "Separa las direcciones con comas, espacios o saltos de línea.",
