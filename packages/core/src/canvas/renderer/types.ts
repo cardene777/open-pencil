@@ -63,6 +63,8 @@ export interface RenderOverlays {
     hoveredHandleInfo?: { segmentIndex: number; tangentField: 'tangentStart' | 'tangentEnd' } | null
   } | null
   remoteCursors?: Array<{
+    peerId?: string
+    pageId?: string
     name: string
     color: Color
     x: number
