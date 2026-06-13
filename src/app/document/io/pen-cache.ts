@@ -1,17 +1,18 @@
 /**
- * Persistent cache for the most recently opened .pen / .fig document so the
- * web editor survives page reloads without forcing the user to drag the file
- * back in. Stored in IndexedDB because documents can easily exceed the
- * localStorage quota (5MB+) and we want binary-safe storage.
+ * IndexedDB ベースの design cache は廃止。
  *
- * board id があれば board:<id> 単位で保存、 無ければ 'latest' (board に紐付かない
- * tab / drag-and-drop で開いた場合 fallback)。 board ごとに 1 スロット。
+ * デザイン本体の SSOT は server DB の `board_documents` テーブルに移行した
+ * (figma / miro と同じ「サーバが正本、 ブラウザは描画クライアント」モデル)。
+ * board open / save は `EditorView.loadBoardDocument` / `scheduleBoardDocumentUpload`
+ * で行う、 つまり API GET `/api/boards/:id/document` と PUT 経路だけ。
+ *
+ * 旧 API は callers の依存を一気に消すと差分が大きすぎるため、 ここでは
+ * **シグネチャを維持した no-op stub** として残す。 戻り値は load 系で常に null、
+ * save 系で void。 これにより既存の `await savePenToCache(...)` や
+ * `await loadCachedPen(...)` 経路は build / type を壊さずに silent no-op になる。
+ *
+ * 将来的に呼び出し元の整理 (`EditorView` に集約) が完了したら本 file ごと削除する。
  */
-
-const DB_NAME = 'inkly-document-cache'
-const DB_VERSION = 1
-const STORE_NAME = 'documents'
-const LATEST_KEY = 'latest'
 
 export interface CachedPenDocument {
   name: string
@@ -20,133 +21,26 @@ export interface CachedPenDocument {
   updatedAt: number
 }
 
-function isIndexedDBAvailable(): boolean {
-  return typeof indexedDB !== 'undefined'
-}
-
-function entryKey(boardId?: string | null): string {
-  if (boardId && boardId.trim().length > 0) {
-    return `board:${boardId.trim()}`
-  }
-  return LATEST_KEY
-}
-
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION)
-    req.onupgradeneeded = () => {
-      const db = req.result
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME)
-      }
-    }
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
-}
-
-async function withStore<T>(
-  mode: IDBTransactionMode,
-  fn: (store: IDBObjectStore) => Promise<T>
-): Promise<T> {
-  const db = await openDB()
-  try {
-    return await new Promise<T>((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, mode)
-      const store = tx.objectStore(STORE_NAME)
-      let settled = false
-      fn(store)
-        .then((value) => {
-          settled = true
-          tx.oncomplete = () => resolve(value)
-          tx.onerror = () => reject(tx.error)
-          tx.onabort = () => reject(tx.error)
-        })
-        .catch((err) => {
-          settled = true
-          reject(err)
-        })
-      tx.onerror = () => {
-        if (!settled) reject(tx.error)
-      }
-    })
-  } finally {
-    db.close()
-  }
-}
-
-function reqToPromise<T>(req: IDBRequest<T>): Promise<T> {
-  return new Promise((resolve, reject) => {
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
-}
-
 export async function savePenToCache(
-  name: string,
-  mimeType: string,
-  bytes: Uint8Array,
-  boardId?: string | null
+  _name: string,
+  _mimeType: string,
+  _bytes: Uint8Array,
+  _boardId?: string | null
 ): Promise<void> {
-  if (!isIndexedDBAvailable()) return
-  try {
-    await withStore('readwrite', async (store) => {
-      await reqToPromise(
-        store.put(
-          { name, mimeType, bytes, updatedAt: Date.now() } satisfies CachedPenDocument,
-          entryKey(boardId)
-        )
-      )
-    })
-  } catch (err) {
-    console.warn('[pen-cache] save failed:', err)
-  }
+  // no-op: server PUT 経路 (EditorView.scheduleBoardDocumentUpload) に一本化
 }
 
-export async function loadCachedPen(boardId?: string | null): Promise<CachedPenDocument | null> {
-  if (!isIndexedDBAvailable()) return null
-  try {
-    return await withStore('readonly', async (store) => {
-      const value = await reqToPromise(store.get(entryKey(boardId)))
-      if (!value || typeof value !== 'object') return null
-      const v = value as Partial<CachedPenDocument>
-      if (!v.name || !v.bytes || !(v.bytes instanceof Uint8Array)) return null
-      return {
-        name: v.name,
-        mimeType: v.mimeType ?? 'application/octet-stream',
-        bytes: v.bytes,
-        updatedAt: v.updatedAt ?? 0
-      }
-    })
-  } catch (err) {
-    console.warn('[pen-cache] load failed:', err)
-    return null
-  }
+export async function loadCachedPen(_boardId?: string | null): Promise<CachedPenDocument | null> {
+  // no-op: server GET 経路 (EditorView.loadBoardDocument) に一本化
+  return null
 }
 
-export async function clearCachedPen(boardId?: string | null): Promise<void> {
-  if (!isIndexedDBAvailable()) return
-  try {
-    await withStore('readwrite', async (store) => {
-      await reqToPromise(store.delete(entryKey(boardId)))
-    })
-  } catch (err) {
-    console.warn('[pen-cache] clear failed:', err)
-  }
+export async function clearCachedPen(_boardId?: string | null): Promise<void> {
+  // no-op: IndexedDB を触らないので clear 不要
 }
 
-/**
- * 全 board の pen cache をまとめて削除する (settings の cache clear menu 等で使用)。
- */
 export async function clearAllCachedPens(): Promise<void> {
-  if (!isIndexedDBAvailable()) return
-  try {
-    await withStore('readwrite', async (store) => {
-      await reqToPromise(store.clear())
-    })
-  } catch (err) {
-    console.warn('[pen-cache] clearAll failed:', err)
-  }
+  // no-op: IndexedDB を触らないので clear 不要
 }
 
 export function fileFromCachedPen(cached: CachedPenDocument): File {

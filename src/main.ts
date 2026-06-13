@@ -36,52 +36,6 @@ if (!IS_TAURI) {
     registerSW({ immediate: true })
   })
 
-  // Restore the last opened document from IndexedDB so a reload does not
-  // force the user to drag the file back in. We do this after mount + a
-  // small delay so the editor / canvas are fully wired up before we feed
-  // the cached file into openFileInNewTab.
-  void (async () => {
-    try {
-      const [{ loadCachedPen, fileFromCachedPen, savePenToCache }, tabsMod, clientMod] =
-        await Promise.all([
-          import('@/app/document/io/pen-cache'),
-          import('@/app/tabs'),
-          import('@/app/api/client')
-        ])
-      // URL から board id を抽出 (/board/:id 形式)、 board に紐付かない場合は 'latest' fallback
-      const boardMatch = typeof window !== 'undefined'
-        ? window.location.pathname.match(/^\/board\/([^/]+)/)
-        : null
-      const boardId = boardMatch?.[1] ?? null
-
-      let cached = await loadCachedPen(boardId)
-
-      // board id があれば server DB (SSOT) から document を取得し、 cache より新しければ採用。
-      // 招待された人 / 別ブラウザの owner / 同じ board の全 collaborator が
-      // 同じ design を読み込めるようにするため、 IndexedDB cache は server より優先しない。
-      if (boardId) {
-        try {
-          const remote = await clientMod.fetchBoardDocument(boardId)
-          if (remote && (!cached || remote.updatedAt > cached.updatedAt)) {
-            await savePenToCache(
-              `${boardId}.fig`,
-              'application/octet-stream',
-              remote.bytes,
-              boardId
-            )
-            cached = await loadCachedPen(boardId)
-          }
-        } catch (remoteError) {
-          console.warn('[main] server document fetch failed:', remoteError)
-        }
-      }
-
-      if (!cached) return
-      await tabsMod.openFileInNewTab(fileFromCachedPen(cached), undefined, undefined, {
-        skipPersistCache: true
-      })
-    } catch (err) {
-      console.warn('[main] failed to restore cached document:', err)
-    }
-  })()
+  // 旧 IndexedDB restore は削除。 デザイン本体の SSOT は server DB に移行 (figma / miro 同等)、
+  // board open / save は EditorView の loadBoardDocument / scheduleBoardDocumentUpload に集約する。
 }

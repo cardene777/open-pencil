@@ -7,7 +7,6 @@ import { hitTestDeep, type PrototypeReaction, type SceneGraph } from '@inkly/cor
 import { useCanvas, useI18n } from '@inkly/vue'
 
 import { activeBoard } from '@/app/boards/active'
-import { fileFromCachedPen, loadCachedPen } from '@/app/document/io/pen-cache'
 import { createEditorStore } from '@/app/editor/session'
 import { findPageId, resolvePrototypeStartFrameId } from '@/app/prototype/frames'
 import { executeReaction, type PrototypeRuntimeState } from '@/app/prototype/runtime'
@@ -150,32 +149,18 @@ async function loadPreviewDocument() {
   unavailable.value = false
 
   try {
-    let cached = await loadCachedPen(boardId.value)
-    // server DB を SSOT として優先取得。 招待された collaborator も同じ design を読める。
-    try {
-      const { fetchBoardDocument } = await import('@/app/api/client')
-      const { savePenToCache } = await import('@/app/document/io/pen-cache')
-      const remote = await fetchBoardDocument(boardId.value)
-      if (remote && (!cached || remote.updatedAt > cached.updatedAt)) {
-        await savePenToCache(
-          `${boardId.value}.fig`,
-          'application/octet-stream',
-          remote.bytes,
-          boardId.value
-        )
-        cached = await loadCachedPen(boardId.value)
-      }
-    } catch (remoteError) {
-      console.warn('[preview] server document fetch failed:', remoteError)
-    }
-
-    if (!cached) {
+    // server DB が SSOT。 IndexedDB cache 経路は廃止 (figma / miro 同等)。
+    const { fetchBoardDocument } = await import('@/app/api/client')
+    const remote = await fetchBoardDocument(boardId.value)
+    if (!remote || remote.bytes.length === 0) {
       unavailable.value = true
       return
     }
 
+    const blob = new Blob([remote.bytes], { type: 'application/octet-stream' })
+    const file = new File([blob], `${boardId.value}.fig`, { type: 'application/octet-stream' })
     const { readFigFile } = await import('@inkly/core/io/formats/fig')
-    const graph = await readFigFile(fileFromCachedPen(cached), { populate: 'first-page' })
+    const graph = await readFigFile(file, { populate: 'first-page' })
     previewStore.replaceGraph(graph)
 
     baseVisibility.clear()
