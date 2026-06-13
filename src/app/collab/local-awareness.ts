@@ -165,6 +165,13 @@ export function clearCursorLerpStates() {
   }
 }
 
+/**
+ * peer idle 判定の再評価周期。 awareness は cursor 移動などの変化があるたびに
+ * `updatePeersList` を発火するが、 全 peer が静止していると再評価されず idle 化が遅れる。
+ * `PEER_IDLE_THRESHOLD_MS (15s)` よりも十分短い周期で polling する。
+ */
+const IDLE_REFRESH_INTERVAL_MS = 5_000
+
 export function createLocalAwarenessActions({
   state,
   storedName,
@@ -176,6 +183,7 @@ export function createLocalAwarenessActions({
   const activityTracker = createPeerActivityTracker()
   const lastObservedCursor = new Map<number, string>()
   const lastObservedSelection = new Map<number, string>()
+  let idleRefreshHandle: ReturnType<typeof setInterval> | null = null
 
   function broadcastAwareness() {
     const awareness = getAwareness()
@@ -249,5 +257,34 @@ export function createLocalAwarenessActions({
     broadcastAwareness()
   }
 
-  return { broadcastAwareness, updateCursor, updateSelection, updatePeersList, setLocalName }
+  /**
+   * idle 再評価 polling を開始する。 awareness が `change` を発火しなくても、
+   * 一定周期で `updatePeersList` を呼んで idle 判定を時間軸で更新する。
+   * 連続呼び出しは前回 interval を clear して再起動 (二重起動防止)。
+   */
+  function startIdleRefresh(intervalMs: number = IDLE_REFRESH_INTERVAL_MS) {
+    stopIdleRefresh()
+    idleRefreshHandle = setInterval(() => {
+      // awareness が destroy 済 (disconnect 中など) の場合は updatePeersList が
+      // 内部で no-op になるので追加 guard 不要。
+      updatePeersList()
+    }, intervalMs)
+  }
+
+  function stopIdleRefresh() {
+    if (idleRefreshHandle !== null) {
+      clearInterval(idleRefreshHandle)
+      idleRefreshHandle = null
+    }
+  }
+
+  return {
+    broadcastAwareness,
+    updateCursor,
+    updateSelection,
+    updatePeersList,
+    setLocalName,
+    startIdleRefresh,
+    stopIdleRefresh
+  }
 }

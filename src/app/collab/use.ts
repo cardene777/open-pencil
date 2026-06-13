@@ -37,13 +37,20 @@ export function useCollab(storeOrGetter: EditorStore | (() => EditorStore)) {
     getActiveStore,
     () => runtime.awareness
   )
-  const { broadcastAwareness, updateCursor, updateSelection, updatePeersList, setLocalName } =
-    createLocalAwarenessActions({
-      state,
-      storedName,
-      getStore: getActiveStore,
-      getAwareness: () => runtime.awareness
-    })
+  const {
+    broadcastAwareness,
+    updateCursor,
+    updateSelection,
+    updatePeersList,
+    setLocalName,
+    startIdleRefresh,
+    stopIdleRefresh
+  } = createLocalAwarenessActions({
+    state,
+    storedName,
+    getStore: getActiveStore,
+    getAwareness: () => runtime.awareness
+  })
 
   const { syncNodeToYjs, syncAllNodesToYjs, applyYjsToGraph } = createYjsGraphSync({
     getStore: getActiveStore,
@@ -89,7 +96,22 @@ export function useCollab(storeOrGetter: EditorStore | (() => EditorStore)) {
     { immediate: false }
   )
 
-  tryOnScopeDispose(disconnect)
+  // connect / disconnect に合わせて idle 再評価 interval を起動 / 停止する。
+  // 全 peer が静止していて awareness change が発火しないケースで idle 化を
+  // 時間軸で進ませるため、 `state.value.connected` を watch して周期 polling を on/off する。
+  watch(
+    () => state.value.connected,
+    (connected) => {
+      if (connected) startIdleRefresh()
+      else stopIdleRefresh()
+    },
+    { immediate: false }
+  )
+
+  tryOnScopeDispose(() => {
+    stopIdleRefresh()
+    disconnect()
+  })
 
   // hub provider が socket OPEN な間 true。 EditorView 側で
   // 「hub 接続中は autosave PUT 全文経路を skip する」judge に使う。
