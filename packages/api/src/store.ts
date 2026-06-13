@@ -40,6 +40,23 @@ export async function createInvitationStore(
 
   const store: InvitationStore = {
     async createInvitation(input: CreateInvitationInput) {
+      // 同じ board + 同じ受信者 (sentToEmailHash 一致) の既存 active 招待を全て revoke する。
+      // これがないと「再送した招待リンク」と「以前送った招待リンク」の両方が有効になり、
+      // dashboard 上で同じ user が複数招待済み user として表示されたり、 古いリンクが
+      // 失効まで生き続けて share UI に古い候補が残る原因になる。
+      // 同 board に限定 (他 board の同 email 招待は別人 owner の管理範囲なので触らない)。
+      await database.db
+        .update(invitations)
+        .set({ revoked: true })
+        .where(
+          and(
+            eq(invitations.boardId, input.boardId),
+            eq(invitations.sentToEmailHash, input.sentToEmailHash),
+            eq(invitations.revoked, false)
+          )
+        )
+        .run()
+
       const record: InvitationRecord = {
         id: crypto.randomUUID(),
         boardId: input.boardId,
