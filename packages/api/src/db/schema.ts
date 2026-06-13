@@ -174,6 +174,41 @@ export const boardDocuments = sqliteTable(
   (table) => [index('board_documents_updated_at_idx').on(table.updatedAt)]
 )
 
+export const boardPins = sqliteTable(
+  'board_pins',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    boardId: text('board_id')
+      .notNull()
+      .references(() => boards.id, { onDelete: 'cascade' }),
+    pinnedAt: integer('pinned_at', { mode: 'number' }).notNull()
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.boardId] }),
+    index('board_pins_user_id_idx').on(table.userId),
+    index('board_pins_board_id_idx').on(table.boardId)
+  ]
+)
+
+export const boardPreviews = sqliteTable(
+  'board_previews',
+  {
+    boardId: text('board_id')
+      .primaryKey()
+      .references(() => boards.id, { onDelete: 'cascade' }),
+    // data URL (image/png; base64,...) を保存。 board ID 1 件につき thumbnail 1 枚。
+    dataUrl: text('data_url').notNull(),
+    size: integer('size', { mode: 'number' }).notNull(),
+    updatedAt: integer('updated_at', { mode: 'number' }).notNull(),
+    updatedByUserId: text('updated_by_user_id').references(() => users.id, {
+      onDelete: 'set null'
+    })
+  },
+  (table) => [index('board_previews_updated_at_idx').on(table.updatedAt)]
+)
+
 export const pendingInternalInvitations = sqliteTable(
   'pending_internal_invitations',
   {

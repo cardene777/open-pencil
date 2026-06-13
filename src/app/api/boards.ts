@@ -3,6 +3,9 @@ export const BOARD_API_ENDPOINTS = {
   board: (boardId: string) => `/api/boards/${boardId}`,
   startFrame: (boardId: string) => `/api/boards/${boardId}/start-frame`,
   document: (boardId: string) => `/api/boards/${boardId}/document`,
+  preview: (boardId: string) => `/api/boards/${boardId}/preview`,
+  pins: '/api/board-pins',
+  pin: (boardId: string) => `/api/boards/${boardId}/pin`,
   share: (boardId: string) => `/api/boards/${boardId}/share`,
   invitations: (boardId: string) => `/api/boards/${boardId}/invitations`,
   invitation: (boardId: string, invitationId: string) =>

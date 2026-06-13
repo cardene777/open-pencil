@@ -7,8 +7,16 @@ import { useI18n } from '@inkly/vue'
 
 import { useAuthStore } from '@/app/auth/store'
 import { isBoardOwner } from '@/app/boards/ownership'
-import { readPinnedBoardIds, togglePinnedBoard } from '@/app/boards/pinned'
-import { readBoardPreview } from '@/app/boards/preview'
+import {
+  loadPinnedBoards,
+  readPinnedBoardIds,
+  togglePinnedBoardAsync
+} from '@/app/boards/pinned'
+import {
+  preloadBoardPreviews,
+  purgeLegacyLocalPreviews,
+  readBoardPreview
+} from '@/app/boards/preview'
 import { useNotificationsStore } from '@/app/notifications/store'
 import {
   formatNotificationTime,
@@ -59,7 +67,8 @@ const totalBoards = computed(() => boards.value.length)
 const totalUnread = computed(() => notifications.unreadCount)
 const latestNotifications = computed(() => notifications.latest)
 
-function syncPreviews(nextBoards: Board[]) {
+async function syncPreviews(nextBoards: Board[]) {
+  await preloadBoardPreviews(nextBoards.map((b) => b.id))
   previews.value = Object.fromEntries(
     nextBoards
       .map((board) => [board.id, readBoardPreview(board.id)])
@@ -74,7 +83,7 @@ async function loadDashboardView() {
       console.warn('[dashboard]', 'listBoards failed', error)
       return [] as Board[]
     })
-    syncPreviews(boards.value)
+    await syncPreviews(boards.value)
   } finally {
     loading.value = false
   }
@@ -108,13 +117,18 @@ function openBoard(board: Board) {
   void router.push(createBoardEditorLocation(board))
 }
 
-function handleTogglePin(boardId: string, event: Event) {
+async function handleTogglePin(boardId: string, event: Event) {
   event.stopPropagation()
-  const nowPinned = togglePinnedBoard(boardId)
-  const next = new Set(pinnedIds.value)
-  if (nowPinned) next.add(boardId)
-  else next.delete(boardId)
-  pinnedIds.value = next
+  try {
+    const nowPinned = await togglePinnedBoardAsync(boardId)
+    const next = new Set(pinnedIds.value)
+    if (nowPinned) next.add(boardId)
+    else next.delete(boardId)
+    pinnedIds.value = next
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update pin'
+    toast.error(message)
+  }
 }
 
 function isPinned(boardId: string) {
@@ -145,9 +159,9 @@ let stopNotificationsWatch: (() => void) | null = null
 
 function refreshBoardsSilently() {
   void listBoards()
-    .then((next) => {
+    .then(async (next) => {
       boards.value = next
-      syncPreviews(next)
+      await syncPreviews(next)
     })
     .catch((error) => {
       console.warn('[dashboard]', 'background listBoards failed', error)
@@ -176,8 +190,10 @@ function onVisibilityChange() {
 }
 
 onMounted(async () => {
+  purgeLegacyLocalPreviews()
   await auth.init()
   await notifications.mount()
+  await loadPinnedBoards()
   pinnedIds.value = new Set(readPinnedBoardIds())
   await loadDashboardView()
 

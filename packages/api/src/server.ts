@@ -4,6 +4,8 @@ import { serveStatic } from 'hono/bun'
 
 import { createInklyAuth, type InklyAuth } from './auth/index.js'
 import { createBoardDocumentStore } from './boardDocumentStore.js'
+import { createBoardPinStore } from './boardPinStore.js'
+import { createBoardPreviewStore } from './boardPreviewStore.js'
 import { createBoardStore } from './boardStore.js'
 import { resolveApiDatabaseOptions, type ApiDatabase } from './db/client.js'
 import { createMigratedApiDatabase } from './db/migrate.js'
@@ -23,6 +25,8 @@ import { createInvitationStore } from './store.js'
 import { resolveJwtSecret } from './token.js'
 import type {
   BoardDocumentStore,
+  BoardPinStore,
+  BoardPreviewStore,
   BoardStore,
   InternalUserStore,
   InvitationStore,
@@ -50,6 +54,8 @@ export interface CreateApiAppOptions {
   internalUserStore?: InternalUserStore
   pendingInternalInvitationStore?: PendingInternalInvitationStore
   boardDocumentStore?: BoardDocumentStore
+  boardPinStore?: BoardPinStore
+  boardPreviewStore?: BoardPreviewStore
   database?: ApiDatabase
   auth?: InklyAuth
   env?: NodeJS.ProcessEnv
@@ -91,6 +97,10 @@ export async function createApiApp(options: CreateApiAppOptions) {
     (await createPendingInternalInvitationStore({ database }))
   const boardDocumentStore =
     options.boardDocumentStore ?? (await createBoardDocumentStore({ database, now: options.now }))
+  const boardPinStore =
+    options.boardPinStore ?? (await createBoardPinStore({ database, now: options.now }))
+  const boardPreviewStore =
+    options.boardPreviewStore ?? (await createBoardPreviewStore({ database, now: options.now }))
   const auth =
     options.auth ??
     createInklyAuth({
@@ -139,7 +149,9 @@ export async function createApiApp(options: CreateApiAppOptions) {
       internalUserStore,
       pendingInternalInvitationStore,
       notificationStore,
-      boardDocumentStore
+      boardDocumentStore,
+      boardPinStore,
+      boardPreviewStore
     })
   )
 

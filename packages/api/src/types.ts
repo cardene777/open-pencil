@@ -245,6 +245,48 @@ export interface BoardDocumentStore {
 }
 
 /**
+ * user ごとの board pin (ダッシュボード「ピン留め」を server 側 SSOT で保持)。
+ * 旧 localStorage 経路は廃止し全ブラウザで同じ pin が見える。
+ */
+export interface BoardPinRecord {
+  userId: string
+  boardId: string
+  pinnedAt: number
+}
+
+export interface BoardPinStore {
+  listPinnedBoardIdsForUser(userId: string): Promise<string[]>
+  pinBoard(userId: string, boardId: string): Promise<boolean>
+  unpinBoard(userId: string, boardId: string): Promise<boolean>
+  isPinned(userId: string, boardId: string): Promise<boolean>
+}
+
+/**
+ * board ごとの preview (ダッシュボード一覧で出すサムネイル) を server 側 SSOT で保持。
+ * 旧 localStorage 経路は廃止し owner / collaborator 全員で同じ preview を共有する。
+ */
+export interface BoardPreviewRecord {
+  boardId: string
+  dataUrl: string
+  size: number
+  updatedAt: number
+  updatedByUserId: string | null
+}
+
+export interface UpsertBoardPreviewInput {
+  boardId: string
+  dataUrl: string
+  updatedByUserId: string | null
+}
+
+export interface BoardPreviewStore {
+  findPreview(boardId: string): Promise<BoardPreviewRecord | null>
+  listPreviewsForBoardIds(boardIds: string[]): Promise<BoardPreviewRecord[]>
+  upsertPreview(input: UpsertBoardPreviewInput): Promise<BoardPreviewRecord>
+  deletePreview(boardId: string): Promise<void>
+}
+
+/**
  * domain 判定ヘルパー (caller 側で利用)
  */
 export function isInternalDomainEmail(email: string): boolean {

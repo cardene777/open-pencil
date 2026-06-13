@@ -17,8 +17,16 @@ import { useI18n } from '@inkly/vue'
 
 import { useAuthStore } from '@/app/auth/store'
 import { isBoardOwner } from '@/app/boards/ownership'
-import { readPinnedBoardIds, togglePinnedBoard } from '@/app/boards/pinned'
-import { readBoardPreview } from '@/app/boards/preview'
+import {
+  loadPinnedBoards,
+  readPinnedBoardIds,
+  togglePinnedBoardAsync
+} from '@/app/boards/pinned'
+import {
+  preloadBoardPreviews,
+  purgeLegacyLocalPreviews,
+  readBoardPreview
+} from '@/app/boards/preview'
 import { initials, toast } from '@/app/shell/ui'
 import BoardCard from '@/components/BoardCard.vue'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
@@ -79,12 +87,17 @@ const filteredBoards = computed(() => {
   })
 })
 
-function handleTogglePin(board: Board) {
-  const nowPinned = togglePinnedBoard(board.id)
-  const next = new Set(pinnedIds.value)
-  if (nowPinned) next.add(board.id)
-  else next.delete(board.id)
-  pinnedIds.value = next
+async function handleTogglePin(board: Board) {
+  try {
+    const nowPinned = await togglePinnedBoardAsync(board.id)
+    const next = new Set(pinnedIds.value)
+    if (nowPinned) next.add(board.id)
+    else next.delete(board.id)
+    pinnedIds.value = next
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update pin'
+    toast.error(message)
+  }
 }
 
 function syncPreviews(nextBoards: Board[]) {
@@ -96,13 +109,12 @@ function syncPreviews(nextBoards: Board[]) {
 }
 
 function syncPreviewsSoon(nextBoards: Board[]) {
-  syncPreviews(nextBoards)
-  requestAnimationFrame(() => {
+  void preloadBoardPreviews(nextBoards.map((b) => b.id)).then(() => {
     syncPreviews(nextBoards)
+    requestAnimationFrame(() => {
+      syncPreviews(nextBoards)
+    })
   })
-  setTimeout(() => {
-    syncPreviews(nextBoards)
-  }, 250)
 }
 
 async function loadBoardsView() {
@@ -178,7 +190,9 @@ async function startGoogleLogin() {
 }
 
 onMounted(async () => {
+  purgeLegacyLocalPreviews()
   await auth.init()
+  await loadPinnedBoards()
   pinnedIds.value = new Set(readPinnedBoardIds())
   await loadBoardsView()
 })

@@ -217,6 +217,82 @@ export async function uploadBoardDocument(boardId: string, bytes: Uint8Array): P
   }
 }
 
+/**
+ * server DB に保存された board preview (data URL) を取得する。 未保存 (404) は null。
+ */
+export async function fetchBoardPreview(boardId: string): Promise<{
+  dataUrl: string
+  updatedAt: number
+} | null> {
+  const response = await fetch(BOARD_API_ENDPOINTS.preview(boardId), {
+    credentials: 'include',
+    headers: buildHeaders({})
+  })
+
+  if (response.status === 404) return null
+  if (!response.ok) {
+    throw new Error(`Failed to fetch board preview (HTTP ${response.status})`)
+  }
+
+  const data = (await response.json().catch(() => null)) as {
+    dataUrl?: string
+    updatedAt?: number
+  } | null
+  if (!data?.dataUrl) return null
+  return {
+    dataUrl: data.dataUrl,
+    updatedAt: Number(data.updatedAt) || Date.now()
+  }
+}
+
+/**
+ * server DB に board preview (data URL) を保存する。 owner / collaborator 全員に共通の
+ * thumbnail が見えるよう一元化、 localStorage 経路は廃止。
+ */
+export async function uploadBoardPreview(boardId: string, dataUrl: string): Promise<void> {
+  const response = await fetch(BOARD_API_ENDPOINTS.preview(boardId), {
+    method: 'PUT',
+    credentials: 'include',
+    headers: buildHeaders({
+      headers: { 'content-type': 'application/json' }
+    }),
+    body: JSON.stringify({ dataUrl })
+  })
+  if (!response.ok) {
+    throw new Error(`Failed to upload board preview (HTTP ${response.status})`)
+  }
+}
+
+/**
+ * sign-in user の pinned board id 一覧を server から取得する。 未 sign-in は 401 → 空 array。
+ */
+export async function fetchPinnedBoardIds(): Promise<string[]> {
+  const { response, data } = await requestJson<{ boardIds: string[] }>(BOARD_API_ENDPOINTS.pins)
+  if (response.status === 401) return []
+  if (!response.ok) {
+    throw new Error(`Failed to fetch pinned boards (HTTP ${response.status})`)
+  }
+  return (data as { boardIds?: string[] } | null)?.boardIds ?? []
+}
+
+/**
+ * board を pin する (server DB 側、 user-board pair PK)。
+ */
+export async function pinBoard(boardId: string): Promise<void> {
+  await apiRequest<{ pinned: true; created: boolean }>(BOARD_API_ENDPOINTS.pin(boardId), {
+    method: 'POST'
+  })
+}
+
+/**
+ * board を unpin する。 該当 user の該当 board 行を削除する。
+ */
+export async function unpinBoard(boardId: string): Promise<void> {
+  await apiRequest<{ pinned: false; removed: boolean }>(BOARD_API_ENDPOINTS.pin(boardId), {
+    method: 'DELETE'
+  })
+}
+
 export function inviteUser(input: InviteUserInput) {
   return apiRequest<InviteUserResponse>(BOARD_API_ENDPOINTS.invite, {
     method: 'POST',

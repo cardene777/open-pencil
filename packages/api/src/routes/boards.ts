@@ -6,6 +6,8 @@ import { canAccessBoard, isBoardOwner, resolveRequestActor } from '../auth/actor
 import { getAuthSession, type InklyAuth } from '../auth/index.js'
 import type {
   BoardDocumentStore,
+  BoardPinStore,
+  BoardPreviewStore,
   BoardStore,
   InternalUserStore,
   InvitationStore,
@@ -13,6 +15,11 @@ import type {
   PendingInternalInvitationStore
 } from '../types.js'
 import { INVITATION_ROLES, isInternalDomainEmail } from '../types.js'
+
+// preview data URL は server に常時転送するので幅を持たせつつ無制限を避ける。
+// 図 1 枚 (256px JPEG / base64) ≒ 50KB を典型値とし、 200KB を上限に置く。
+const PREVIEW_DATA_URL_MAX_LENGTH = 200_000
+const PREVIEW_DATA_URL_PREFIX = 'data:image/'
 
 const createBoardSchema = z.object({
   name: z.string().trim().min(1).max(120).default('Untitled board')
@@ -42,7 +49,16 @@ export interface BoardRoutesOptions {
   pendingInternalInvitationStore?: PendingInternalInvitationStore
   notificationStore?: NotificationStore
   boardDocumentStore?: BoardDocumentStore
+  boardPinStore?: BoardPinStore
+  boardPreviewStore?: BoardPreviewStore
 }
+
+const upsertPreviewSchema = z.object({
+  dataUrl: z
+    .string()
+    .startsWith(PREVIEW_DATA_URL_PREFIX)
+    .max(PREVIEW_DATA_URL_MAX_LENGTH)
+})
 
 function validationError(message: string): ValidationErrorBody {
   return {
@@ -364,6 +380,151 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
     const record = await options.boardDocumentStore.upsertDocument({
       boardId: board.id,
       bytes: new Uint8Array(buffer),
+      updatedByUserId: session?.user.id ?? null
+    })
+
+    return c.json({
+      boardId: record.boardId,
+      size: record.size,
+      updatedAt: record.updatedAt
+    })
+  })
+
+  /**
+   * pin / unpin。 user スコープ (sign-in 必須)。 board access 判定は加えて行う、
+   * 自分が表示できる board しか pin できない。
+   */
+  app.get('/board-pins', async (c) => {
+    if (!options.boardPinStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Pin store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const session = await getAuthSession(options.auth, c.req.raw)
+    if (!session) {
+      return Response.json(
+        { error: { code: 'unauthorized', message: 'Sign-in required to read pinned boards' } },
+        { status: 401 }
+      )
+    }
+
+    const boardIds = await options.boardPinStore.listPinnedBoardIdsForUser(session.user.id)
+    return c.json({ boardIds })
+  })
+
+  app.post('/boards/:id/pin', async (c) => {
+    if (!options.boardPinStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Pin store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const session = await getAuthSession(options.auth, c.req.raw)
+    if (!session) {
+      return Response.json(
+        { error: { code: 'unauthorized', message: 'Sign-in required to pin boards' } },
+        { status: 401 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!canAccessBoard(board, actor)) {
+      return forbiddenResponse('You do not have access to this board')
+    }
+
+    const created = await options.boardPinStore.pinBoard(session.user.id, board.id)
+    return c.json({ pinned: true, created })
+  })
+
+  app.delete('/boards/:id/pin', async (c) => {
+    if (!options.boardPinStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Pin store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const session = await getAuthSession(options.auth, c.req.raw)
+    if (!session) {
+      return Response.json(
+        { error: { code: 'unauthorized', message: 'Sign-in required to unpin boards' } },
+        { status: 401 }
+      )
+    }
+
+    const removed = await options.boardPinStore.unpinBoard(session.user.id, c.req.param('id'))
+    return c.json({ pinned: false, removed })
+  })
+
+  /**
+   * board preview (サムネイル) を server SSOT で保持。
+   * GET ... canAccessBoard (read 系なので anonymous でも自分の board は読める)、
+   * PUT ... session 必須 (sign-in したユーザが書き込める)。
+   */
+  app.get('/boards/:id/preview', async (c) => {
+    if (!options.boardPreviewStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Preview store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!canAccessBoard(board, actor)) {
+      return forbiddenResponse('You do not have access to this board')
+    }
+
+    const preview = await options.boardPreviewStore.findPreview(board.id)
+    if (!preview) {
+      return Response.json(
+        { error: { code: 'preview_not_found', message: 'No preview stored yet' } },
+        { status: 404 }
+      )
+    }
+
+    return c.json({
+      boardId: preview.boardId,
+      dataUrl: preview.dataUrl,
+      updatedAt: preview.updatedAt
+    })
+  })
+
+  app.put('/boards/:id/preview', async (c) => {
+    if (!options.boardPreviewStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Preview store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const session = await getAuthSession(options.auth, c.req.raw)
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!canAccessBoard(board, actor)) {
+      return forbiddenResponse('You do not have access to this board')
+    }
+
+    const body = await c.req.json().catch(() => null)
+    const parsed = upsertPreviewSchema.safeParse(body)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]?.message ?? 'Invalid request body'
+      return c.json(validationError(issue), 400)
+    }
+
+    const record = await options.boardPreviewStore.upsertPreview({
+      boardId: board.id,
+      dataUrl: parsed.data.dataUrl,
       updatedByUserId: session?.user.id ?? null
     })
 
