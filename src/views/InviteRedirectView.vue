@@ -79,18 +79,10 @@ onMounted(async () => {
       return
     }
 
-    // 共有リンクからの未認証アクセスは guest login 画面へ強制遷移する。
-    // returnTo に invite path、 invite に token を持たせ、 ゲスト login 後に
-    // 招待先 board へ自動遷移できるようにする (`status === 'ready'` の signin
-    // フォームには到達させない)。
-    status.value = 'authed'
-    void router.replace({
-      path: '/login/guest',
-      query: {
-        returnTo: `/invite/${token.value}`,
-        invite: token.value
-      }
-    })
+    // 未認証 case では本画面の signUp / signIn form を出す。
+    // redeemInvitation 経由で sign-up + collaborator 化を 1 リクエストで実行する経路に乗せるため、
+    // 通常の guest login (collaborator 化を伴わない) には飛ばさない。
+    status.value = 'ready'
   } catch {
     status.value = 'invalid'
   }
