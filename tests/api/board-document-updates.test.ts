@@ -44,6 +44,41 @@ describe('board document update / version stores (yjs replay)', () => {
     expect(nodes.has('node-2')).toBe(true)
   })
 
+  test('pruneOldVersions is deterministic even when createdAt values collide on same ms', async () => {
+    // Date.now() を固定して全 5 件を同一タイムスタンプで作る。 旧経路は cutoff
+    // = "keepCount 個飛ばし行の createdAt" を読んで `<= cutoff` で消すロジック
+    // だったため、 全行が同 ms なら keep したい行も含めて全削除されていた
+    // (flaky の根本原因)。 新経路は id 集合差分で削除するので衝突に依らず確定的。
+    const database = await createTestApiDatabase()
+    const { boardId } = await seedUserAndBoard(database, {
+      userEmail: 'collision@jfet.co.jp'
+    })
+    const fixedTimestamp = 1_700_000_000_000
+    const versionStore = await createBoardDocumentVersionStore({
+      database,
+      now: () => fixedTimestamp
+    })
+
+    for (let i = 0; i < 5; i += 1) {
+      const doc = new Y.Doc()
+      doc.getMap('nodes').set(`node-${i}`, new Y.Map(Object.entries({ x: i })))
+      await versionStore.createVersion({
+        boardId,
+        state: Y.encodeStateAsUpdate(doc),
+        label: null
+      })
+    }
+
+    const versions = await versionStore.listVersionsForBoard(boardId)
+    expect(versions.length).toBe(5)
+    expect(versions.every((v) => v.createdAt === fixedTimestamp)).toBe(true)
+
+    const removed = await versionStore.pruneOldVersions(boardId, 3)
+    expect(removed).toBe(2)
+    const remaining = await versionStore.listVersionsForBoard(boardId)
+    expect(remaining.length).toBe(3)
+  })
+
   test('version store keeps history and prunes old snapshots', async () => {
     const database = await createTestApiDatabase()
     const { boardId } = await seedUserAndBoard(database, {
