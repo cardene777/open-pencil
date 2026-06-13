@@ -28,6 +28,42 @@ else
   exit 1
 fi
 
+# 既存プロセスの予防 kill。 前回 `bun run dev:full` を Ctrl+C で止め損ねたり、
+# 別 terminal で起動していたりすると 3001 / 1420 が握られたままになる。
+# ユーザーが毎回手で kill するのは面倒なので毎起動先頭で問答無用に掃除する。
+# (kill 対象 = listen 中の bun / node プロセスのみ、 他のサービスには触らない)
+kill_port_listeners() {
+  local port="$1"
+  local label="$2"
+  local pids
+  pids=$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -Fp 2>/dev/null | sed -n 's/^p//p')
+  if [ -z "$pids" ]; then
+    return
+  fi
+  for pid in $pids; do
+    if [ "$pid" = "$$" ]; then
+      continue
+    fi
+    local cmd
+    cmd=$(ps -p "$pid" -o comm= 2>/dev/null || echo "?")
+    echo "[dev] killing stale $label process (pid=$pid, cmd=$cmd) on port $port"
+    kill "$pid" 2>/dev/null || true
+  done
+  # SIGTERM 後 SIGKILL に escalate しないと bun が握り続けるケースあり
+  sleep 1
+  pids=$(lsof -nP -iTCP:"$port" -sTCP:LISTEN -Fp 2>/dev/null | sed -n 's/^p//p')
+  for pid in $pids; do
+    if [ "$pid" = "$$" ]; then
+      continue
+    fi
+    echo "[dev] force-killing stubborn $label process (pid=$pid) on port $port"
+    kill -9 "$pid" 2>/dev/null || true
+  done
+}
+
+kill_port_listeners 3001 api
+kill_port_listeners 1420 vite
+
 API_PID=""
 VITE_PID=""
 
