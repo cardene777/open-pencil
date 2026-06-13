@@ -99,7 +99,8 @@ export function createInitialCollabState(
     roomId: null,
     peers: [],
     localName,
-    localColor: colorFromIdentity(userId, anonymousId)
+    localColor: colorFromIdentity(userId, anonymousId),
+    localUserId: userId
   }
 }
 

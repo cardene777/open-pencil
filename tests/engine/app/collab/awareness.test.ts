@@ -31,6 +31,38 @@ describe('buildRemotePeers dedup + idle', () => {
     expect(names).toEqual(['alice', 'bob'])
   })
 
+  test('userId is prioritized over name+color for dedup (真の同 user 判定)', () => {
+    // 同 user.id を持つ 2 client は name / color が違っても dedup される。
+    // sign-in user が複数端末 / タブで接続したケース。
+    const states = new Map<number, Record<string, unknown>>()
+    states.set(10, { user: { name: 'alice-laptop', color: color(0.1, 0.2, 0.3), userId: 'u-1' } })
+    states.set(11, { user: { name: 'alice-phone', color: color(0.7, 0.7, 0.7), userId: 'u-1' } })
+    states.set(12, { user: { name: 'bob', color: color(0.5, 0.5, 0.5), userId: 'u-2' } })
+    const peers = buildRemotePeers(states, 0)
+    expect(peers.length).toBe(2)
+    const userIds = peers.map((p) => p.userId).sort()
+    expect(userIds).toEqual(['u-1', 'u-2'])
+  })
+
+  test('different userId is NOT deduped even if name+color happen to match', () => {
+    // 偶然同名 + 同色でも userId が異なれば別人扱い (真の dedup 経路の境界)。
+    const states = new Map<number, Record<string, unknown>>()
+    states.set(10, { user: { name: 'alice', color: color(0.4, 0.5, 0.6), userId: 'u-a' } })
+    states.set(11, { user: { name: 'alice', color: color(0.4, 0.5, 0.6), userId: 'u-b' } })
+    const peers = buildRemotePeers(states, 0)
+    expect(peers.length).toBe(2)
+  })
+
+  test('userId-less peer falls back to name+color dedup (旧 client 互換)', () => {
+    // 旧 client が awareness に userId を載せていなくても、 同 name + 同 color なら
+    // 既存経路で dedup される (PR #214 の name+color fallback)。
+    const states = new Map<number, Record<string, unknown>>()
+    states.set(10, { user: { name: 'alice', color: color(0.4, 0.5, 0.6) } })
+    states.set(11, { user: { name: 'alice', color: color(0.4, 0.5, 0.6) } })
+    const peers = buildRemotePeers(states, 0)
+    expect(peers.length).toBe(1)
+  })
+
   test('Anonymous peers are not deduped (匿名同士は別人扱い)', () => {
     const states = new Map<number, Record<string, unknown>>()
     states.set(10, { user: { name: '', color: color(0.1, 0.1, 0.1) } })
