@@ -65,6 +65,9 @@ function applyPreviewVisibility(state: PrototypeRuntimeState) {
   }
 
   for (const node of previewStore.graph.getAllNodes()) {
+    // visible normalization は yjs-document-decode と yjs-sync (applyYnodeToGraph)
+    // の boundary で済んでいるので、 ここでは追加の fallback を入れない (SSOT 一元化、
+    // PR #233 review MINOR ... view 側で二重防御していた状態を撤去)。
     const nextVisible = visible.has(node.id) ? (baseVisibility.get(node.id) ?? node.visible) : false
     if (node.visible !== nextVisible) {
       previewStore.graph.updateNode(node.id, { visible: nextVisible })
@@ -180,6 +183,7 @@ async function loadPreviewDocument() {
 
     baseVisibility.clear()
     for (const node of previewStore.graph.getAllNodes()) {
+      // visible normalization は decode / apply boundary 側で済んでいる (SSOT 一元化)。
       baseVisibility.set(node.id, node.visible)
     }
 

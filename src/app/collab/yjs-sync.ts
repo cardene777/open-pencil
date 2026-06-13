@@ -439,13 +439,64 @@ export function createYjsGraphSync({
       return
     }
 
-    const parentId = props.parentId as string
-    if (parentId && store.graph.getNode(parentId)) {
+    const parentId = props.parentId as string | undefined
+
+    // root node (parentId なし) 経路 ... yjs 側の root を invitee 側の SceneGraph の
+    // root と等価扱いし、 graph.rootId を yjs 側 id に置換して child を後で drain
+    // できるようにする。 これがないと invitee 側 default root が arbitrary な id を
+    // 持つせいで、 yjs から流れてくる child の parentId が graph に存在せず永久に
+    // pending 化される (リアルタイム反映なし、 リロードで初出の症状)。
+    //
+    // PR #233 review MAJOR ... root snapshot の childIds をそのまま preload すると、
+    // 後で child add event 経由で createNode が同じ child を再 link して childIds
+    // に重複が入る。 PR #229 の pending queue モデルに合わせて root の childIds は
+    // 空で初期化し、 親子 link は child の add / drain 側に一任する。
+    if (!parentId) {
+      const previousRootId = store.graph.rootId
+      if (previousRootId !== nodeId) {
+        // default 構造 (root + default Page 1 のみ) を yjs 側 root に置き換える。
+        // default Page 1 は editor の初期 graph で作られているが、 yjs にも別 id の
+        // page が乗ってくるため、 default Page 1 は捨てて yjs 側の構造に任せる。
+        const previousRoot = store.graph.nodes.get(previousRootId)
+        const defaultChildIds = previousRoot ? [...previousRoot.childIds] : []
+        store.graph.nodes.delete(previousRootId)
+        for (const childId of defaultChildIds) {
+          store.graph.deleteNode(childId)
+        }
+        store.graph.rootId = nodeId
+      }
+      const type = (props.type as SceneNode['type']) ?? 'FRAME'
+      const node: SceneNode = {
+        ...(props as Partial<SceneNode>),
+        id: nodeId,
+        type,
+        // child link は child の add / drain で構築するので空で初期化する。
+        childIds: []
+      } as SceneNode
+      store.graph.nodes.set(nodeId, node)
+      removePendingNodeId(nodeId)
+      return
+    }
+
+    if (store.graph.getNode(parentId)) {
+      // createNode は内部で parent.childIds に child id を push するので、
+      // ここでは includes チェックを追加せずに createNode の link 結果に一任する
+      // (PR #233 review CRITICAL ... 大量 sibling で O(N^2) になる includes 回避)。
       const type = props.type as SceneNode['type']
       const node = store.graph.createNode(type, parentId, props as Partial<SceneNode>)
       store.graph.nodes.delete(node.id)
       node.id = nodeId
       store.graph.nodes.set(nodeId, node)
+      // createNode が parent.childIds に push した「古い id」を本来の id に置換する。
+      // ここまでで parent.childIds 末尾には node の旧 id が居るので、 末尾 1 件だけ
+      // 書き換えれば O(1) で済む (includes を使わない)。
+      const parentNode = store.graph.nodes.get(parentId)
+      if (parentNode && parentNode.childIds.length > 0) {
+        const lastIndex = parentNode.childIds.length - 1
+        if (parentNode.childIds[lastIndex] !== nodeId) {
+          parentNode.childIds[lastIndex] = nodeId
+        }
+      }
       removePendingNodeId(nodeId)
       return
     }
@@ -453,11 +504,8 @@ export function createYjsGraphSync({
     // parent が未到達なら parentId 索引の保留 bucket に積む。 親が後続 event で
     // graph に来た時に drainParents で対象 child だけ drain する。 これがないと
     // yjs add イベントが非決定順で届いた時に child node が永久に drop される
-    // (#205 の主因)。 parentId が無い (root と勘違いされた orphan) は drop する
-    // (drain trigger が無いので保留しても永久に解決しない)。
-    if (parentId) {
-      stashPending(nodeId, parentId, ynode)
-    }
+    // (#205 の主因)。
+    stashPending(nodeId, parentId, ynode)
   }
 
   return { syncNodeToYjs, syncAllNodesToYjs, applyYjsToGraph }
