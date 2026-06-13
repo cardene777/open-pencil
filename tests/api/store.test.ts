@@ -66,4 +66,102 @@ describe('invitation store', () => {
     expect(await store.hasActiveInvitationForEmailHash(hash, expiringSoon.expiresAt + 1)).toBe(false)
     database.close()
   })
+
+  test('createInvitation auto-revokes existing active invitation for same board + email', async () => {
+    // 同じ board に同じ user (sentToEmailHash 一致) への招待を再発行した場合、
+    // 古い招待は revoke され、 新しい招待のみが active になる。
+    // これがないと dashboard に同 user の複数招待 entry が表示される事故になる。
+    const database = await createTestApiDatabase()
+    const store = await createInvitationStore({ database })
+    const hash = 'c'.repeat(64)
+    const future = Date.now() + 60_000
+
+    const first = await store.createInvitation({
+      boardId: 'board-dup',
+      sentToEmailHash: hash,
+      role: 'editor',
+      expiresAt: future
+    })
+    expect(first.revoked).toBe(false)
+
+    const second = await store.createInvitation({
+      boardId: 'board-dup',
+      sentToEmailHash: hash,
+      role: 'editor',
+      expiresAt: future
+    })
+    expect(second.revoked).toBe(false)
+    expect(second.id).not.toBe(first.id)
+
+    // 1 件目は revoke されている
+    const refreshedFirst = await store.findInvitation(first.id)
+    expect(refreshedFirst?.revoked).toBe(true)
+
+    // active な招待は 2 件目だけ
+    expect(await store.hasActiveInvitationForEmailHash(hash, Date.now())).toBe(true)
+
+    // listInvitationsByBoardId は両方返す (revoked も含む、 表示側の判断に委ねる)
+    const all = await store.listInvitationsByBoardId('board-dup')
+    expect(all.length).toBe(2)
+    expect(all.filter((i) => !i.revoked).length).toBe(1)
+    expect(all.filter((i) => !i.revoked)[0]?.id).toBe(second.id)
+
+    database.close()
+  })
+
+  test('createInvitation does not revoke invitations on other boards for same email', async () => {
+    // board 跨ぎでは触らない。 board A に招待中の user に対して別 owner が board B
+    // で再招待しても A の招待は active のまま。
+    const database = await createTestApiDatabase()
+    const store = await createInvitationStore({ database })
+    const hash = 'd'.repeat(64)
+    const future = Date.now() + 60_000
+
+    const onBoardA = await store.createInvitation({
+      boardId: 'board-A',
+      sentToEmailHash: hash,
+      role: 'editor',
+      expiresAt: future
+    })
+
+    await store.createInvitation({
+      boardId: 'board-B',
+      sentToEmailHash: hash,
+      role: 'editor',
+      expiresAt: future
+    })
+
+    const refreshedA = await store.findInvitation(onBoardA.id)
+    expect(refreshedA?.revoked).toBe(false)
+
+    database.close()
+  })
+
+  test('createInvitation does not revoke invitations for different email on same board', async () => {
+    // 同 board でも email hash が異なれば別 user、 旧招待を触らない。
+    const database = await createTestApiDatabase()
+    const store = await createInvitationStore({ database })
+    const aliceHash = 'a'.repeat(64)
+    const bobHash = 'b'.repeat(64)
+    const future = Date.now() + 60_000
+
+    const aliceInvite = await store.createInvitation({
+      boardId: 'board-shared',
+      sentToEmailHash: aliceHash,
+      role: 'editor',
+      expiresAt: future
+    })
+
+    await store.createInvitation({
+      boardId: 'board-shared',
+      sentToEmailHash: bobHash,
+      role: 'editor',
+      expiresAt: future
+    })
+
+    const refreshedAlice = await store.findInvitation(aliceInvite.id)
+    expect(refreshedAlice?.revoked).toBe(false)
+
+    database.close()
+  })
 })
