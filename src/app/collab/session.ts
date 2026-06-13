@@ -10,6 +10,10 @@ import {
   connectWebRtcProvider,
   type WebRtcProviderConnection
 } from '@/app/collab/webrtc-provider'
+import {
+  connectYjsHubProvider,
+  type YjsHubProviderConnection
+} from '@/app/collab/yjs-hub-provider'
 import { bindCollabGraphEvents, registerYjsObservers } from '@/app/collab/yjs-sync'
 import type { EditorStore } from '@/app/editor/active-store'
 
@@ -19,6 +23,7 @@ export type CollabRuntime = {
   ynodes: Y.Map<Y.Map<unknown>> | null
   yimages: Y.Map<Uint8Array> | null
   provider: WebRtcProviderConnection | null
+  hubProvider: YjsHubProviderConnection | null
   persistence: IndexeddbPersistence | null
   connectedStore: EditorStore | null
   suppressGraphSync: boolean
@@ -29,6 +34,8 @@ export type CollabRuntime = {
 
 type ConnectCollabSessionOptions = {
   roomId: string
+  /** boardId が指定された場合 server yjs-hub にも繋ぐ。 未指定 (P2P 一時 share 等) は WebRTC のみ */
+  boardId?: string | null
   runtime: CollabRuntime
   state: Ref<CollabState>
   store: EditorStore
@@ -56,6 +63,7 @@ type CollabConnectionActionsOptions = {
 type CollabSessionResources = {
   store: EditorStore
   provider: WebRtcProviderConnection | null
+  hubProvider: YjsHubProviderConnection | null
   awareness: awarenessProtocol.Awareness | null
   persistence: IndexeddbPersistence | null
   ydoc: Y.Doc | null
@@ -71,6 +79,7 @@ export function createCollabRuntime(): CollabRuntime {
     ynodes: null,
     yimages: null,
     provider: null,
+    hubProvider: null,
     persistence: null,
     connectedStore: null,
     suppressGraphSync: false,
@@ -105,9 +114,13 @@ export function createCollabConnectionActions({
   syncNodeToYjs,
   resetFollow
 }: CollabConnectionActionsOptions) {
-  function connect(roomId: string, options: { seedIfEmpty?: boolean } = {}) {
+  function connect(
+    roomId: string,
+    options: { seedIfEmpty?: boolean; boardId?: string | null } = {}
+  ) {
     connectCollabSession({
       roomId,
+      boardId: options.boardId ?? null,
       runtime,
       state,
       store: getStore(),
@@ -126,6 +139,7 @@ export function createCollabConnectionActions({
     disposeCollabSessionResources({
       store,
       provider: runtime.provider,
+      hubProvider: runtime.hubProvider,
       awareness: runtime.awareness,
       persistence: runtime.persistence,
       ydoc: runtime.ydoc,
@@ -155,6 +169,7 @@ export function watchAwarenessZoom(store: EditorStore, getAwareness: () => Aware
 
 export function connectCollabSession({
   roomId,
+  boardId,
   runtime,
   state,
   store,
@@ -192,12 +207,36 @@ export function connectCollabSession({
     applyYjsToGraph
   })
 
-  const provider = connectWebRtcProvider({
-    roomId,
-    ydoc: runtime.ydoc,
-    awareness: runtime.awareness
-  })
-  runtime.provider = provider
+  // hub-first ... boardId が紐付いていれば server yjs-hub に default 経路で繋ぐ。
+  // hub 接続失敗 / auth エラー時は onFallback で P2P provider を起動する。
+  // boardId が無い (一時 share room) 場合は最初から P2P で繋ぐ。
+  let p2pProvider: WebRtcProviderConnection | null = null
+  function startP2pProvider() {
+    if (p2pProvider || !runtime.ydoc || !runtime.awareness) return
+    p2pProvider = connectWebRtcProvider({
+      roomId,
+      ydoc: runtime.ydoc,
+      awareness: runtime.awareness
+    })
+    runtime.provider = p2pProvider
+  }
+
+  let hubProviderReady: Promise<{ synced: boolean } | { peerCount: number }> | null = null
+  if (boardId) {
+    const hubProvider = connectYjsHubProvider({
+      boardId,
+      ydoc: runtime.ydoc,
+      awareness: runtime.awareness,
+      onFallback: () => {
+        console.info('[collab] hub unreachable, falling back to WebRTC P2P', { roomId, boardId })
+        startP2pProvider()
+      }
+    })
+    runtime.hubProvider = hubProvider
+    hubProviderReady = hubProvider.ready
+  } else {
+    startP2pProvider()
+  }
   state.value.connected = true
   broadcastAwareness()
 
@@ -205,12 +244,16 @@ export function connectCollabSession({
     whenSynced?: Promise<unknown>
   }
   const persistenceReady = persistence.whenSynced ?? Promise.resolve()
-  void Promise.all([provider.ready, persistenceReady]).then(([info]) => {
+  const transportReady = hubProviderReady ?? p2pProvider?.ready ?? Promise.resolve(null)
+  void Promise.all([transportReady, persistenceReady]).then(([info]) => {
     if (!runtime.ydoc || !runtime.ynodes) return
-    if (seedIfEmpty && info.peerCount === 0 && runtime.ynodes.size === 0) {
-      for (const node of store.graph.getAllNodes()) {
-        syncNodeToYjs(node.id)
-      }
+    const isEmpty = runtime.ynodes.size === 0
+    if (!seedIfEmpty || !isEmpty) return
+    // seedIfEmpty 経路は「初回 P2P で peer count = 0」のときだけ作動させていた既存挙動を維持し、
+    // hub 経路では (server 側 snapshot が空) ndoc が空のままなら seed する
+    if (info && 'peerCount' in info && info.peerCount > 0) return
+    for (const node of store.graph.getAllNodes()) {
+      syncNodeToYjs(node.id)
     }
   })
 
@@ -232,6 +275,7 @@ export function resetCollabRuntime(runtime: CollabRuntime) {
   runtime.unbindGraphEvents = null
   runtime.stopZoomWatch = null
   runtime.provider = null
+  runtime.hubProvider = null
   runtime.awareness = null
   runtime.persistence = null
   runtime.ydoc = null
@@ -250,6 +294,7 @@ export function disposeCollabSessionResources(resources: CollabSessionResources)
   resources.unbindGraphEvents?.()
   resources.stopZoomWatch?.()
   resources.provider?.disconnect()
+  resources.hubProvider?.disconnect()
   resources.awareness?.destroy()
   if (resources.persistence) {
     void resources.persistence.destroy()

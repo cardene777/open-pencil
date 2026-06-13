@@ -232,7 +232,10 @@ watch(
     }
     if (!roomId) return
     if (collab.state.value.connected && collab.state.value.roomId === roomId) return
-    collab.connect(roomId, { seedIfEmpty: true })
+    // board id をそのまま hub 経路にも渡す。 server yjs-hub の room と client の Y.Doc を
+    // 同一 board に紐付ける (figma / miro と同じ server-mediated 経路を default 化、
+    // 接続失敗時のみ P2P fallback)。
+    collab.connect(roomId, { seedIfEmpty: true, boardId: roomId })
     // metadata (board.name) を先に解決してから document を取り込み、 取り込み後に
     // documentName を board.name で書き換える経路を保証する
     void (async () => {

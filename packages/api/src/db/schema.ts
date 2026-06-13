@@ -174,6 +174,54 @@ export const boardDocuments = sqliteTable(
   (table) => [index('board_documents_updated_at_idx').on(table.updatedAt)]
 )
 
+/**
+ * yjs update vector を append-only で保持する (Realtime Collab Phase 2、 Issue #202)。
+ * board ごとに大量の delta を貯めるため compaction routine が定期的に snapshot 化して
+ * 古い update を削除する設計。 GET 時は最新 snapshot + 以降の update を applyUpdate して
+ * Y.Doc を復元する。
+ */
+export const boardDocumentUpdates = sqliteTable(
+  'board_document_updates',
+  {
+    id: text('id').primaryKey(),
+    boardId: text('board_id')
+      .notNull()
+      .references(() => boards.id, { onDelete: 'cascade' }),
+    update: text('update').notNull(),
+    size: integer('size', { mode: 'number' }).notNull(),
+    createdAt: integer('created_at', { mode: 'number' }).notNull(),
+    createdByUserId: text('created_by_user_id').references(() => users.id, {
+      onDelete: 'set null'
+    })
+  },
+  (table) => [
+    index('board_document_updates_board_id_idx').on(table.boardId),
+    index('board_document_updates_created_at_idx').on(table.createdAt)
+  ]
+)
+
+/**
+ * board_documents の最新 snapshot とは別に「過去 N 世代の snapshot 履歴」を保つ。
+ * compaction で古い update を削除する直前に 1 件追加、 巻き戻し UI 用に N 件まで残す。
+ */
+export const boardDocumentVersions = sqliteTable(
+  'board_document_versions',
+  {
+    id: text('id').primaryKey(),
+    boardId: text('board_id')
+      .notNull()
+      .references(() => boards.id, { onDelete: 'cascade' }),
+    state: text('state').notNull(),
+    size: integer('size', { mode: 'number' }).notNull(),
+    createdAt: integer('created_at', { mode: 'number' }).notNull(),
+    label: text('label')
+  },
+  (table) => [
+    index('board_document_versions_board_id_idx').on(table.boardId),
+    index('board_document_versions_created_at_idx').on(table.createdAt)
+  ]
+)
+
 export const boardPins = sqliteTable(
   'board_pins',
   {
