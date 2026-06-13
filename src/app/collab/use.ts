@@ -83,6 +83,8 @@ export function useCollab(storeOrGetter: EditorStore | (() => EditorStore)) {
   // user.name が空になった (logout) なら storedName (localStorage) に fallback、
   // color は user.id 優先、 未 login 時は anonymous_id にfallback。
   // userId は真の dedup key として awareness に載せる (`buildRemotePeers` で優先利用)。
+  // immediate: true で「auth が後から解決 → connect 時には localUserId=null だった」
+  // 経路で userId なしの awareness state が固定される問題を避ける (avatar 重複 root cause)。
   watch(
     () => auth.user,
     (user) => {
@@ -95,7 +97,7 @@ export function useCollab(storeOrGetter: EditorStore | (() => EditorStore)) {
       state.value.localUserId = user?.id ?? null
       broadcastAwareness()
     },
-    { immediate: false }
+    { immediate: true }
   )
 
   // connect / disconnect に合わせて idle 再評価 interval を起動 / 停止する。

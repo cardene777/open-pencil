@@ -65,7 +65,13 @@ function applyPreviewVisibility(state: PrototypeRuntimeState) {
   }
 
   for (const node of previewStore.graph.getAllNodes()) {
-    const nextVisible = visible.has(node.id) ? (baseVisibility.get(node.id) ?? node.visible) : false
+    // yjs decode 経路で復元した graph は node.visible が undefined になる場合がある。
+    // baseVisibility map の値が undefined、 fallback の node.visible も undefined だと
+    // nextVisible = undefined → updateNode で false 化されて preview 全体が真っ暗になる。
+    // 二段 fallback の最後に明示的に true を追加して防御する。
+    const baseValue = baseVisibility.get(node.id)
+    const fallbackValue = baseValue ?? node.visible ?? true
+    const nextVisible = visible.has(node.id) ? fallbackValue : false
     if (node.visible !== nextVisible) {
       previewStore.graph.updateNode(node.id, { visible: nextVisible })
     }
@@ -180,7 +186,9 @@ async function loadPreviewDocument() {
 
     baseVisibility.clear()
     for (const node of previewStore.graph.getAllNodes()) {
-      baseVisibility.set(node.id, node.visible)
+      // yjs decode 経路では node.visible が undefined の可能性、 true で正規化して
+      // baseVisibility に格納する (#205 / Play 真っ暗 root cause fix)。
+      baseVisibility.set(node.id, node.visible ?? true)
     }
 
     const resolvedStartFrame =
