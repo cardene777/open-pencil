@@ -1,4 +1,4 @@
-import { and, desc, eq, lt } from 'drizzle-orm'
+import { desc, eq, inArray } from 'drizzle-orm'
 
 import type { ApiDatabase } from './db/client.js'
 import { createMigratedApiDatabase } from './db/migrate.js'
@@ -98,25 +98,36 @@ export async function createBoardDocumentVersionStore(
       return row ? rowToRecord(row) : null
     },
     async pruneOldVersions(boardId, keepCount) {
-      const cutoff = await database.db
-        .select({ createdAt: boardDocumentVersions.createdAt })
+      // 古い経路は cutoff = (keepCount 個飛ばし行の createdAt) を読み、 削除条件
+      // を `createdAt <= cutoff` にしていたが、 連続 createVersion で createdAt が
+      // 同 ms になると cutoff が他行と被り、 削除条件が「keep したい行も含めて全削除」
+      // に振れる flaky 経路があった (test: "version store keeps history and prunes
+      // old snapshots" がランダム fail する原因)。
+      // 新経路 ... 「最新 keepCount 個の id 集合を読む → それ以外の id を `not in` で
+      // 削除」 に変更し、 同 ms 衝突に依らず確定的に keepCount 件残す。 drizzle に
+      // `notInArray` がないので、 keep 対象を `inArray` で集めて id !== それで判定する
+      // 一段別 query 構成で代替する。
+      const keepRows = await database.db
+        .select({ id: boardDocumentVersions.id })
         .from(boardDocumentVersions)
         .where(eq(boardDocumentVersions.boardId, boardId))
-        .orderBy(desc(boardDocumentVersions.createdAt))
-        .limit(1)
-        .offset(keepCount)
-        .get()
+        .orderBy(desc(boardDocumentVersions.createdAt), desc(boardDocumentVersions.id))
+        .limit(keepCount)
+        .all()
 
-      if (!cutoff) return 0
+      const allRows = await database.db
+        .select({ id: boardDocumentVersions.id })
+        .from(boardDocumentVersions)
+        .where(eq(boardDocumentVersions.boardId, boardId))
+        .all()
+
+      const keepIds = new Set(keepRows.map((row) => row.id))
+      const idsToDelete = allRows.map((row) => row.id).filter((id) => !keepIds.has(id))
+      if (idsToDelete.length === 0) return 0
 
       const result = await database.db
         .delete(boardDocumentVersions)
-        .where(
-          and(
-            eq(boardDocumentVersions.boardId, boardId),
-            lt(boardDocumentVersions.createdAt, cutoff.createdAt + 1)
-          )
-        )
+        .where(inArray(boardDocumentVersions.id, idsToDelete))
         .run()
       return Number(result.rowsAffected)
     }
