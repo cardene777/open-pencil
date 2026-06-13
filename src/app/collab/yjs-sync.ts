@@ -446,10 +446,15 @@ export function createYjsGraphSync({
     // できるようにする。 これがないと invitee 側 default root が arbitrary な id を
     // 持つせいで、 yjs から流れてくる child の parentId が graph に存在せず永久に
     // pending 化される (リアルタイム反映なし、 リロードで初出の症状)。
+    //
+    // PR #233 review MAJOR ... root snapshot の childIds をそのまま preload すると、
+    // 後で child add event 経由で createNode が同じ child を再 link して childIds
+    // に重複が入る。 PR #229 の pending queue モデルに合わせて root の childIds は
+    // 空で初期化し、 親子 link は child の add / drain 側に一任する。
     if (!parentId) {
       const previousRootId = store.graph.rootId
       if (previousRootId !== nodeId) {
-        // default 構造 (root + default Page 1 のみ) を yjs 側 root に正しく接続する。
+        // default 構造 (root + default Page 1 のみ) を yjs 側 root に置き換える。
         // default Page 1 は editor の初期 graph で作られているが、 yjs にも別 id の
         // page が乗ってくるため、 default Page 1 は捨てて yjs 側の構造に任せる。
         const previousRoot = store.graph.nodes.get(previousRootId)
@@ -465,7 +470,8 @@ export function createYjsGraphSync({
         ...(props as Partial<SceneNode>),
         id: nodeId,
         type,
-        childIds: Array.isArray(props.childIds) ? [...(props.childIds as string[])] : []
+        // child link は child の add / drain で構築するので空で初期化する。
+        childIds: []
       } as SceneNode
       store.graph.nodes.set(nodeId, node)
       removePendingNodeId(nodeId)
@@ -473,17 +479,23 @@ export function createYjsGraphSync({
     }
 
     if (store.graph.getNode(parentId)) {
+      // createNode は内部で parent.childIds に child id を push するので、
+      // ここでは includes チェックを追加せずに createNode の link 結果に一任する
+      // (PR #233 review CRITICAL ... 大量 sibling で O(N^2) になる includes 回避)。
       const type = props.type as SceneNode['type']
       const node = store.graph.createNode(type, parentId, props as Partial<SceneNode>)
       store.graph.nodes.delete(node.id)
       node.id = nodeId
       store.graph.nodes.set(nodeId, node)
-      // parent の childIds にも反映する (createNode は internal で childIds に push
-      // 済だが、 上で node.id を入れ替えたあとに整合性を確保するため明示的に
-      // 確認する)。
+      // createNode が parent.childIds に push した「古い id」を本来の id に置換する。
+      // ここまでで parent.childIds 末尾には node の旧 id が居るので、 末尾 1 件だけ
+      // 書き換えれば O(1) で済む (includes を使わない)。
       const parentNode = store.graph.nodes.get(parentId)
-      if (parentNode && !parentNode.childIds.includes(nodeId)) {
-        parentNode.childIds.push(nodeId)
+      if (parentNode && parentNode.childIds.length > 0) {
+        const lastIndex = parentNode.childIds.length - 1
+        if (parentNode.childIds[lastIndex] !== nodeId) {
+          parentNode.childIds[lastIndex] = nodeId
+        }
       }
       removePendingNodeId(nodeId)
       return

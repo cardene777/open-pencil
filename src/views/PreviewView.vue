@@ -65,13 +65,10 @@ function applyPreviewVisibility(state: PrototypeRuntimeState) {
   }
 
   for (const node of previewStore.graph.getAllNodes()) {
-    // yjs decode 経路で復元した graph は node.visible が undefined になる場合がある。
-    // baseVisibility map の値が undefined、 fallback の node.visible も undefined だと
-    // nextVisible = undefined → updateNode で false 化されて preview 全体が真っ暗になる。
-    // 二段 fallback の最後に明示的に true を追加して防御する。
-    const baseValue = baseVisibility.get(node.id)
-    const fallbackValue = baseValue ?? node.visible ?? true
-    const nextVisible = visible.has(node.id) ? fallbackValue : false
+    // visible normalization は yjs-document-decode と yjs-sync (applyYnodeToGraph)
+    // の boundary で済んでいるので、 ここでは追加の fallback を入れない (SSOT 一元化、
+    // PR #233 review MINOR ... view 側で二重防御していた状態を撤去)。
+    const nextVisible = visible.has(node.id) ? (baseVisibility.get(node.id) ?? node.visible) : false
     if (node.visible !== nextVisible) {
       previewStore.graph.updateNode(node.id, { visible: nextVisible })
     }
@@ -186,9 +183,8 @@ async function loadPreviewDocument() {
 
     baseVisibility.clear()
     for (const node of previewStore.graph.getAllNodes()) {
-      // yjs decode 経路では node.visible が undefined の可能性、 true で正規化して
-      // baseVisibility に格納する (#205 / Play 真っ暗 root cause fix)。
-      baseVisibility.set(node.id, node.visible ?? true)
+      // visible normalization は decode / apply boundary 側で済んでいる (SSOT 一元化)。
+      baseVisibility.set(node.id, node.visible)
     }
 
     const resolvedStartFrame =
