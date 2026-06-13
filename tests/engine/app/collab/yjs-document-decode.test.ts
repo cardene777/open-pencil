@@ -85,6 +85,55 @@ describe('decodeBoardDocumentBytes', () => {
     expect(Array.from(graph.images.get('hash-b') ?? [])).toEqual([9, 8, 7])
   })
 
+  test('__proto__ key を含む細工 snapshot でも visible fallback が回避されない (PR #229 review MINOR)', () => {
+    const ydoc = new Y.Doc()
+    const ynodes = ydoc.getMap<Y.Map<unknown>>('nodes')
+
+    const root = new Y.Map<unknown>()
+    root.set('type', 'DOCUMENT')
+    ynodes.set('root-evil', root)
+
+    const evilFrame = new Y.Map<unknown>()
+    evilFrame.set('type', 'FRAME')
+    evilFrame.set('parentId', 'root-evil')
+    // __proto__ 経由で global Object.prototype.visible を false にしようとする細工。
+    // yNodeToProps 側の reject + null-prototype 構築で無効化される。
+    evilFrame.set('__proto__', '{"visible":false}')
+    ynodes.set('frame-evil', evilFrame)
+
+    const bytes = Y.encodeStateAsUpdate(ydoc)
+    const graph = decodeBoardDocumentBytes(bytes)
+    expect(graph).not.toBeNull()
+    if (!graph) return
+    // own visible field が無いので default true で復元される (細工は遮断される)。
+    expect(graph.nodes.get('frame-evil')?.visible).toBe(true)
+    // Object.prototype が汚染されていないことを確認。
+    // oxlint-disable-next-line inkly/no-broad-unknown-type-assertions -- prototype pollution 検査のための一時的な cast
+    expect(({} as Record<string, unknown>).visible).toBeUndefined()
+  })
+
+  test('visible が非 boolean (string / number) のとき true で fallback (PR #229 review MINOR)', () => {
+    const ydoc = new Y.Doc()
+    const ynodes = ydoc.getMap<Y.Map<unknown>>('nodes')
+
+    const root = new Y.Map<unknown>()
+    root.set('type', 'DOCUMENT')
+    ynodes.set('root-typed', root)
+
+    const frame = new Y.Map<unknown>()
+    frame.set('type', 'FRAME')
+    frame.set('parentId', 'root-typed')
+    // string / 0 / null を visible に詰めて型違反させる細工。
+    frame.set('visible', 'false')
+    ynodes.set('frame-typed', frame)
+
+    const bytes = Y.encodeStateAsUpdate(ydoc)
+    const graph = decodeBoardDocumentBytes(bytes)
+    expect(graph).not.toBeNull()
+    if (!graph) return
+    expect(graph.nodes.get('frame-typed')?.visible).toBe(true)
+  })
+
   test('visible field 未設定 (古い snapshot) は true で復元される (#205)', () => {
     const ydoc = new Y.Doc()
     const ynodes = ydoc.getMap<Y.Map<unknown>>('nodes')

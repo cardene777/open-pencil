@@ -85,10 +85,20 @@ export function syncNodePropsToYMap(
   }
 }
 
+// untrusted yjs payload に __proto__ / constructor / prototype key が含まれていても
+// props object の prototype を書き換えないようにする (PR #229 review MINOR: proto
+// pollution 経由で visible fallback が回避される問題)。
+const PROTO_POLLUTION_KEYS = new Set(['__proto__', 'constructor', 'prototype'])
+
 export function yNodeToProps(ynode: Y.Map<unknown>): Record<string, unknown> {
-  const props: Record<string, unknown> = {}
+  // Object.create(null) で prototype chain を切る。 props 経由で読む側は own field
+  // しか見えないので、 default 値 fallback が確実に効く。
+  // oxlint-disable-next-line inkly/no-broad-unknown-type-assertions -- yjs 由来の untrusted dictionary は domain type を持たない
+  const props = Object.create(null) as Record<string, unknown>
 
   for (const [key, value] of ynode.entries()) {
+    if (PROTO_POLLUTION_KEYS.has(key)) continue
+
     const shouldParseString =
       typeof value === 'string' &&
       (YJS_JSON_FIELDS.has(key) || value.startsWith('{') || value.startsWith('['))
@@ -288,53 +298,117 @@ export function createYjsGraphSync({
   }
 
   // parent が graph に未到達のまま add イベントが届いた node を保留する。
-  // 別の event で parent が来た後にまとめて再試行する (#205 ... event 非決定順で
-  // child 先行 add → drop → invitee 側で frame が消える bug の防止)。
-  const pendingAdds = new Map<string, Y.Map<unknown>>()
+  // PR #229 review MAJOR ... 全 snapshot scan + 無 bound だと untrusted yjs payload
+  // で O(N^2) + DoS の経路があったため、 parentId 索引化 + cap + 親 delete 連鎖 clear
+  // に変更。
+  //
+  // pendingByParent ... 親 id ごとに「親到来時に drain する child の list」を持つ。
+  // pendingNodeIds ... 重複 add 検知用 (同 nodeId が複数の親 record に積まれない)。
+  // PENDING_ADDS_CAP ... 親が永遠に来ない悪意ある payload で無限肥大しないための上限。
+  const pendingByParent = new Map<string, Map<string, Y.Map<unknown>>>()
+  const pendingNodeIds = new Set<string>()
+  const PENDING_ADDS_CAP = 5000
 
   function applyYjsToGraph(events: Y.YEvent<Y.Map<unknown>>[]) {
     const store = getStore()
     const ynodes = getYnodes()
     if (!ynodes) return
+
+    const parentsBecomingPresent = new Set<string>()
+
     for (const event of events) {
       if (event.target === ynodes) {
         for (const [key, change] of event.changes.keys) {
           if (change.action === 'add') {
             const ynode = ynodes.get(key)
-            if (ynode) applyYnodeToGraph(key, ynode)
+            if (ynode) {
+              applyYnodeToGraph(key, ynode)
+              // この key が新たな親候補になる、 該当 child を後で drain する。
+              parentsBecomingPresent.add(key)
+            }
           } else if (change.action === 'delete') {
             store.graph.deleteNode(key)
-            pendingAdds.delete(key)
+            // 削除された親に紐づく pending child は親が永遠に来ないので drop する。
+            clearPendingForParent(key)
+            removePendingNodeId(key)
           }
         }
       } else if (event.target.parent === ynodes) {
         const nodeId = findNodeIdForYMap(event.target)
         if (nodeId) {
           const ynode = ynodes.get(nodeId)
-          if (ynode) applyYnodeToGraph(nodeId, ynode)
+          if (ynode) {
+            applyYnodeToGraph(nodeId, ynode)
+            parentsBecomingPresent.add(nodeId)
+          }
         }
       }
     }
 
-    // この batch で parent が出来た保留 node があれば再試行する (収束まで loop)。
-    if (pendingAdds.size > 0) flushPendingAdds()
+    // 親が新たに graph に到着した分だけ drain する (全 snapshot scan を廃止)。
+    if (parentsBecomingPresent.size > 0) drainParents(parentsBecomingPresent)
   }
 
-  function flushPendingAdds() {
-    let progress = true
-    while (progress && pendingAdds.size > 0) {
-      progress = false
-      // Map iteration 中の delete は ES 仕様で safe (現在 key より前は影響しない)、
-      // 値のコピーは作らない。 applyYnodeToGraph は parent が graph に存在すれば
-      // pendingAdds.delete を呼ぶので size 差分で前進判定する。
-      const snapshot: Array<[string, Y.Map<unknown>]> = []
-      for (const entry of pendingAdds) snapshot.push(entry)
-      for (const [nodeId, ynode] of snapshot) {
-        const sizeBefore = pendingAdds.size
-        applyYnodeToGraph(nodeId, ynode)
-        if (pendingAdds.size !== sizeBefore) progress = true
+  function drainParents(seedParents: Set<string>) {
+    const store = getStore()
+    const queue: string[] = []
+    for (const parent of seedParents) queue.push(parent)
+
+    while (queue.length > 0) {
+      const parentId = queue.shift()
+      if (parentId === undefined) break
+      if (!store.graph.getNode(parentId)) continue
+      const bucket = pendingByParent.get(parentId)
+      if (!bucket) continue
+      pendingByParent.delete(parentId)
+      for (const [childId, childYnode] of bucket) {
+        pendingNodeIds.delete(childId)
+        applyYnodeToGraph(childId, childYnode)
+        // 今 add した child 自体が更に別の child の親かもしれないので queue に積む。
+        if (store.graph.getNode(childId)) queue.push(childId)
       }
     }
+  }
+
+  function clearPendingForParent(parentId: string) {
+    const bucket = pendingByParent.get(parentId)
+    if (!bucket) return
+    for (const childId of bucket.keys()) pendingNodeIds.delete(childId)
+    pendingByParent.delete(parentId)
+  }
+
+  function removePendingNodeId(nodeId: string) {
+    if (!pendingNodeIds.has(nodeId)) return
+    // どの bucket に入っているか分からないので全 bucket を探索する
+    // (cap で全体上限が抑えられているので O(cap) で済む)。
+    for (const [parentId, bucket] of pendingByParent) {
+      if (bucket.delete(nodeId) && bucket.size === 0) {
+        pendingByParent.delete(parentId)
+      }
+    }
+    pendingNodeIds.delete(nodeId)
+  }
+
+  function stashPending(nodeId: string, parentId: string, ynode: Y.Map<unknown>) {
+    if (pendingNodeIds.has(nodeId)) {
+      // 同 nodeId は最後の ynode で上書きする (yjs CRDT semantics 上の最新値勝ち)。
+      removePendingNodeId(nodeId)
+    }
+    if (pendingNodeIds.size >= PENDING_ADDS_CAP) {
+      // 上限到達 ... untrusted payload による DoS 防止で drop する。
+      // 静かに drop すると debug 困難なので 1 度だけ console.warn する。
+      console.warn(
+        `[collab] pendingAdds cap reached (${PENDING_ADDS_CAP}), dropping node ${nodeId}`
+      )
+      return
+    }
+    let bucket = pendingByParent.get(parentId)
+    if (!bucket) {
+      bucket = new Map()
+      pendingByParent.set(parentId, bucket)
+    }
+    bucket.set(nodeId, ynode)
+    pendingNodeIds.add(nodeId)
   }
 
   function findNodeIdForYMap(ymap: Y.Map<unknown>): string | null {
@@ -351,16 +425,17 @@ export function createYjsGraphSync({
     const existing = store.graph.getNode(nodeId)
     const props = yNodeToProps(ynode)
 
-    // visible が remote から undefined (=field 自体無し or 古い snapshot) で届いた
-    // ケースは true に正規化する (#205 ... invitee 側で false 解釈されて layer が
-    // 閉じる症状の防止)。 false は明示意図 (ユーザーが hide した layer) なので保持。
-    if (props.visible === undefined) {
+    // visible が remote から欠落 / 非 boolean で届いたケースは true に正規化する
+    // (#205 ... invitee 側で false 解釈されて layer が閉じる症状の防止)。
+    // own field の boolean 値だけを採用し、 それ以外は default true で fallback。
+    // false は明示意図 (ユーザーが hide した layer) なので保持。
+    if (!(Object.hasOwn(props, 'visible') && typeof props.visible === 'boolean')) {
       props.visible = true
     }
 
     if (existing) {
       store.graph.updateNode(nodeId, props as Partial<SceneNode>)
-      pendingAdds.delete(nodeId)
+      removePendingNodeId(nodeId)
       return
     }
 
@@ -371,14 +446,18 @@ export function createYjsGraphSync({
       store.graph.nodes.delete(node.id)
       node.id = nodeId
       store.graph.nodes.set(nodeId, node)
-      pendingAdds.delete(nodeId)
+      removePendingNodeId(nodeId)
       return
     }
 
-    // parent が未到達なら保留する。 後続 event で parent が到来したら flushPendingAdds
-    // で再試行する。 これがないと yjs add イベントが非決定順で届いた時に child node
-    // が永久に drop される (#205 の主因)。
-    pendingAdds.set(nodeId, ynode)
+    // parent が未到達なら parentId 索引の保留 bucket に積む。 親が後続 event で
+    // graph に来た時に drainParents で対象 child だけ drain する。 これがないと
+    // yjs add イベントが非決定順で届いた時に child node が永久に drop される
+    // (#205 の主因)。 parentId が無い (root と勘違いされた orphan) は drop する
+    // (drain trigger が無いので保留しても永久に解決しない)。
+    if (parentId) {
+      stashPending(nodeId, parentId, ynode)
+    }
   }
 
   return { syncNodeToYjs, syncAllNodesToYjs, applyYjsToGraph }

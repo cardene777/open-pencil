@@ -121,9 +121,14 @@ function createSceneNodeFromProps(
 ): SceneNode {
   const type = (props.type as NodeType) ?? 'GROUP'
   const childIds = Array.isArray(props.childIds) ? [...(props.childIds as string[])] : []
-  // visible が ynodes 側で undefined (古い snapshot や field 落ち) のときは true で fallback。
-  // false は明示の hide 意図なので保持する (#205 ... invitee で frame が消える bug の防止)。
-  const visible = props.visible === undefined ? true : props.visible
+  // visible は own boolean 値のみ採用、 それ以外は default true で fallback。
+  // yNodeToProps が null-prototype object を返すので prototype chain 経由の
+  // 値混入は遮断済だが、 非 boolean / 欠落値も明示的に弾く (PR #229 review MINOR
+  // ... 細工 snapshot 経由の visible fallback bypass 防止)。
+  const visible =
+    Object.hasOwn(props, 'visible') && typeof props.visible === 'boolean'
+      ? (props.visible as boolean)
+      : true
   const node = {
     ...props,
     id,
