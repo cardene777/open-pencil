@@ -79,13 +79,25 @@ const excludedCollaboratorUserIds = computed(
         .filter((userId): userId is string => typeof userId === 'string' && userId.length > 0)
     )
 )
-const filteredSuggestResults = computed(() =>
-  suggestResults.value.filter(
-    (user) =>
-      !selectedEmails.value.has(user.email) &&
-      !excludedCollaboratorUserIds.value.has(user.id)
-  )
+/**
+ * suggest 候補に「招待済 (= 既に board collaborator)」と「chip 選択済」の flag を付ける。
+ * filter で消すと「招待した相手の suggest 候補」が画面から消えてしまい、 ユーザーは
+ * 「招待が成功したのか / そもそも候補に居ないのか」を区別できない。 代わりに行を
+ * 残したまま `alreadyMember` / `alreadySelected` を立てて disabled + badge 表示する。
+ */
+type EnrichedSuggestUser = InternalUserSummary & {
+  alreadyMember: boolean
+  alreadySelected: boolean
+}
+
+const enrichedSuggestResults = computed<EnrichedSuggestUser[]>(() =>
+  suggestResults.value.map((user) => ({
+    ...user,
+    alreadyMember: excludedCollaboratorUserIds.value.has(user.id),
+    alreadySelected: selectedEmails.value.has(user.email)
+  }))
 )
+const filteredSuggestResults = enrichedSuggestResults
 const showSuggestDropdown = computed(
   () =>
     suggestOpen.value &&
@@ -206,7 +218,8 @@ function flushTypedToChip() {
   return added
 }
 
-function appendChipFromSuggestion(user: InternalUserSummary) {
+function appendChipFromSuggestion(user: EnrichedSuggestUser) {
+  if (user.alreadyMember || user.alreadySelected) return
   const added = appendChipFromValue(user.email)
   if (added) {
     inputValue.value = ''
@@ -432,14 +445,33 @@ const chipStyles: Record<'internal' | 'external' | 'invalid', string> = {
                   :key="user.id"
                   type="button"
                   :data-test-id="`share-recipient-suggest-${user.id}`"
-                  class="flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-hover"
+                  :disabled="user.alreadyMember || user.alreadySelected"
+                  :class="[
+                    'flex w-full items-center justify-between gap-3 px-3 py-2 text-left transition-colors',
+                    user.alreadyMember || user.alreadySelected
+                      ? 'cursor-not-allowed opacity-50'
+                      : 'cursor-pointer hover:bg-hover'
+                  ]"
                   @mousedown.prevent
                   @click="appendChipFromSuggestion(user)"
                 >
-                  <div class="min-w-0">
+                  <div class="min-w-0 flex-1">
                     <p class="truncate text-sm text-surface">{{ user.name }}</p>
                     <p class="truncate text-xs text-muted">{{ user.email }}</p>
                   </div>
+                  <span
+                    v-if="user.alreadyMember"
+                    :data-test-id="`share-recipient-suggest-already-member-${user.id}`"
+                    class="shrink-0 rounded-full border border-accent/30 bg-accent/15 px-2 py-0.5 text-[10px] text-accent"
+                  >
+                    {{ shareModalT.internalSuggestAlreadyMember }}
+                  </span>
+                  <span
+                    v-else-if="user.alreadySelected"
+                    class="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] text-emerald-100"
+                  >
+                    {{ shareModalT.internalSuggestAlreadySelected }}
+                  </span>
                 </button>
               </div>
             </div>

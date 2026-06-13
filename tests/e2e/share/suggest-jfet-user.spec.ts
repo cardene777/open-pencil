@@ -76,7 +76,10 @@ test.describe('jfet share suggest ui', () => {
     await expectToast(page, '1 added directly to the board.')
   })
 
-  test('existing collaborators are excluded from suggestions', async ({ browser, page }) => {
+  test('existing collaborators are shown but disabled with "already member" badge', async ({
+    browser,
+    page
+  }) => {
     const ownerEmail = `owner-exclude-${Date.now()}@jfet.co.jp`
     const collaboratorEmail = `alex-collab-${Date.now()}@jfet.co.jp`
     const visibleEmail = `alice-visible-${Date.now()}@jfet.co.jp`
@@ -97,11 +100,25 @@ test.describe('jfet share suggest ui', () => {
 
     await page.getByTestId('share-recipients-input').fill('a')
 
+    // 招待先候補としてどちらも suggest dropdown に表示される。
     await expect(
       page.getByTestId(`share-recipient-suggest-${visibleUser.userId}`)
     ).toBeVisible()
     await expect(
       page.getByTestId(`share-recipient-suggest-${collaborator.userId}`)
-    ).toHaveCount(0)
+    ).toBeVisible()
+
+    // 既に collaborator の方は disabled + 「招待済」 badge が出る。
+    await expect(
+      page.getByTestId(`share-recipient-suggest-${collaborator.userId}`)
+    ).toBeDisabled()
+    await expect(
+      page.getByTestId(`share-recipient-suggest-already-member-${collaborator.userId}`)
+    ).toBeVisible()
+
+    // visibleUser は通常 click 可能。
+    await expect(
+      page.getByTestId(`share-recipient-suggest-${visibleUser.userId}`)
+    ).toBeEnabled()
   })
 })

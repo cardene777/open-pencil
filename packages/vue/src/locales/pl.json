@@ -692,6 +692,8 @@
     "internalSuggestHint": "Wybierz podpowiedź albo dodaj pełny adres e-mail ręcznie.",
     "internalSuggestLoading": "Wyszukiwanie wewnętrznych użytkowników…",
     "internalSuggestEmpty": "Brak pasujących wewnętrznych użytkowników.",
+    "internalSuggestAlreadyMember": "Już członek",
+    "internalSuggestAlreadySelected": "Już wybrany",
     "internalManualAdd": "Dodaj ręcznie",
     "internalEmailsPlaceholder": "alice@jfet.co.jp, bob@jfet.co.jp",
     "internalEmailsHint": "Oddziel adresy przecinkami, spacjami lub nowymi liniami.",

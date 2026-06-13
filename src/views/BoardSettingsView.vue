@@ -252,8 +252,8 @@ onMounted(() => {
               :key="invitation.id"
               class="rounded-2xl border border-border bg-canvas/70 p-4"
             >
-              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div class="space-y-1">
+              <div class="flex items-start gap-3">
+                <div class="min-w-0 flex-1 space-y-1">
                   <p class="text-sm font-medium text-surface">
                     {{
                       invitation.role === 'editor'
@@ -274,11 +274,11 @@ onMounted(() => {
                   </p>
                 </div>
 
-                <div class="flex items-center gap-2">
+                <div class="flex shrink-0 flex-row items-center gap-2">
                   <button
                     type="button"
                     data-test-id="board-copy-invitation"
-                    class="cursor-pointer rounded-md border border-border bg-panel px-2 py-1 text-[11px] text-surface transition-colors hover:bg-hover"
+                    class="cursor-pointer whitespace-nowrap rounded-md border border-border bg-panel px-3 py-1.5 text-[11px] text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="!invitation.token"
                     @click="copyInvitationUrl(invitation.token)"
                   >
@@ -287,7 +287,7 @@ onMounted(() => {
                   <button
                     type="button"
                     data-test-id="board-revoke-invitation"
-                    class="cursor-pointer rounded-md px-2 py-1 text-[11px] text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200"
+                    class="cursor-pointer whitespace-nowrap rounded-md px-3 py-1.5 text-[11px] text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-50"
                     :disabled="invitation.revoked"
                     @click="requestRevoke(invitation)"
                   >

@@ -692,6 +692,8 @@
     "internalSuggestHint": "选择候选项，或手动添加完整邮箱地址。",
     "internalSuggestLoading": "正在搜索内部成员…",
     "internalSuggestEmpty": "没有匹配的内部成员。",
+    "internalSuggestAlreadyMember": "已是成员",
+    "internalSuggestAlreadySelected": "已选择",
     "internalManualAdd": "手动添加",
     "internalEmailsPlaceholder": "alice@jfet.co.jp, bob@jfet.co.jp",
     "internalEmailsHint": "使用逗号、空格或换行分隔地址。",
