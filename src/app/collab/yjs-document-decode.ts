@@ -15,9 +15,10 @@ import { yNodeToProps } from '@/app/collab/yjs-sync'
  * 復元戦略 ...
  *   1. 空の `Y.Doc` を作り `Y.applyUpdate(ydoc, bytes)` を試行。 throw すれば yjs format でない。
  *   2. `ydoc.getMap('nodes')` から `Y.Map<unknown>` を取り、 各 entry を `yNodeToProps` で
- *      props 化、 parent → child の順で SceneGraph に挿入する。
- *   3. 順序は parentId を辿って「root が無い node」を先に弾き、 親 node を作ってから子 node を
- *      作る。
+ *      props 化し、 parentId → childIds の adjacency map を 1 pass で構築する。
+ *   3. root (parentId 無し) から DFS で順次 SceneGraph に挿入することで O(N) で復元する。
+ *   4. `ydoc.getMap('images')` (yjs-sync.ts SSOT) からも image bytes を `graph.images` に
+ *      copy する。 live collab path と同じ仕様。
  *
  * 戻り値 ... 復元成功時は `SceneGraph`、 失敗時 (yjs format でない / 構造が壊れている) は null。
  */
@@ -36,8 +37,10 @@ export function decodeBoardDocumentBytes(bytes: Uint8Array): SceneGraph | null {
     return null
   }
 
+  const yimages = ydoc.getMap<Uint8Array>('images')
+
   try {
-    const graph = buildGraphFromYNodes(ynodes)
+    const graph = buildGraphFromYNodes(ynodes, yimages)
     ydoc.destroy()
     return graph
   } catch {
@@ -46,58 +49,67 @@ export function decodeBoardDocumentBytes(bytes: Uint8Array): SceneGraph | null {
   }
 }
 
-function buildGraphFromYNodes(ynodes: Y.Map<Y.Map<unknown>>): SceneGraph | null {
-  // node id → props のスナップショットを作って parent 連鎖を topological に並べる。
+function buildGraphFromYNodes(
+  ynodes: Y.Map<Y.Map<unknown>>,
+  yimages: Y.Map<Uint8Array>
+): SceneGraph | null {
+  // node id → props のスナップショットを作って adjacency を 1 pass で構築する。
   const propsById = new Map<string, Record<string, unknown>>()
-  for (const [id, ynode] of ynodes.entries()) {
-    propsById.set(id, yNodeToProps(ynode))
-  }
-
-  // root を探す。 SceneGraph の root は parent が無い node。
+  const childrenByParent = new Map<string, string[]>()
   let rootId: string | null = null
-  for (const [id, props] of propsById.entries()) {
+
+  for (const [id, ynode] of ynodes.entries()) {
+    const props = yNodeToProps(ynode)
+    propsById.set(id, props)
     const parentId = props.parentId as string | undefined
-    if (!parentId) {
+    if (parentId) {
+      const siblings = childrenByParent.get(parentId)
+      if (siblings) {
+        siblings.push(id)
+      } else {
+        childrenByParent.set(parentId, [id])
+      }
+    } else if (!rootId) {
+      // 複数 root が来ても先勝ちで 1 つだけ採用する (壊れた snapshot 防御)。
       rootId = id
-      break
     }
   }
+
   if (!rootId) return null
+  const rootProps = propsById.get(rootId)
+  if (!rootProps) return null
 
   const graph = new SceneGraph()
   // SceneGraph constructor は DOCUMENT root + default Page 1 を自動生成するため
   // ynodes 側の真の構造で置き換える前に nodes Map を完全 reset する。
   graph.nodes.clear()
-  const rootProps = propsById.get(rootId)
-  if (!rootProps) return null
-  const rootNode = createSceneNodeFromProps(rootId, rootProps)
-  rootNode.childIds = []
   graph.rootId = rootId
-  graph.nodes.set(rootId, rootNode)
 
-  // BFS で子 node を順次追加。 parent が graph に存在しない node は後回しにする。
-  const pending = new Set(propsById.keys())
-  pending.delete(rootId)
-  let progress = true
-  while (progress && pending.size > 0) {
-    progress = false
-    for (const id of pending) {
-      const props = propsById.get(id)
-      if (!props) {
-        pending.delete(id)
-        continue
-      }
-      const parentId = props.parentId as string | undefined
-      if (!parentId || !graph.nodes.has(parentId)) continue
-      const node = createSceneNodeFromProps(id, props)
-      graph.nodes.set(id, node)
-      const parentNode = graph.nodes.get(parentId)
-      if (parentNode && !parentNode.childIds.includes(id)) {
-        parentNode.childIds.push(id)
-      }
-      pending.delete(id)
-      progress = true
+  // root → 子 → 孫 を DFS で挿入。 childIds は adjacency map から直接 set する
+  // (Array.includes の O(N) 検査を廃止)。
+  const stack: string[] = [rootId]
+  while (stack.length > 0) {
+    const id = stack.pop()
+    if (id === undefined) break
+    if (graph.nodes.has(id)) continue
+    const props = propsById.get(id)
+    if (!props) continue
+    const node = createSceneNodeFromProps(id, props)
+    const adjacencyChildren = childrenByParent.get(id) ?? []
+    node.childIds = [...adjacencyChildren]
+    graph.nodes.set(id, node)
+    for (const childId of adjacencyChildren) {
+      stack.push(childId)
     }
+  }
+
+  // 孤立 node (root から到達不能) は drop する。
+  // server snapshot が壊れていない限り発生しないが、 防御的に弾く。
+
+  // yjs-sync.ts と同じ仕様で images map を SceneGraph 側に copy する
+  // (PR #210/#220 経路で live collab と同じ image 状態にする)。
+  for (const [hash, data] of yimages.entries()) {
+    graph.images.set(hash, new Uint8Array(data))
   }
 
   return graph
