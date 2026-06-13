@@ -46,6 +46,10 @@ export function remotePeersToCursors(peers: RemotePeer[], currentPageId: string)
     .map((p) => {
       const cursor = p.cursor as NonNullable<RemotePeer['cursor']>
       return {
+        // peerId は lerp 補間の cache key として利用 (yjs awareness clientID は number、
+        // cache key は string に正規化したい)
+        peerId: String(p.clientId),
+        pageId: cursor.pageId,
         name: p.name,
         color: p.color,
         x: cursor.x,

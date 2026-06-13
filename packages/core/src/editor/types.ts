@@ -60,6 +60,10 @@ export interface EditorState {
   penCursorX: number | null
   penCursorY: number | null
   remoteCursors: Array<{
+    /** awareness clientID を string 化したもの、 lerp 補間の cache key */
+    peerId?: string
+    /** どの page の cursor かを保持。 page 切替で補間を打ち切る判定に使う */
+    pageId?: string
     name: string
     color: Color
     x: number

@@ -297,6 +297,10 @@ export function disposeCollabSessionResources(resources: CollabSessionResources)
   resources.stopZoomWatch?.()
   resources.provider?.disconnect()
   resources.hubProvider?.disconnect()
+  // 受信側 lerp 補間の rAF 経路と cache state を完全破棄して memory leak / 残像を防ぐ
+  void import('@/app/collab/local-awareness').then(({ clearCursorLerpStates }) => {
+    clearCursorLerpStates()
+  })
   resources.awareness?.destroy()
   if (resources.persistence) {
     void resources.persistence.destroy()
