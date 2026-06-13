@@ -80,7 +80,7 @@ function close() {
         <button
           type="button"
           data-test-id="login-modal-member"
-          class="flex items-center justify-center gap-3 rounded-xl border border-accent/40 bg-accent/15 px-4 py-3 text-sm font-medium text-surface transition-colors hover:bg-accent/25 disabled:cursor-wait disabled:opacity-60"
+          class="flex items-center justify-center gap-3 rounded-xl border border-border bg-canvas/60 px-4 py-3 text-sm font-medium text-surface transition-colors hover:bg-hover disabled:cursor-wait disabled:opacity-60"
           :disabled="loggingIn"
           @click="chooseMember"
         >

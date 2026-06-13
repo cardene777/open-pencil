@@ -3,6 +3,8 @@ import { describe, expect, test } from 'bun:test'
 import type { InklyAuth, InklyAuthSession } from '../../packages/api/src/auth/index.js'
 import { createBoardStore } from '../../packages/api/src/boardStore.js'
 import { createInternalUserStore } from '../../packages/api/src/internalUserStore.js'
+import { createNotificationStore } from '../../packages/api/src/notificationStore.js'
+import type { NotificationRecord } from '../../packages/api/src/types.js'
 import { createPendingInternalInvitationStore } from '../../packages/api/src/pendingInternalInvitationStore.js'
 import { createTestApiApp, createTestApiDatabase, TEST_API_SECRET } from '../helpers/api.js'
 import { seedUserAndBoard } from '../helpers/seed-board-and-user.js'
@@ -159,6 +161,64 @@ describe('POST /api/boards/:id/share', () => {
     expect(body.added).toEqual([])
     expect(body.pending).toEqual([])
     expect(body.rejected).toEqual([{ email: 'external@example.com', reason: 'non_internal_domain' }])
+
+    appDb.close()
+  })
+
+  test('emits realtime invitation notification when sharing to existing jfet user', async () => {
+    const database = await createTestApiDatabase()
+    const { userId: ownerUserId, boardId } = await seedUserAndBoard(database, {
+      userEmail: 'owner-rt@jfet.co.jp'
+    })
+
+    const boardStore = await createBoardStore({ database })
+    const internalUserStore = await createInternalUserStore({ database })
+    const { userId: targetUserId } = await seedUserAndBoard(database, {
+      userEmail: 'target-rt@jfet.co.jp'
+    })
+    await internalUserStore.upsertInternalUser({
+      email: 'target-rt@jfet.co.jp',
+      userId: targetUserId
+    })
+    const pendingInternalInvitationStore = await createPendingInternalInvitationStore({ database })
+
+    const emitted: NotificationRecord[] = []
+    const notificationStore = await createNotificationStore({
+      database,
+      onNotificationCreated: (notification) => {
+        emitted.push(notification)
+      }
+    })
+
+    const { app, database: appDb } = await createTestApiApp({
+      secret: TEST_API_SECRET,
+      database,
+      auth: buildMockSessionAuth(buildSession(ownerUserId, 'owner-rt@jfet.co.jp')),
+      boardStore,
+      internalUserStore,
+      pendingInternalInvitationStore,
+      notificationStore
+    })
+
+    const response = await app.request(`/api/boards/${boardId}/share`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ emails: ['target-rt@jfet.co.jp'], role: 'editor' })
+    })
+
+    expect(response.status).toBe(200)
+    expect(emitted).toHaveLength(1)
+    const notification = emitted[0]
+    expect(notification?.userId).toBe(targetUserId)
+    expect(notification?.type).toBe('invitation')
+    const payload = notification?.payload as {
+      boardId: string
+      inviteeEmail: string
+      url: string
+    }
+    expect(payload.boardId).toBe(boardId)
+    expect(payload.inviteeEmail).toBe('target-rt@jfet.co.jp')
+    expect(payload.url).toBe(`/board/${boardId}`)
 
     appDb.close()
   })

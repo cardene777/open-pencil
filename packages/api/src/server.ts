@@ -132,7 +132,8 @@ export async function createApiApp(options: CreateApiAppOptions) {
       boardStore,
       invitationStore: store,
       internalUserStore,
-      pendingInternalInvitationStore
+      pendingInternalInvitationStore,
+      notificationStore
     })
   )
 

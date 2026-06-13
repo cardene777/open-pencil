@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 
@@ -139,11 +139,67 @@ function formatRelativeUpdate(timestamp: number) {
   return new Date(timestamp).toLocaleDateString()
 }
 
+const BOARD_POLL_INTERVAL_MS = 30_000
+let boardPollTimer: ReturnType<typeof setInterval> | null = null
+let stopNotificationsWatch: (() => void) | null = null
+
+function refreshBoardsSilently() {
+  void listBoards()
+    .then((next) => {
+      boards.value = next
+      syncPreviews(next)
+    })
+    .catch((error) => {
+      console.warn('[dashboard]', 'background listBoards failed', error)
+    })
+}
+
+function startBoardPolling() {
+  if (boardPollTimer) return
+  boardPollTimer = setInterval(() => {
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+    refreshBoardsSilently()
+  }, BOARD_POLL_INTERVAL_MS)
+}
+
+function stopBoardPolling() {
+  if (!boardPollTimer) return
+  clearInterval(boardPollTimer)
+  boardPollTimer = null
+}
+
+function onVisibilityChange() {
+  if (typeof document === 'undefined') return
+  if (document.visibilityState === 'visible') {
+    refreshBoardsSilently()
+  }
+}
+
 onMounted(async () => {
   await auth.init()
   await notifications.mount()
   pinnedIds.value = new Set(readPinnedBoardIds())
   await loadDashboardView()
+
+  // 招待 / 共有変更が来ると notifications WS で push される。 通知数が動いたら
+  // board リストを refetch して dashboard をリアルタイム同期する。
+  stopNotificationsWatch = watch(
+    () => notifications.items.length,
+    () => refreshBoardsSilently()
+  )
+
+  startBoardPolling()
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', onVisibilityChange)
+  }
+})
+
+onUnmounted(() => {
+  stopBoardPolling()
+  stopNotificationsWatch?.()
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+  }
 })
 </script>
 

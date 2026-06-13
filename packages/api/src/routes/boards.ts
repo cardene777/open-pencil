@@ -8,6 +8,7 @@ import type {
   BoardStore,
   InternalUserStore,
   InvitationStore,
+  NotificationStore,
   PendingInternalInvitationStore
 } from '../types.js'
 import { INVITATION_ROLES, isInternalDomainEmail } from '../types.js'
@@ -38,6 +39,7 @@ export interface BoardRoutesOptions {
   invitationStore: InvitationStore
   internalUserStore?: InternalUserStore
   pendingInternalInvitationStore?: PendingInternalInvitationStore
+  notificationStore?: NotificationStore
 }
 
 function validationError(message: string): ValidationErrorBody {
@@ -257,6 +259,30 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
           invitationId: null
         })
         added.push({ email, userId: internal.userId })
+
+        // 招待された jfet user の dashboard / notifications にリアルタイムで反映するため、
+        // notificationStore 経由で notification を 1 件発行する。 createNotification は
+        // 内部で onNotificationCreated を呼び、 そこから notifications WS server が
+        // 該当 user の接続全てに push する設計 (`server.ts` で配線済)。
+        if (options.notificationStore) {
+          try {
+            await options.notificationStore.createNotification({
+              userId: internal.userId,
+              type: 'invitation',
+              payload: {
+                invitationId: `direct:${board.id}:${internal.userId}`,
+                boardId: board.id,
+                boardName: board.name,
+                role: parsed.data.role,
+                inviterDisplayName: session.user.name ?? session.user.email,
+                inviteeEmail: email,
+                url: `/board/${board.id}`
+              }
+            })
+          } catch (error) {
+            console.warn('[boards.share] failed to emit invitation notification', error)
+          }
+        }
       } else {
         // 未 sign-up jfet user → pending pre-record
         await options.pendingInternalInvitationStore.createPendingInvitation({
