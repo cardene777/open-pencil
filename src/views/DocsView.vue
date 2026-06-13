@@ -9,7 +9,6 @@ type SectionId =
   | 'quickstart'
   | 'editor'
   | 'boards'
-  | 'teams'
   | 'mention'
   | 'cli'
   | 'faq'
@@ -39,7 +38,7 @@ const sections: DocSection[] = [
     body: [
       '1. `https://pencil-editor.fly.dev` を開く (またはローカルで `bun run dev:full` を起動して `http://localhost:1420` を開く)。',
       '2. ヘッダー右上の「ログイン」を押し、 メンバー (Google) かゲスト (メール) を選択する。 jfet.co.jp の Google アカウントが手元にない場合はゲストでメール + パスワードを登録する。',
-      '3. ログイン後、 ダッシュボードに移動して `+ 新しい board` を選び board 名を入力する。 既存 team を選ぶと team 配下に作成され、 team メンバー全員が即座に編集可能になる。',
+      '3. ログイン後、 ダッシュボードに移動して `+ 新しい board` を選び board 名を入力する。',
       '4. board 画面右上の「招待」ボタンから共有リンクを発行する。 リンクを開いた人は guest login 画面に飛ばされ、 メール + パスワードでアカウント作成すると即 board に参加できる。',
       '5. 任意のテキストレイヤーを編集中に `@<相手>` と入力するとメンション補完が出る。 選択すると通知ベルに即座にプッシュされる。'
     ]
@@ -51,35 +50,24 @@ const sections: DocSection[] = [
     body: [
       'ツールバーは V (移動)、 F (Frame)、 R (Rectangle)、 P (Pen)、 T (Text)、 H (Hand) を切り替えるキー操作に対応しています。 ⌘+Z / ⇧⌘+Z で undo / redo、 ⌘+D で複製、 ⌫ で削除を実行できます。',
       'レイヤーパネルでは上下ドラッグで z-index 並べ替え、 → / ← でツリー展開ができます。 プロパティパネルではテキスト / 塗り / 線 / エフェクト / 書き出し設定を 1 か所で編集できます。 ScrubInput (数値の上をドラッグ) で滑らかに値を変更できます。',
-      'ダブルクリックでテキスト編集モードに入ります。 編集中にメンション補完を使う場合は `@` を入力するとチームメンバー候補が表示されます (mention タブを参照)。'
+      'ダブルクリックでテキスト編集モードに入ります。 編集中にメンション補完を使う場合は `@` を入力すると board 参加者候補が表示されます (mention タブを参照)。'
     ]
   },
   {
     id: 'boards',
     title: 'Board 管理',
-    summary: '個人 board と team board の差を理解する。',
+    summary: 'board 作成 / 共有 / 削除の基本を理解する。',
     body: [
       '個人 board は所有者本人だけが管理権を持ち、 招待リンクを発行することで他者に共有できます。 招待リンクには invitation token が含まれており、 受け取った相手は guest login 画面でメールアドレスを登録するだけで board に参加できます。',
-      'team board は team owner / editor / viewer の 3 ロールで管理されます。 team owner だけが他メンバーを招待でき、 editor は board の編集ができ、 viewer は閲覧のみです。 team 配下に board を新規作成すると、 team メンバー全員が即座に編集可能になります。',
       'ダッシュボードの「ピン留め」を使うと、 よく使う board をリストの先頭に固定できます。 board を削除すると関連する collaborator / invitation も合わせて削除されます (undo はできないため確認モーダルで二段階保護されています)。'
-    ]
-  },
-  {
-    id: 'teams',
-    title: 'Team / メンバー',
-    summary: 'team 作成 / 招待 / ロール変更 / 削除のフロー。',
-    body: [
-      '`/teams` から team を作成すると owner として登録されます。 team detail で「+ メンバー招待」を押すと email + role を入力する dialog が開き、 既存 user (jfet または guest) を team に追加できます。 招待された相手にはリアルタイムで通知ベルに push が届きます。',
-      'team owner は editor → viewer のロール降格 / viewer → editor の昇格 / メンバー削除を実行できます。 owner 自身は他の owner が居ない限り team から離脱できません (孤児 team を防止)。',
-      'team settings から team 名 / 説明 / 表示色を変更できます。 team を削除すると team 配下の board の `teamId` は null になり、 個人 board として残ります (board は失われません)。'
     ]
   },
   {
     id: 'mention',
     title: 'Mention 通知',
-    summary: 'チームメンバーにリアルタイムで通知を飛ばす。',
+    summary: 'board 参加者にリアルタイムで通知を飛ばす。',
     body: [
-      'テキスト編集中に `@` を入力するとメンション候補が popover で表示されます。 候補は board が属する team のメンバー (自分を除く) から取得され、 名前 / メールアドレスで部分一致絞り込みできます。',
+      'テキスト編集中に `@` を入力するとメンション候補が popover で表示されます。 候補は board の参加者 (自分を除く) から取得され、 名前 / メールアドレスで部分一致絞り込みできます。',
       '候補を選択すると mention text が確定され、 相手の通知ベルに WebSocket push でリアルタイム通知が届きます。 通知本文には mention された board 名と発信者の表示名が含まれます。',
       '通知ベルから直接 board に遷移できます (notification popover → board リンク)。 既読 / 未読の管理は `/notifications` ページから一括操作できます。'
     ]
@@ -99,11 +87,11 @@ const sections: DocSection[] = [
     title: 'FAQ',
     summary: 'よくある質問。',
     body: [
-      'Q: メンバーとゲストの違いは?  A: メンバーは jfet.co.jp Google アカウントでログインし、 全機能 (ダッシュボード / team / 通知 / admin) を利用できます。 ゲストは外部のメール + パスワードでログインし、 招待された board の編集のみが可能です。 ゲストは team 作成 / admin 機能には進めません。',
+      'Q: メンバーとゲストの違いは?  A: メンバーは jfet.co.jp Google アカウントでログインし、 ダッシュボード / 通知 / admin を利用できます。 ゲストは外部のメール + パスワードでログインし、 招待された board の編集のみが可能です。',
       'Q: 招待リンクを発行した相手が「ゲスト」ではなく「メンバー」としてログインした場合は?  A: jfet.co.jp の Google アカウントを持っているなら Google ログインで board にアクセスできます。 招待リンクは認証方法を強制せず、 アクセスする人がメンバー / ゲストのどちらでも board に到達できます。',
       'Q: board を間違えて削除したら?  A: 現状 undo はありません。 重要な board は事前に `inkly export` で .pen / .json として書き出しておくことを推奨します。',
       'Q: 自分でホストしたい場合は?  A: GitHub の `cardene777/open-pencil` を clone し、 Fly.io または任意の Node 環境にデプロイできます。 詳細は repository の README を参照してください。',
-      'Q: Mention 候補が空になる場合は?  A: board が team 配下に作成されていることを確認してください。 個人 board (team 紐づきなし) では mention 候補が表示されません。'
+      'Q: Mention 候補が空になる場合は?  A: 相手がその board の参加者として追加済みか確認してください。 board に参加していない user は候補に表示されません。'
     ]
   }
 ]

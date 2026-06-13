@@ -2,10 +2,8 @@ import type { NotificationRecord } from '@/app/api/notifications'
 
 export interface NotificationsFormatT {
   invitationTitle: (params: { inviter: string; board: string }) => string
-  teamInviteTitle: (params: { inviter: string; team: string }) => string
   mentionTitle: (params: { mentioner: string; board: string }) => string
   invitationBody: (params: { role: string }) => string
-  teamInviteBody: (params: { role: string }) => string
 }
 
 export function isNotificationUnread(notification: NotificationRecord) {
@@ -22,11 +20,6 @@ export function getNotificationTitle(
         inviter: notification.payload.inviterDisplayName,
         board: notification.payload.boardName
       })
-    case 'team_invite':
-      return t.teamInviteTitle({
-        inviter: notification.payload.inviterDisplayName,
-        team: notification.payload.teamName
-      })
     case 'mention':
       return t.mentionTitle({
         mentioner: notification.payload.mentionedByDisplayName,
@@ -42,8 +35,6 @@ export function getNotificationBody(
   switch (notification.type) {
     case 'invitation':
       return t.invitationBody({ role: notification.payload.role })
-    case 'team_invite':
-      return t.teamInviteBody({ role: notification.payload.role })
     case 'mention':
       return notification.payload.message
   }

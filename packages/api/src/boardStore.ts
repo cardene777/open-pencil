@@ -8,17 +8,12 @@ import type {
   BoardCollaboratorRecord,
   BoardRecord,
   BoardStore,
-  CreateBoardInput,
-  UpdateBoardInput
+  CreateBoardInput
 } from './types.js'
 
 export interface CreateBoardStoreOptions {
   database?: ApiDatabase
   now?: () => number
-}
-
-function cloneBoard(record: BoardRecord): BoardRecord {
-  return structuredClone(record)
 }
 
 function mapCollaborator(row: typeof collaborators.$inferSelect): BoardCollaboratorRecord {
@@ -45,7 +40,7 @@ function createRecordMapper(database: ApiDatabase) {
       name: row.name,
       creatorAnonymousId: row.creatorAnonymousId,
       creatorUserId: row.creatorUserId,
-      teamId: row.teamId,
+      startFrameId: row.startFrameId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       collaborators: collaboratorRows.map(mapCollaborator)
@@ -54,12 +49,23 @@ function createRecordMapper(database: ApiDatabase) {
 }
 
 async function createInMemoryDatabase() {
-  return await createMigratedApiDatabase({ mode: 'memory' })
+  return createMigratedApiDatabase({ mode: 'memory' })
 }
 
 async function mapBoardRows(
   database: ApiDatabase,
-  rows: Array<Pick<typeof boards.$inferSelect, 'id' | 'name' | 'creatorAnonymousId' | 'creatorUserId' | 'teamId' | 'createdAt' | 'updatedAt'>>
+  rows: Array<
+    Pick<
+      typeof boards.$inferSelect,
+      | 'id'
+      | 'name'
+      | 'creatorAnonymousId'
+      | 'creatorUserId'
+      | 'startFrameId'
+      | 'createdAt'
+      | 'updatedAt'
+    >
+  >
 ): Promise<BoardRecord[]> {
   if (rows.length === 0) return []
 
@@ -83,12 +89,12 @@ async function mapBoardRows(
   }
 
   return rows.map((row) =>
-    cloneBoard({
+    structuredClone({
       id: row.id,
       name: row.name,
       creatorAnonymousId: row.creatorAnonymousId,
       creatorUserId: row.creatorUserId,
-      teamId: row.teamId,
+      startFrameId: row.startFrameId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       collaborators: collaboratorsByBoardId.get(row.id) ?? []
@@ -110,9 +116,7 @@ function validateCreateBoardInput(input: CreateBoardInput) {
   }
 }
 
-export async function createBoardStore(
-  options: CreateBoardStoreOptions = {}
-): Promise<BoardStore> {
+export async function createBoardStore(options: CreateBoardStoreOptions = {}): Promise<BoardStore> {
   const database = options.database ?? (await createInMemoryDatabase())
   const now = options.now ?? Date.now
   const mapBoard = createRecordMapper(database)
@@ -122,7 +126,6 @@ export async function createBoardStore(
       const createdAt = now()
       const id = crypto.randomUUID()
       const { creatorAnonymousId, creatorUserId } = validateCreateBoardInput(input)
-      const teamId = input.teamId?.trim() || null
 
       await database.db.transaction(async (tx) => {
         await tx
@@ -132,7 +135,6 @@ export async function createBoardStore(
             name: input.name,
             creatorAnonymousId,
             creatorUserId,
-            teamId,
             createdAt,
             updatedAt: createdAt
           })
@@ -159,7 +161,7 @@ export async function createBoardStore(
     },
     async findBoard(id: string) {
       const row = await database.db.select().from(boards).where(eq(boards.id, id)).get()
-      return row ? cloneBoard(await mapBoard(row)) : null
+      return row ? structuredClone(await mapBoard(row)) : null
     },
     async listBoardsForAnonymous(anonymousId: string) {
       const boardRows = await database.db
@@ -168,22 +170,19 @@ export async function createBoardStore(
           name: boards.name,
           creatorAnonymousId: boards.creatorAnonymousId,
           creatorUserId: boards.creatorUserId,
-          teamId: boards.teamId,
+          startFrameId: boards.startFrameId,
           createdAt: boards.createdAt,
           updatedAt: boards.updatedAt
         })
         .from(boards)
         .leftJoin(collaborators, eq(boards.id, collaborators.boardId))
         .where(
-          or(
-            eq(boards.creatorAnonymousId, anonymousId),
-            eq(collaborators.anonymousId, anonymousId)
-          )
+          or(eq(boards.creatorAnonymousId, anonymousId), eq(collaborators.anonymousId, anonymousId))
         )
         .orderBy(desc(boards.updatedAt))
         .all()
 
-      return await mapBoardRows(database, boardRows)
+      return mapBoardRows(database, boardRows)
     },
     async listBoardsForUser(userId: string) {
       // 1) creator として作った board (boards.creatorUserId = userId)
@@ -197,7 +196,7 @@ export async function createBoardStore(
           name: boards.name,
           creatorAnonymousId: boards.creatorAnonymousId,
           creatorUserId: boards.creatorUserId,
-          teamId: boards.teamId,
+          startFrameId: boards.startFrameId,
           createdAt: boards.createdAt,
           updatedAt: boards.updatedAt
         })
@@ -207,31 +206,13 @@ export async function createBoardStore(
         .orderBy(desc(boards.updatedAt))
         .all()
 
-      return await mapBoardRows(database, boardRows)
-    },
-    async listBoardsForTeam(teamId: string) {
-      const boardRows = await database.db
-        .select({
-          id: boards.id,
-          name: boards.name,
-          creatorAnonymousId: boards.creatorAnonymousId,
-          creatorUserId: boards.creatorUserId,
-          teamId: boards.teamId,
-          createdAt: boards.createdAt,
-          updatedAt: boards.updatedAt
-        })
-        .from(boards)
-        .where(eq(boards.teamId, teamId))
-        .orderBy(desc(boards.updatedAt))
-        .all()
-
-      return await mapBoardRows(database, boardRows)
+      return mapBoardRows(database, boardRows)
     },
     async deleteBoard(id: string) {
       const record = await store.findBoard(id)
       if (!record) return null
       await database.db.delete(boards).where(eq(boards.id, id)).run()
-      return cloneBoard(record)
+      return structuredClone(record)
     },
     async addCollaborator(boardId: string, input: AddBoardCollaboratorInput) {
       const board = await store.findBoard(boardId)
@@ -259,56 +240,27 @@ export async function createBoardStore(
           })
           .run()
 
-        await tx
-          .update(boards)
-          .set({ updatedAt })
-          .where(eq(boards.id, boardId))
-          .run()
+        await tx.update(boards).set({ updatedAt }).where(eq(boards.id, boardId)).run()
       })
 
       const record = await store.findBoard(boardId)
-      return record ? cloneBoard(record) : null
+      return record ? structuredClone(record) : null
     },
-    async updateBoard(id: string, input: UpdateBoardInput) {
-      const record = await store.findBoard(id)
-      if (!record) return null
-
-      const nextName = input.name?.trim()
-      const nextTeamId = input.teamId === undefined ? record.teamId : (input.teamId?.trim() || null)
-      const changes: typeof boards.$inferInsert = {
-        id: record.id,
-        name: nextName && nextName.length > 0 ? nextName : record.name,
-        creatorAnonymousId: record.creatorAnonymousId,
-        creatorUserId: record.creatorUserId,
-        teamId: nextTeamId,
-        createdAt: record.createdAt,
-        updatedAt: now()
-      }
+    async updateBoardStartFrame(id: string, startFrameId: string | null) {
+      const board = await store.findBoard(id)
+      if (!board) return null
 
       await database.db
         .update(boards)
         .set({
-          name: changes.name,
-          teamId: changes.teamId,
-          updatedAt: changes.updatedAt
+          startFrameId,
+          updatedAt: now()
         })
         .where(eq(boards.id, id))
         .run()
 
-      const updated = await store.findBoard(id)
-      return updated ? cloneBoard(updated) : null
-    },
-    async clearTeamForBoards(teamId: string) {
-      const result = await database.db
-        .update(boards)
-        .set({
-          teamId: null,
-          updatedAt: now()
-        })
-        .where(eq(boards.teamId, teamId))
-        .run()
-
-      return result.rowsAffected
+      const record = await store.findBoard(id)
+      return record ? structuredClone(record) : null
     }
   }
 

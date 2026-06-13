@@ -2,7 +2,6 @@ import type { Page } from '@playwright/test'
 
 import type { Board } from '@/app/api/client'
 import type { NotificationRecord } from '@/app/api/notifications'
-import type { TeamDetailResponse, TeamMember } from '@/app/api/teams'
 
 interface AuthSession {
   user: {
@@ -13,28 +12,12 @@ interface AuthSession {
   }
 }
 
-export interface SeedTeamOptions {
-  name: string
-  members?: Array<{
-    email: string
-    name: string
-    role?: Exclude<TeamMember['role'], 'owner'>
-    image?: string | null
-  }>
-  boards?: string[]
-}
-
 export interface SeedNotificationsOptions {
   items: Array<
     | {
         type: 'invitation'
         read?: boolean
         payload: Extract<NotificationRecord, { type: 'invitation' }>['payload']
-      }
-    | {
-        type: 'team_invite'
-        read?: boolean
-        payload: Extract<NotificationRecord, { type: 'team_invite' }>['payload']
       }
     | {
         type: 'mention'
@@ -116,38 +99,6 @@ export async function seedBoards(page: Page, count: number) {
 
   const payload = (await response.json()) as { boards: Board[] }
   return payload.boards
-}
-
-export async function seedTeam(page: Page, options: SeedTeamOptions) {
-  const session = await readSession(page)
-  if (!session) throw new Error('seedTeam requires a signed-in owner session')
-
-  const response = await page.request.post('/api/test/seed/team', {
-    data: {
-      owner: {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image
-      },
-      name: options.name,
-      members: (options.members ?? []).map((member) => ({
-        email: member.email,
-        name: member.name,
-        image: member.image ?? null,
-        role: member.role ?? 'editor'
-      })),
-      boards: options.boards ?? []
-    }
-  })
-
-  if (!response.ok()) {
-    throw new Error(`Failed to seed team: ${response.status()} ${response.statusText()}`)
-  }
-
-  return (await response.json()) as Pick<TeamDetailResponse, 'boards' | 'members'> & {
-    team: TeamDetailResponse['team']
-  }
 }
 
 export async function seedNotifications(page: Page, options: SeedNotificationsOptions) {

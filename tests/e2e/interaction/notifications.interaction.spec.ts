@@ -20,22 +20,6 @@ function invitationItem(read: boolean, boardName = 'Board A') {
   }
 }
 
-function teamInviteItem(read: boolean, teamName = 'Team X') {
-  const id = `team-${Math.random().toString(36).slice(2, 8)}`
-  return {
-    type: 'team_invite' as const,
-    read,
-    payload: {
-      teamId: id,
-      teamName,
-      role: 'editor' as const,
-      inviterDisplayName: 'Team Owner',
-      inviteeEmail: 'reader@jfet.co.jp',
-      url: `/team/${id}`
-    }
-  }
-}
-
 function mentionItem(read: boolean, boardName = 'Mention Board') {
   const id = `board-${Math.random().toString(36).slice(2, 8)}`
   return {
@@ -68,11 +52,11 @@ test.describe('notifications interaction', () => {
   test('unread notifications populate the list', async ({ page }) => {
     await mockGoogleLogin(page, { email: 'populated@jfet.co.jp', name: 'Populated User' })
     await seedNotifications(page, {
-      items: [invitationItem(false), teamInviteItem(false), mentionItem(true)]
+      items: [invitationItem(false), mentionItem(true)]
     })
 
     await page.goto('/notifications')
-    await expect(page.getByTestId('notification-item')).toHaveCount(3)
+    await expect(page.getByTestId('notification-item')).toHaveCount(2)
   })
 
   test('mark-read flips one item to read state', async ({ page }) => {
@@ -92,7 +76,7 @@ test.describe('notifications interaction', () => {
   test('mark-all-read removes mark-read buttons across items', async ({ page }) => {
     await mockGoogleLogin(page, { email: 'allreader@jfet.co.jp', name: 'All Reader' })
     await seedNotifications(page, {
-      items: [invitationItem(false, 'A'), teamInviteItem(false, 'B')]
+      items: [invitationItem(false, 'A'), mentionItem(false, 'B')]
     })
 
     await page.goto('/notifications')

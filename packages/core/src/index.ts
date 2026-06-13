@@ -72,6 +72,7 @@ export {
   type VariableCollectionMode,
   type CharacterStyleOverride,
   type StyleRun,
+  type PrototypeReaction,
   type SceneGraphEvents,
   type DocumentColorSpace
 } from './scene-graph'
@@ -152,7 +153,13 @@ export {
   PerfTracer,
   perfTracer
 } from './profiler'
-export type { FrameCapture, NodeProfile, PerfTraceEntry, PerfTraceListener, PerfTraceTrack } from './profiler'
+export type {
+  FrameCapture,
+  NodeProfile,
+  PerfTraceEntry,
+  PerfTraceListener,
+  PerfTraceTrack
+} from './profiler'
 export { computeLayout, computeAllLayouts, setTextMeasurer } from './layout'
 export type { TextMeasurer } from './layout'
 export { getCanvasKit, type CanvasKitOptions } from './canvaskit'

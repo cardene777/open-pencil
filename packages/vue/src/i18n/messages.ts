@@ -1,5 +1,7 @@
 import { createI18n, params } from '@nanostores/i18n'
 import type { ComponentsJSON } from '@nanostores/i18n'
+import type { TranslationFunction } from '@nanostores/i18n'
+import type { ReadableAtom } from 'nanostores'
 
 import { locale } from '#vue/i18n/locale'
 import type { Locale } from '#vue/i18n/locale'
@@ -15,7 +17,26 @@ const localeLoaders: Record<Exclude<Locale, 'en'>, () => Promise<{ default: Comp
   'zh-CN': () => import('#vue/locales/zh-CN.json')
 }
 
-const i18n = createI18n<Locale, 'en'>(locale, {
+type MessageTree = {
+  [key: string]: string | TranslationFunction<any[], any> | MessageTree
+}
+
+type MessageValues<Tree extends MessageTree> = {
+  [Key in keyof Tree]: Tree[Key] extends string
+    ? string
+    : Tree[Key] extends TranslationFunction<infer Args, infer Output>
+      ? TranslationFunction<Args, Output>
+      : Tree[Key] extends MessageTree
+        ? MessageValues<Tree[Key]>
+        : never
+}
+
+type NestedI18n = <Body extends MessageTree>(
+  componentName: string,
+  baseTranslation: Body
+) => ReadableAtom<MessageValues<Body>>
+
+const baseI18n = createI18n<Locale, 'en'>(locale, {
   baseLocale: 'en',
   async get(code) {
     if (code === 'en') return {}
@@ -23,6 +44,8 @@ const i18n = createI18n<Locale, 'en'>(locale, {
     return mod.default
   }
 })
+
+const i18n = baseI18n as NestedI18n
 
 export const menuMessages = i18n('menu', {
   file: 'File',
@@ -308,6 +331,47 @@ export const panelMessages = i18n('panels', {
   colorHexInput: 'Color hex value'
 })
 
+export const prototypeMessages = i18n('prototype', {
+  panelTitle: 'Prototype',
+  addReaction: 'Add reaction',
+  reaction: params('Reaction {index}'),
+  trigger: 'Trigger',
+  triggerOnClick: 'On click',
+  triggerOnHover: 'On hover',
+  triggerOnMouseDown: 'On mouse down',
+  triggerAfterDelay: 'After delay',
+  action: 'Action',
+  actionNavigate: 'Navigate',
+  actionOpenOverlay: 'Open overlay',
+  actionCloseOverlay: 'Close overlay',
+  actionBack: 'Back',
+  actionExternalUrl: 'Open URL',
+  targetFrame: 'Target frame',
+  externalUrl: 'External URL',
+  transition: 'Transition',
+  transitionInstant: 'Instant',
+  transitionDissolve: 'Dissolve',
+  transitionSlideLeft: 'Slide left',
+  transitionSlideRight: 'Slide right',
+  delayMs: 'Delay (ms)',
+  transitionDurationMs: 'Duration (ms)',
+  deleteReaction: 'Delete',
+  moveUp: 'Move up',
+  moveDown: 'Move down',
+  startFrameLabel: 'Start frame',
+  setAsStartFrame: 'Set as start frame',
+  openInPreview: 'Open in preview',
+  play: 'Play',
+  back: 'Back',
+  resetToStart: 'Reset to start',
+  close: 'Close',
+  noFrames: 'No frames on this page',
+  noSelection: 'Select a frame to edit prototype reactions.',
+  noTargetFrame: 'No target frame',
+  loadingPreview: 'Loading preview…',
+  previewUnavailable: 'Preview unavailable'
+})
+
 export const variableTypeMessages = i18n('variableTypes', {
   color: 'Color',
   colorHint: 'Paint values',
@@ -420,20 +484,15 @@ export const dialogMessages = i18n('dialogs', {
 
 export const boardsMessages = i18n('boards', {
   heading: 'Your boards',
-  subtitle: 'Create a personal board or attach it to a team workspace without leaving Inkly.',
+  subtitle: 'Create a board and share it without leaving Inkly.',
   defaultBoardName: 'Untitled board',
   boardNamePlaceholder: 'Board name',
-  personalBoardOption: 'Personal board',
-  teamSelectAriaLabel: 'Board workspace',
-  newBoardButton: 'New board',
-  newBoardCreating: 'Creating…',
-  teamScopeHint: 'Team boards can be created only in teams you own.',
   recentHeading: 'Recent boards',
   recentSubtitle: 'Search by board name or reopen a recently edited board.',
   searchPlaceholder: 'Search boards',
   loadingBoards: 'Loading boards…',
   emptyHeading: 'No boards yet',
-  emptyHint: 'Create your first board to start the invite and team sharing flows.',
+  emptyHint: 'Create your first board to start the invite and sharing flows.',
   emptySearchHeading: 'No matching boards',
   emptySearchHint: 'Try a different name or clear the search box.',
   deleteDialogTitle: 'Delete board',
@@ -451,8 +510,6 @@ export const dashboardMessages = i18n('dashboard', {
   brand: 'Inkly',
   metrics: {
     personalBoards: 'Personal boards',
-    teamBoards: 'Team boards',
-    teams: 'Teams',
     unread: 'Unread'
   },
   quickActions: {
@@ -462,14 +519,12 @@ export const dashboardMessages = i18n('dashboard', {
     creating: 'Creating…',
     allBoards: 'All boards',
     allBoardsHint: 'Browse and manage your boards',
-    teams: 'Teams',
-    teamsHint: 'Create and manage team workspaces',
     notifications: 'Notifications',
-    notificationsHint: '{count} unread'
+    notificationsHint: params('{count} unread')
   },
   pinned: {
     heading: 'Pinned boards',
-    countLabel: '{count} pinned'
+    countLabel: params('{count} pinned')
   },
   recent: {
     heading: 'Recent boards',
@@ -478,6 +533,7 @@ export const dashboardMessages = i18n('dashboard', {
     loading: 'Loading…',
     empty: 'No boards yet. Create your first board above.'
   },
+  invitedBadge: 'Invited',
   activityFeed: {
     heading: 'Activity',
     subtitle: 'Recent notifications and mentions',
@@ -491,7 +547,6 @@ export const dashboardMessages = i18n('dashboard', {
   },
   navLinks: {
     boards: 'Boards',
-    teams: 'Teams',
     account: 'Account'
   },
   customize: {
@@ -508,16 +563,19 @@ export const dashboardMessages = i18n('dashboard', {
     sectionPinned: 'Pinned boards',
     sectionRecent: 'Recent boards',
     sectionActivity: 'Activity',
-    dragHandleAria: 'Drag to reorder {section}',
-    dragRowAria: '{section} section, draggable',
-    dragStartAnnounce: 'Grabbed {section}. Drop it on another section to reorder.',
-    dragDropAnnounce: 'Moved {section} before {target}.',
-    dragCancelAnnounce: 'Cancelled reorder of {section}.',
-    keyboardHint: 'Press Space to pick up. Use arrow keys to move, Enter to drop, Escape to cancel.',
-    keyboardPickupAnnounce: 'Picked up {section}. Arrow keys move, Enter drops, Escape cancels.',
-    keyboardMoveAnnounce: 'Moved {section} to position {position} of {total}.',
-    keyboardDropAnnounce: 'Dropped {section}.',
-    keyboardCancelAnnounce: 'Cancelled keyboard reorder of {section}.'
+    dragHandleAria: params('Drag to reorder {section}'),
+    dragRowAria: params('{section} section, draggable'),
+    dragStartAnnounce: params('Grabbed {section}. Drop it on another section to reorder.'),
+    dragDropAnnounce: params('Moved {section} before {target}.'),
+    dragCancelAnnounce: params('Cancelled reorder of {section}.'),
+    keyboardHint:
+      'Press Space to pick up. Use arrow keys to move, Enter to drop, Escape to cancel.',
+    keyboardPickupAnnounce: params(
+      'Picked up {section}. Arrow keys move, Enter drops, Escape cancels.'
+    ),
+    keyboardMoveAnnounce: params('Moved {section} to position {position} of {total}.'),
+    keyboardDropAnnounce: params('Dropped {section}.'),
+    keyboardCancelAnnounce: params('Cancelled keyboard reorder of {section}.')
   }
 })
 
@@ -540,8 +598,7 @@ export const accountMessages = i18n('account', {
   logoutPending: 'Signing out…',
   logoutDialogTitle: 'Log out',
   logoutDialogDescription: 'You will return to anonymous mode on this device.',
-  logoutDialogHint:
-    'Your boards remain available. Sign in again to restore account notifications and teams.',
+  logoutDialogHint: 'Your boards remain available. Sign in again to restore account notifications.',
   logoutDialogCancel: 'Cancel',
   logoutDialogConfirm: 'Log out',
   toastSignedOut: 'Signed out',
@@ -609,10 +666,8 @@ export const notificationsMessages = i18n('notifications', {
 
 export const notificationsFormatMessages = i18n('notificationsFormat', {
   invitationTitle: params('{inviter} invited you to {board}'),
-  teamInviteTitle: params('{inviter} added you to {team}'),
   mentionTitle: params('{mentioner} mentioned you in {board}'),
-  invitationBody: params('Board invitation as {role}.'),
-  teamInviteBody: params('Workspace access as {role}.')
+  invitationBody: params('Board invitation as {role}.')
 })
 
 export const notificationBellMessages = i18n('notificationBell', {
@@ -636,18 +691,6 @@ export const boardCardMessages = i18n('boardCard', {
   pinnedLabel: 'Pinned',
   settings: 'Settings',
   delete: 'Delete'
-})
-
-export const teamCardMessages = i18n('teamCard', {
-  membersCount: params('{count} members'),
-  boardsCount: params('{count} boards'),
-  separator: ' · ',
-  updatedPrefix: 'Updated',
-  roleOwner: 'Owner',
-  roleEditor: 'Editor',
-  roleViewer: 'Viewer',
-  open: 'Open',
-  settings: 'Settings'
 })
 
 export const loginBannerMessages = i18n('loginBanner', {
@@ -688,7 +731,7 @@ export const safariBannerMessages = i18n('safariBanner', {
 
 export const shareModalMessages = i18n('shareModal', {
   dialogTitle: 'Share',
-  dialogDescription: params('Issue an invitation link to share {boardName}.'),
+  dialogDescription: params('Add internal members to {boardName} or send an invitation link.'),
   boardNameFallback: 'Board',
   boardMissingNotice: 'Create a board on /boards first, then re-open to issue invitation links.',
   emailLabel: 'Email',
@@ -709,7 +752,28 @@ export const shareModalMessages = i18n('shareModal', {
   toastInvitationCreated: 'Invitation link created',
   toastCreateFail: 'Failed to create invitation',
   toastLinkCopied: 'Link copied to clipboard',
-  shareTitle: params('Invitation to {boardName}')
+  shareTitle: params('Invitation to {boardName}'),
+  internalEmailsLabel: 'Internal members (jfet.co.jp)',
+  internalSuggestPlaceholder: 'Search by name or email',
+  internalSuggestHint: 'Select a suggestion or add a full email manually.',
+  internalSuggestLoading: 'Searching internal members…',
+  internalSuggestEmpty: 'No matching internal members.',
+  internalManualAdd: 'Add manually',
+  internalEmailsPlaceholder: 'alice@jfet.co.jp, bob@jfet.co.jp',
+  internalEmailsHint: 'Separate addresses with commas, spaces, or newlines.',
+  internalChipRemove: 'Remove',
+  externalEmailLabel: 'External invitation (single)',
+  shareSubmit: 'Share',
+  shareSubmitPending: 'Sharing…',
+  toastShareAdded: params('{count} added directly to the board.'),
+  toastSharePending: params('{count} pending — they will join after first sign-in.'),
+  toastShareRejected: params('{count} external addresses — use the invitation link instead.'),
+  toastShareFail: 'Failed to share the board',
+  recipientsLabel: 'Recipients',
+  recipientsPlaceholder: 'Type an email and press space to add',
+  recipientsHint: 'Press space, comma, or Enter to turn the email into a chip.',
+  recipientsInvalidNotice: params('{count} entries are not valid email addresses.'),
+  recipientsExternalNotice: params('{count} external addresses will receive an invitation link.')
 })
 
 export const fontSettingsMessages = i18n('fontSettings', {
@@ -732,121 +796,11 @@ export const fontSettingsMessages = i18n('fontSettings', {
   enabled: 'Enabled',
   disabled: 'Disabled',
   fallbackHeading: 'Fallback packs',
-  fallbackDescription:
-    'Download CJK and Arabic fallbacks before opening files that need them.',
+  fallbackDescription: 'Download CJK and Arabic fallbacks before opening files that need them.',
   download: 'Download',
   downloading: 'Downloading…',
   refresh: 'Refresh',
   clearCache: 'Clear cache'
-})
-
-export const teamsMessages = i18n('teams', {
-  headTitle: 'Teams',
-  eyebrow: 'Workspace',
-  heading: 'Teams',
-  subtitle: 'Share boards through a team workspace and manage roles in one place.',
-  newTeamButton: 'New team',
-  loading: 'Loading teams…',
-  emptyHeading: 'No teams yet',
-  emptyHint: 'Create a workspace to share boards with editors and viewers.',
-  createDialogTitle: 'Create team',
-  createDialogDescription: 'Team owners can attach boards and manage member roles.',
-  nameLabel: 'Name',
-  namePlaceholder: 'Design Ops',
-  createDialogCancel: 'Cancel',
-  createDialogSubmit: 'Create team',
-  createDialogSubmitPending: 'Creating…',
-  toastLoginRequired: 'Login required',
-  toastLoadFail: 'Failed to load teams',
-  toastCreateFail: 'Failed to create team',
-  toastLoginFail: 'Failed to start Google login'
-})
-
-export const teamDetailMessages = i18n('teamDetail', {
-  headTitleDefault: 'Team',
-  headTitleWithName: params('{name} Team'),
-  backToTeams: 'Back to teams',
-  headingFallback: 'Team',
-  membersBoardsSummary: params('{members} members · {boards} boards'),
-  inviteButton: 'Invite member',
-  settingsButton: 'Settings',
-  loading: 'Loading team…',
-  membersHeading: 'Members',
-  removeMemberAction: 'Remove',
-  boardsHeading: 'Boards',
-  refresh: 'Refresh',
-  boardUpdatedPrefix: 'Updated',
-  openBoard: 'Open',
-  emptyBoards: 'No boards attached to this team yet.',
-  inviteDialogTitle: 'Invite member',
-  inviteDialogDescription: 'Add an existing Inkly user to this workspace by email.',
-  emailLabel: 'Email',
-  emailPlaceholder: 'member@example.com',
-  emailRequired: 'Email is required',
-  emailInvalid: 'Enter a valid email address',
-  roleLabel: 'Role',
-  roleEditor: 'Editor',
-  roleViewer: 'Viewer',
-  inviteDialogCancel: 'Cancel',
-  inviteDialogSubmit: 'Add member',
-  inviteDialogSubmitPending: 'Adding…',
-  removeDialogTitle: 'Remove member',
-  removeDialogDescription: 'This removes the member from the workspace immediately.',
-  removeDialogLoseAccess: params('{email} will lose access.'),
-  removeDialogLoseAccessFallback: 'This member will lose access.',
-  removeDialogCancel: 'Cancel',
-  removeDialogConfirm: 'Remove member',
-  toastLoadFail: 'Failed to load team',
-  toastMemberAdded: 'Member added',
-  toastAddFail: 'Failed to add member',
-  toastMemberRemoved: 'Member removed',
-  toastRemoveFail: 'Failed to remove member'
-})
-
-export const teamSettingsMessages = i18n('teamSettings', {
-  headTitleDefault: 'Team Settings',
-  headTitleWithName: params('{name} Settings'),
-  backToTeam: 'Back to team',
-  headingFallback: 'Team settings',
-  subtitle: 'Rename the team, manage roles, or delete the workspace.',
-  loading: 'Loading settings…',
-  ownerOnlyNotice: 'Only the team owner can change settings.',
-  teamNameLabel: 'Team name',
-  teamNameFallback: 'Team',
-  saveChanges: 'Save changes',
-  saving: 'Saving…',
-  memberRolesHeading: 'Member roles',
-  roleOwner: 'Owner',
-  roleEditor: 'Editor',
-  roleViewer: 'Viewer',
-  memberRemoveAction: 'Remove',
-  removeConfirmPrompt: 'Remove this member from the team?',
-  dangerZoneHeading: 'Danger zone',
-  dangerZoneHint:
-    'Deleting the team removes memberships and returns team boards to personal ownership.',
-  deleteTeamButton: 'Delete team',
-  deleteTeamPending: 'Deleting…',
-  roleDialogTitle: 'Change member role',
-  roleDialogBody: params('{name} will become {role} on this team.'),
-  roleDialogMemberFallback: 'This member',
-  roleDialogCancel: 'Cancel',
-  roleDialogConfirm: 'Apply role',
-  deleteDialogTitle: 'Delete team',
-  deleteDialogDescription:
-    'Delete this team and move its boards back to personal ownership. This cannot be undone.',
-  deleteDialogSummary: params('{name} and its memberships will be removed.'),
-  deleteDialogTeamFallback: 'This team',
-  deleteDialogCancel: 'Cancel',
-  deleteDialogConfirm: 'Delete team',
-  toastLoadFail: 'Failed to load team settings',
-  toastTeamUpdated: 'Team updated',
-  toastUpdateFail: 'Failed to update team',
-  toastRoleUpdated: 'Member role updated',
-  toastRoleUpdateFail: 'Failed to update member role',
-  toastMemberRemoved: 'Member removed',
-  toastRemoveFail: 'Failed to remove member',
-  toastTeamDeleted: 'Team deleted',
-  toastDeleteFail: 'Failed to delete team'
 })
 
 export const commonMessages = i18n('common', {
@@ -864,7 +818,8 @@ export const guestDashboardMessages = i18n('guestDashboard', {
   boardsHeading: 'Your invited boards',
   boardsSubheading: 'Boards shared with you by jfet members',
   emptyTitle: 'No invited boards yet',
-  emptyDescription: 'When someone invites you to a board, it will appear here. Re-open the invitation URL if you came in by mistake.',
+  emptyDescription:
+    'When someone invites you to a board, it will appear here. Re-open the invitation URL if you came in by mistake.',
   inviterUnknown: 'unknown inviter',
   fromInviter: params('from {name}'),
   untitledBoard: 'Untitled board',
@@ -883,7 +838,8 @@ export const guestDashboardMessages = i18n('guestDashboard', {
 export const permissionDeniedMessages = i18n('permissionDenied', {
   headTitle: 'Access not granted',
   headline: 'Access not granted',
-  description: 'Only boards shared with you are available. Open the invitation URL again, or sign in with a different account.',
+  description:
+    'Only boards shared with you are available. Open the invitation URL again, or sign in with a different account.',
   blockedPathLabel: 'Blocked path',
   ctaPrimary: 'Go to invited boards',
   ctaSignOut: 'Sign out'
@@ -948,73 +904,35 @@ export const adminMessages = i18n('admin', {
   tabs: {
     overview: 'Overview',
     boards: 'Boards',
-    teams: 'Teams',
-    activity: 'Activity',
-    members: 'Members'
+    activity: 'Activity'
   },
   overview: {
     totalBoards: 'Total boards',
     personal: 'Personal',
-    teamBoards: 'Team boards',
     collaborators: 'Collaborators'
   },
   boardsTab: {
     heading: 'All boards',
-    shownCount: '{shown} / {total} shown',
+    shownCount: params('{shown} / {total} shown'),
     searchPlaceholder: 'Search by name or id',
     searchAria: 'Search boards',
-    filterAria: 'Filter boards by workspace',
-    filterAll: 'All',
-    filterPersonal: 'Personal',
-    filterTeam: 'Team',
     exportCsv: 'Export CSV',
-    exportToastSingular: 'Exported {count} board',
-    exportToastPlural: 'Exported {count} boards',
-    bulkDelete: 'Delete {count}',
-    bulkDeleting: 'Deleting…',
-    bulkClear: 'Clear',
-    bulkConfirmSingular: 'Delete {count} selected board? This cannot be undone.',
-    bulkConfirmPlural: 'Delete {count} selected boards? This cannot be undone.',
-    bulkSuccessSingular: 'Deleted {count} board',
-    bulkSuccessPlural: 'Deleted {count} boards',
-    bulkFailSingular: 'Failed to delete {count} board',
-    bulkFailPlural: 'Failed to delete {count} boards',
-    bulkMove: 'Move {count}',
-    bulkMoving: 'Moving…',
-    bulkMoveDialogTitle: 'Move boards',
-    bulkMoveDialogPersonal: 'Personal (no team)',
-    bulkMoveDialogConfirm: 'Move',
-    bulkMoveDialogCancel: 'Cancel',
-    bulkMoveSuccessSingular: 'Moved {count} board',
-    bulkMoveSuccessPlural: 'Moved {count} boards',
-    bulkMoveFailSingular: 'Failed to move {count} board',
-    bulkMoveFailPlural: 'Failed to move {count} boards',
-    bulkMoveTargetAria: 'Select target workspace',
-    deletePromptSingular: 'Delete board "{name}"? This cannot be undone.',
+    exportToastSingular: params('Exported {count} board'),
+    exportToastPlural: params('Exported {count} boards'),
+    deletePromptSingular: params('Delete board "{name}"? This cannot be undone.'),
     deleteSuccess: 'Board deleted',
     deleteFail: 'Failed to delete board',
-    selectAllAria: 'Select all visible boards',
-    selectRowAria: 'Select {name}',
     loading: 'Loading…',
     empty: 'No boards match the filter.',
     colName: 'Name',
-    colWorkspace: 'Workspace',
     colCollaborators: 'Collaborators',
     colCreated: 'Created',
     colUpdated: 'Updated',
-    colActions: 'Actions',
+    actions: 'Actions',
+    open: 'Open',
+    deleting: 'Deleting…',
     delete: 'Delete',
-    workspacePersonal: 'Personal',
     csvHeaderId: 'Id'
-  },
-  teamsTab: {
-    heading: 'All teams',
-    summary: '{owned} owned, {joined} joined',
-    owned: 'Owned',
-    joined: 'Joined',
-    membersCount: '{count} members',
-    membersCountWithRole: '{count} members · {role}',
-    empty: 'No teams found.'
   },
   activityTab: {
     heading: 'Activity',
@@ -1025,17 +943,16 @@ export const adminMessages = i18n('admin', {
     typeAria: 'Filter activity by type',
     typeAll: 'All types',
     typeInvitation: 'Invitation',
-    typeTeamInvite: 'Team invite',
     typeMention: 'Mention',
     rangeAria: 'Filter activity by range',
     rangeAll: 'All time',
     range24h: 'Last 24h',
     range7d: 'Last 7 days',
     range30d: 'Last 30 days',
-    shownCount: '{shown} / {total} shown',
+    shownCount: params('{shown} / {total} shown'),
     exportCsv: 'Export CSV',
-    exportToastSingular: 'Exported {count} record',
-    exportToastPlural: 'Exported {count} records',
+    exportToastSingular: params('Exported {count} record'),
+    exportToastPlural: params('Exported {count} records'),
     csvUnknown: 'Unknown',
     csvHeaderId: 'Id',
     csvHeaderType: 'Type',
@@ -1043,28 +960,5 @@ export const adminMessages = i18n('admin', {
     csvHeaderBody: 'Body',
     csvHeaderCreatedAt: 'Created At',
     csvHeaderReadAt: 'Read At'
-  },
-  membersTab: {
-    heading: 'All members',
-    summary: '{shown} / {total} shown · owners {owners} · editors {editors} · viewers {viewers}',
-    searchPlaceholder: 'Search by name, email or role',
-    searchAria: 'Search members',
-    roleAria: 'Filter members by role',
-    roleAll: 'All roles',
-    roleOwner: 'Owner',
-    roleEditor: 'Editor',
-    roleViewer: 'Viewer',
-    loading: 'Loading members…',
-    loadFail: 'Failed to load members',
-    empty: 'No members match the filter.',
-    colName: 'Name',
-    colEmail: 'Email',
-    colTeam: 'Team',
-    colRole: 'Role',
-    colJoined: 'Joined',
-    namePlaceholder: '—',
-    exportCsv: 'Export CSV',
-    exportToastSingular: 'Exported {count} member',
-    exportToastPlural: 'Exported {count} members'
   }
 })

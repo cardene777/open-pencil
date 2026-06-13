@@ -44,18 +44,6 @@ test.describe('notifications visual regression', () => {
           }
         },
         {
-          type: 'team_invite',
-          read: true,
-          payload: {
-            teamId: 'team-1',
-            teamName: 'Research Ops',
-            role: 'viewer',
-            inviterDisplayName: 'Ops Owner',
-            inviteeEmail: 'notifications-mixed@jfet.co.jp',
-            url: '/team/team-1'
-          }
-        },
-        {
           type: 'mention',
           payload: {
             boardId: 'board-2',
@@ -69,7 +57,7 @@ test.describe('notifications visual regression', () => {
     })
 
     await page.goto('/notifications')
-    await expect(page.getByTestId('notification-item')).toHaveCount(3)
+    await expect(page.getByTestId('notification-item')).toHaveCount(2)
     await expectPageScreenshot(page, 'notifications-mixed.png')
   })
 
@@ -103,18 +91,6 @@ test.describe('notifications visual regression', () => {
             url: '/?board=popover-board-2&name=Popover+Review'
           }
         },
-        {
-          type: 'team_invite',
-          read: true,
-          payload: {
-            teamId: 'popover-team',
-            teamName: 'Popover Team',
-            role: 'viewer',
-            inviterDisplayName: 'Team Owner',
-            inviteeEmail: 'notifications-popover@jfet.co.jp',
-            url: '/team/popover-team'
-          }
-        }
       ]
     })
 

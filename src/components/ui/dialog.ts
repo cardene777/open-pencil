@@ -6,7 +6,9 @@ export const dialog = tv({
     content:
       'fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-panel shadow-2xl outline-none',
     title: 'text-sm font-semibold text-surface',
-    description: 'text-xs text-muted'
+    description: 'text-xs text-muted',
+    cancel:
+      'inline-flex items-center justify-center rounded-lg border border-white/10 bg-canvas/60 px-4 py-2 text-sm text-surface transition-colors hover:bg-hover'
   }
 })
 
@@ -15,6 +17,7 @@ interface DialogUi {
   content?: string
   title?: string
   description?: string
+  cancel?: string
 }
 
 export function useDialogUI(ui?: DialogUi) {
@@ -23,6 +26,7 @@ export function useDialogUI(ui?: DialogUi) {
     overlay: cls.overlay({ class: ui?.overlay }),
     content: cls.content({ class: ui?.content }),
     title: cls.title({ class: ui?.title }),
-    description: cls.description({ class: ui?.description })
+    description: cls.description({ class: ui?.description }),
+    cancel: cls.cancel({ class: ui?.cancel })
   }
 }

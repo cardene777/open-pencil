@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, onUnmounted, provide, ref, watch } from 'vue'
 import { useEventListener, useUrlSearchParams } from '@vueuse/core'
-import { RouterLink, useRoute } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
 import { SplitterGroup, SplitterPanel, SplitterResizeHandle } from 'reka-ui'
 
@@ -9,6 +9,8 @@ import { useViewportKind, formatShortcut, useI18n } from '@inkly/vue'
 import { useKeyboard } from '@/app/shell/keyboard/use'
 import { loadEditorLayout, saveEditorLayout } from '@/app/shell/layout-storage'
 import { openFileFromPath, useMenu } from '@/app/shell/menu/use'
+import { createBoardPreviewLocation, listBoards } from '@/app/api/client'
+import { clearActiveBoard, setActiveBoard, activeBoard } from '@/app/boards/active'
 import { writeBoardPreview } from '@/app/boards/preview'
 import { useCollab, COLLAB_KEY } from '@/app/collab/use'
 import { connectAutomation } from '@/app/automation/bridge/server'
@@ -29,17 +31,20 @@ import PropertiesPanel from '@/components/PropertiesPanel.vue'
 import SafariBanner from '@/components/SafariBanner.vue'
 import SaveAndLeaveModal from '@/components/SaveAndLeaveModal.vue'
 import TabBar from '@/components/TabBar.vue'
+import { persistPrototypePreviewDocument } from '@/app/prototype/document'
+import { resolvePrototypeStartFrameId } from '@/app/prototype/frames'
 import Tip from '@/components/ui/Tip.vue'
 import Toolbar from '@/components/Toolbar/Toolbar.vue'
 
 const route = useRoute()
+const router = useRouter()
 const params = useUrlSearchParams('history')
 const showChrome = !('no-chrome' in params)
 
 const createdInitialTab = tabCount() === 0
 const firstTab = createdInitialTab ? createTab() : (activeTab.value ?? createTab())
 const store = useEditorStore()
-const { dialogs } = useI18n()
+const { dialogs, prototype: prototypeT } = useI18n()
 const { isMobile } = useViewportKind()
 
 if (createdInitialTab && route.meta.demo && !('test' in params)) {
@@ -64,15 +69,39 @@ const boardRoomId = computed(() => {
 const boardName = computed(() =>
   typeof route.query.name === 'string' && route.query.name.length > 0 ? route.query.name : null
 )
-const boardTeamName = computed(() =>
-  typeof route.query.teamName === 'string' && route.query.teamName.length > 0
-    ? route.query.teamName
-    : null
-)
 let previewWriteTimer: ReturnType<typeof setTimeout> | null = null
+let documentUploadTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * board document を server DB (SSOT) に sceneVersion 変更ごと debounce 1.5 秒で upload。
+ * 招待された collaborator が同じ design を読み込むため、 IndexedDB cache とは別 layer で
+ * 確実に server へ書く。 source.ts 内の autosave 経路は idle 時にしか走らないため、
+ * sceneVersion watcher 直結 + 明示 PUT が必要。
+ */
+async function flushBoardDocument(boardId: string) {
+  try {
+    const [{ exportFigFile }, { uploadBoardDocument }] = await Promise.all([
+      import('@inkly/core/io/formats/fig'),
+      import('@/app/api/client')
+    ])
+    const bytes = await exportFigFile(getActiveStore().graph)
+    await uploadBoardDocument(boardId, bytes)
+  } catch (error) {
+    console.warn('[editor] failed to upload board document to server:', error)
+  }
+}
+
+function scheduleBoardDocumentUpload(boardId: string) {
+  if (documentUploadTimer) clearTimeout(documentUploadTimer)
+  documentUploadTimer = setTimeout(() => {
+    void flushBoardDocument(boardId)
+  }, 1500)
+}
 
 function flushBoardPreview(boardId: string) {
-  const sceneCanvas = document.querySelector<HTMLCanvasElement>('[data-test-id="scene-canvas-element"]')
+  const sceneCanvas = document.querySelector<HTMLCanvasElement>(
+    '[data-test-id="scene-canvas-element"]'
+  )
   if (!sceneCanvas || sceneCanvas.width === 0 || sceneCanvas.height === 0) return
   writeBoardPreview(boardId, sceneCanvas.toDataURL('image/png'))
 }
@@ -84,6 +113,69 @@ function scheduleBoardPreview(boardId: string) {
       flushBoardPreview(boardId)
     })
   }, 50)
+}
+
+async function loadBoardMetadata(boardId: string) {
+  try {
+    const boards = await listBoards()
+    setActiveBoard(boards.find((board) => board.id === boardId) ?? null)
+  } catch (error) {
+    console.warn('[board]', 'failed to load board metadata', error)
+    clearActiveBoard(boardId)
+  }
+}
+
+let lastLoadedBoardId: string | null = null
+let suppressUploadVersion = -1
+
+/**
+ * boardRoomId watcher から呼ぶ — server DB (SSOT) から最新 document を取得し、 graph を差し替える。
+ * これで招待された collaborator や別端末の owner も同じ design を見られる。
+ * route 解決済の boardId で呼ぶので main.ts の早期 restore より race condition なく動く。
+ */
+async function loadBoardDocument(boardId: string) {
+  if (lastLoadedBoardId === boardId) return
+  lastLoadedBoardId = boardId
+  try {
+    const [{ fetchBoardDocument }, { readFigFile }] = await Promise.all([
+      import('@/app/api/client'),
+      import('@inkly/core/io/formats/fig')
+    ])
+    const remote = await fetchBoardDocument(boardId)
+    if (!remote || remote.bytes.length === 0) {
+      console.info('[editor] no server document for board', boardId)
+      return
+    }
+
+    const blob = new Blob([remote.bytes], { type: 'application/octet-stream' })
+    const file = new File([blob], `${boardId}.fig`, { type: 'application/octet-stream' })
+    const graph = await readFigFile(file, { populate: 'first-page' })
+
+    const activeStore = getActiveStore()
+    activeStore.replaceGraph(graph)
+
+    // boards API から取った board.name を documentName に反映、 breadcrumb の identifier 表示を消す。
+    // activeBoard は loadBoardMetadata で同 watcher 経路から先に解決される。
+    if (activeBoard.value?.name) {
+      activeStore.state.documentName = activeBoard.value.name
+    }
+
+    // canvas renderer が遅延 mount している場合に備え、 明示的に再描画 + 全体 fit を要求する
+    // (replaceGraph 内部の requestRender だけだと canvas mount 前の場合 silently drop される)
+    activeStore.requestRender()
+    requestAnimationFrame(() => {
+      try {
+        activeStore.zoomToFit?.()
+      } catch {
+        // zoomToFit が無い editor 実装に備える silent fallback
+      }
+    })
+
+    // 直後の sceneVersion +1 を「サーバから取り込んだ反映」扱いにし、 PUT で送り返さない
+    suppressUploadVersion = activeStore.state.sceneVersion
+  } catch (error) {
+    console.warn('[editor] failed to load board document:', error)
+  }
 }
 
 useEventListener(
@@ -136,10 +228,17 @@ watch(
     if (previousRoomId) {
       flushBoardPreview(previousRoomId)
       if (collab.state.value.roomId === previousRoomId) collab.disconnect()
+      clearActiveBoard(previousRoomId)
     }
     if (!roomId) return
     if (collab.state.value.connected && collab.state.value.roomId === roomId) return
     collab.connect(roomId, { seedIfEmpty: true })
+    // metadata (board.name) を先に解決してから document を取り込み、 取り込み後に
+    // documentName を board.name で書き換える経路を保証する
+    void (async () => {
+      await loadBoardMetadata(roomId)
+      await loadBoardDocument(roomId)
+    })()
   },
   { immediate: true }
 )
@@ -149,6 +248,9 @@ watch(
   (sceneVersion) => {
     if (!boardRoomId.value || sceneVersion < 0) return
     scheduleBoardPreview(boardRoomId.value)
+    // server から取り込んだ直後の sceneVersion bump は upload しない (loopback 防止)
+    if (sceneVersion === suppressUploadVersion) return
+    scheduleBoardDocumentUpload(boardRoomId.value)
   }
 )
 
@@ -173,7 +275,11 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (previewWriteTimer) clearTimeout(previewWriteTimer)
-  if (boardRoomId.value) flushBoardPreview(boardRoomId.value)
+  if (documentUploadTimer) clearTimeout(documentUploadTimer)
+  if (boardRoomId.value) {
+    flushBoardPreview(boardRoomId.value)
+    void flushBoardDocument(boardRoomId.value)
+  }
 })
 
 onUnmounted(() => {
@@ -193,6 +299,17 @@ function handleBackToDashboard(event: MouseEvent) {
   // 未保存の編集ありなのでモーダル起動
   event.preventDefault()
   saveModalOpen.value = true
+}
+
+const playStartFrameId = computed(() => {
+  void store.state.sceneVersion
+  return activeBoard.value?.startFrameId ?? resolvePrototypeStartFrameId(store.graph)
+})
+
+async function openPreview() {
+  if (!boardRoomId.value || !playStartFrameId.value) return
+  await persistPrototypePreviewDocument(boardRoomId.value, store)
+  await router.push(createBoardPreviewLocation(boardRoomId.value, playStartFrameId.value))
 }
 </script>
 
@@ -219,15 +336,18 @@ function handleBackToDashboard(event: MouseEvent) {
         <span data-test-id="editor-document-name" class="truncate text-sm font-medium text-surface">
           {{ store.state.documentName }}
         </span>
-        <span
-          v-if="boardTeamName"
-          data-test-id="editor-team-badge"
-          class="rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.16em] text-amber-100"
-        >
-          {{ boardTeamName }}
-        </span>
       </div>
-      <span v-if="boardRoomId" class="text-[11px] text-muted">Board {{ boardRoomId }}</span>
+      <div class="flex items-center gap-2">
+        <button
+          v-if="boardRoomId && playStartFrameId"
+          data-test-id="editor-play-button"
+          class="cursor-pointer rounded bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
+          @click="openPreview"
+        >
+          {{ prototypeT.play }}
+        </button>
+        <span v-if="boardRoomId" class="text-[11px] text-muted">Board {{ boardRoomId }}</span>
+      </div>
     </div>
     <SaveAndLeaveModal v-model:open="saveModalOpen" :document-name="store.state.documentName" />
 

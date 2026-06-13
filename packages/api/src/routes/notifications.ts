@@ -3,13 +3,12 @@ import { z } from 'zod'
 
 import { getAuthSession, type InklyAuth } from '../auth/index.js'
 import { DEFAULT_NOTIFICATION_SWEEP_OLDER_THAN_MS } from '../notificationStore.js'
-import type { BoardRecord, BoardStore, NotificationStore, TeamStore, TeamUserRecord } from '../types.js'
+import type { BoardStore, NotificationStore, UserRecord } from '../types.js'
 
 export interface NotificationRoutesOptions {
   auth: InklyAuth
   boardStore: BoardStore
   notificationStore: NotificationStore
-  teamStore: TeamStore
   env?: NodeJS.ProcessEnv
 }
 
@@ -38,7 +37,7 @@ function errorResponse(status: number, code: string, message: string) {
   )
 }
 
-function dedupeUsers(users: TeamUserRecord[]) {
+function dedupeUsers(users: UserRecord[]) {
   const userIds = new Set<string>()
   return users.filter((user) => {
     if (userIds.has(user.id)) return false
@@ -56,15 +55,17 @@ async function resolveMentionableUsers(options: NotificationRoutesOptions, board
   const board = await options.boardStore.findBoard(boardId)
   if (!board) return null
 
-  const owner =
-    board.creatorUserId ? (await options.teamStore.findUserById(board.creatorUserId)) ?? null : null
-  const teamMembers = board.teamId
-    ? (await options.teamStore.listMembers(board.teamId)).map((member) => member.user)
-    : []
+  const userIds = [
+    ...(board.creatorUserId ? [board.creatorUserId] : []),
+    ...board.collaborators
+      .map((collaborator) => collaborator.userId)
+      .filter((userId): userId is string => typeof userId === 'string' && userId.length > 0)
+  ]
+  const users = dedupeUsers(await options.notificationStore.listUsersByIds(userIds))
 
   return {
     board,
-    users: dedupeUsers([...(owner ? [owner] : []), ...teamMembers])
+    users
   }
 }
 
@@ -150,6 +151,25 @@ export function createNotificationRoutes(options: NotificationRoutesOptions): Ho
     return c.json({ deleted: true, notification })
   })
 
+  app.get('/notifications/mention-candidates/:boardId', async (c) => {
+    const session = await getAuthSession(options.auth, c.req.raw)
+    if (!session) return errorResponse(401, 'unauthorized', 'Login required')
+
+    const mentionContext = await resolveMentionableUsers(options, c.req.param('boardId'))
+    if (!mentionContext) {
+      return errorResponse(404, 'board_not_found', 'Board not found')
+    }
+
+    const requester = mentionContext.users.find((user) => user.id === session.user.id) ?? null
+    if (!requester) {
+      return errorResponse(403, 'forbidden', 'Only board participants can view mention candidates')
+    }
+
+    return c.json({
+      users: mentionContext.users.filter((user) => user.id !== session.user.id)
+    })
+  })
+
   app.post('/notifications/mention', async (c) => {
     const session = await getAuthSession(options.auth, c.req.raw)
     if (!session) return errorResponse(401, 'unauthorized', 'Login required')
@@ -176,31 +196,19 @@ export function createNotificationRoutes(options: NotificationRoutesOptions): Ho
 
     const sourceMember = mentionContext.users.find((user) => user.id === session.user.id) ?? null
     if (!sourceMember) {
-      return errorResponse(
-        403,
-        'forbidden',
-        'Only board collaborators and team members can mention users'
-      )
+      return errorResponse(403, 'forbidden', 'Only board participants can mention users')
     }
 
     const mentionedUser =
       mentionContext.users.find((user) => user.id === parsed.data.mentionedUserId) ?? null
     if (!mentionedUser) {
-      return errorResponse(
-        404,
-        'mentioned_user_not_found',
-        'Mentioned user not found on this board'
-      )
+      return errorResponse(404, 'mentioned_user_not_found', 'Mentioned user not found on this board')
     }
 
-    const teamName = mentionContext.board.teamId
-      ? (await options.teamStore.findTeam(mentionContext.board.teamId))?.name ?? null
-      : null
     const url = new URLSearchParams({
       board: mentionContext.board.id,
       name: mentionContext.board.name
     })
-    if (teamName) url.set('teamName', teamName)
 
     const notification = await options.notificationStore.createNotification({
       userId: mentionedUser.id,

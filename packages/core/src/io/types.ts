@@ -85,6 +85,10 @@ export interface JSXExportOptions {
   format?: JSXFormat
 }
 
+export interface SiteExportOptions {
+  startFrameId?: string | null
+}
+
 export interface ExportResult {
   format: string
   mimeType: string

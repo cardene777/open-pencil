@@ -2,17 +2,36 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { resolveAnonymousId } from '../anonymousId.js'
+import { canAccessBoard, isBoardOwner, resolveRequestActor } from '../auth/actor.js'
 import { getAuthSession, type InklyAuth } from '../auth/index.js'
-import { isBoardOwner, resolveRequestActor } from '../auth/actor.js'
-import type { BoardRecord, BoardStore, InvitationStore, TeamStore } from '../types.js'
+import type {
+  BoardDocumentStore,
+  BoardPinStore,
+  BoardPreviewStore,
+  BoardStore,
+  InternalUserStore,
+  InvitationStore,
+  NotificationStore,
+  PendingInternalInvitationStore
+} from '../types.js'
+import { INVITATION_ROLES, isInternalDomainEmail } from '../types.js'
+
+// preview data URL は server に常時転送するので幅を持たせつつ無制限を避ける。
+// 図 1 枚 (256px JPEG / base64) ≒ 50KB を典型値とし、 200KB を上限に置く。
+const PREVIEW_DATA_URL_MAX_LENGTH = 200_000
+const PREVIEW_DATA_URL_PREFIX = 'data:image/'
 
 const createBoardSchema = z.object({
-  name: z.string().trim().min(1).max(120).default('Untitled board'),
-  teamId: z.string().trim().min(1).nullable().optional()
+  name: z.string().trim().min(1).max(120).default('Untitled board')
 })
 
-const updateBoardSchema = z.object({
-  teamId: z.string().trim().min(1).nullable().optional()
+const shareBoardSchema = z.object({
+  emails: z.array(z.string().trim().email()).min(1).max(50),
+  role: z.enum(INVITATION_ROLES).default('editor')
+})
+
+const updateBoardStartFrameSchema = z.object({
+  startFrameId: z.string().trim().min(1).max(256).nullable()
 })
 
 interface ValidationErrorBody {
@@ -26,8 +45,20 @@ export interface BoardRoutesOptions {
   auth: InklyAuth
   boardStore: BoardStore
   invitationStore: InvitationStore
-  teamStore: TeamStore
+  internalUserStore?: InternalUserStore
+  pendingInternalInvitationStore?: PendingInternalInvitationStore
+  notificationStore?: NotificationStore
+  boardDocumentStore?: BoardDocumentStore
+  boardPinStore?: BoardPinStore
+  boardPreviewStore?: BoardPreviewStore
 }
+
+const upsertPreviewSchema = z.object({
+  dataUrl: z
+    .string()
+    .startsWith(PREVIEW_DATA_URL_PREFIX)
+    .max(PREVIEW_DATA_URL_MAX_LENGTH)
+})
 
 function validationError(message: string): ValidationErrorBody {
   return {
@@ -36,18 +67,6 @@ function validationError(message: string): ValidationErrorBody {
       message
     }
   }
-}
-
-function unauthorizedResponse() {
-  return Response.json(
-    {
-      error: {
-        code: 'unauthorized',
-        message: 'Login required'
-      }
-    },
-    { status: 401 }
-  )
 }
 
 function forbiddenResponse(message: string) {
@@ -74,44 +93,6 @@ function notFoundResponse(code: string, message: string) {
   )
 }
 
-async function attachTeamSummaries(
-  boards: BoardRecord[],
-  teamStore: TeamStore
-) {
-  const teamIds = [
-    ...new Set(boards.map((board) => board.teamId).filter((teamId): teamId is string => !!teamId))
-  ]
-  const teamsById = new Map(
-    await Promise.all(
-      teamIds.map(async (teamId) => {
-        const team = await teamStore.findTeam(teamId)
-        return [teamId, team ? { id: team.id, name: team.name } : null] as const
-      })
-    )
-  )
-
-  return boards.map((board) => ({
-    ...board,
-    team: board.teamId ? (teamsById.get(board.teamId) ?? null) : null
-  }))
-}
-
-function mergeBoards(
-  personalBoards: BoardRecord[],
-  teamBoards: BoardRecord[]
-) {
-  const merged = new Map<string, (typeof personalBoards)[number]>()
-
-  for (const board of [...personalBoards, ...teamBoards]) {
-    const existing = merged.get(board.id)
-    if (!existing || existing.updatedAt < board.updatedAt) {
-      merged.set(board.id, board)
-    }
-  }
-
-  return [...merged.values()].sort((left, right) => right.updatedAt - left.updatedAt)
-}
-
 export function createBoardRoutes(options: BoardRoutesOptions): Hono {
   const app = new Hono()
 
@@ -121,19 +102,11 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
     if (!session) {
       const anonymousId = resolveAnonymousId(c)
       const boards = await options.boardStore.listBoardsForAnonymous(anonymousId)
-      return c.json({ boards: await attachTeamSummaries(boards, options.teamStore) })
+      return c.json({ boards })
     }
 
-    const memberships = await options.teamStore.listTeamsForUser(session.user.id)
-    const personalBoards = await options.boardStore.listBoardsForUser(session.user.id)
-    const teamBoards = (
-      await Promise.all(
-        memberships.map((membership) => options.boardStore.listBoardsForTeam(membership.team.id))
-      )
-    ).flat()
-
     return c.json({
-      boards: await attachTeamSummaries(mergeBoards(personalBoards, teamBoards), options.teamStore)
+      boards: await options.boardStore.listBoardsForUser(session.user.id)
     })
   })
 
@@ -146,79 +119,23 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
     }
 
     const session = await getAuthSession(options.auth, c.req.raw)
-    const teamId = parsed.data.teamId?.trim() || null
-
-    if (teamId) {
-      if (!session) return unauthorizedResponse()
-      const team = await options.teamStore.findTeam(teamId)
-      if (!team) return notFoundResponse('team_not_found', 'Team not found')
-      if (team.ownerUserId !== session.user.id) {
-        return forbiddenResponse('Only the team owner can create team boards')
-      }
-    }
 
     if (session) {
       const board = await options.boardStore.createBoard({
         name: parsed.data.name,
         creatorAnonymousId: '',
-        creatorUserId: session.user.id,
-        teamId
+        creatorUserId: session.user.id
       })
-      const team = board.teamId ? await options.teamStore.findTeam(board.teamId) : null
-      return c.json(
-        {
-          ...board,
-          team: board.teamId ? { id: board.teamId, name: team?.name ?? '' } : null
-        },
-        201
-      )
+      return c.json(board, 201)
     }
 
     const anonymousId = resolveAnonymousId(c)
     const board = await options.boardStore.createBoard({
       name: parsed.data.name,
       creatorAnonymousId: anonymousId,
-      creatorUserId: null,
-      teamId: null
+      creatorUserId: null
     })
-    return c.json({ ...board, team: null }, 201)
-  })
-
-  app.patch('/boards/:id', async (c) => {
-    const body = await c.req.json().catch(() => ({}))
-    const parsed = updateBoardSchema.safeParse(body)
-    if (!parsed.success) {
-      const issue = parsed.error.issues[0]?.message ?? 'Invalid request body'
-      return c.json(validationError(issue), 400)
-    }
-
-    const board = await options.boardStore.findBoard(c.req.param('id'))
-    if (!board) return notFoundResponse('board_not_found', 'Board not found')
-
-    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
-    if (!isBoardOwner(board, actor)) {
-      return forbiddenResponse('Only the creator can update this board')
-    }
-
-    const nextTeamId = parsed.data.teamId === undefined ? undefined : (parsed.data.teamId?.trim() || null)
-    if (nextTeamId) {
-      const session = await getAuthSession(options.auth, c.req.raw)
-      if (!session) return unauthorizedResponse()
-      const team = await options.teamStore.findTeam(nextTeamId)
-      if (!team) return notFoundResponse('team_not_found', 'Team not found')
-      if (team.ownerUserId !== session.user.id) {
-        return forbiddenResponse('Only the team owner can attach boards to this team')
-      }
-    }
-
-    const updated = await options.boardStore.updateBoard(board.id, { teamId: nextTeamId })
-    if (!updated) return notFoundResponse('board_not_found', 'Board not found')
-
-    const team = updated.teamId ? await options.teamStore.findTeam(updated.teamId) : null
-    return c.json({
-      ...updated,
-      team: updated.teamId ? { id: updated.teamId, name: team?.name ?? '' } : null
-    })
+    return c.json(board, 201)
   })
 
   app.delete('/boards/:id', async (c) => {
@@ -234,6 +151,31 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
     return c.json({ deleted: true })
   })
 
+  app.patch('/boards/:id/start-frame', async (c) => {
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!isBoardOwner(board, actor)) {
+      return forbiddenResponse('Only the creator can update the board start frame')
+    }
+
+    const body = await c.req.json().catch(() => null)
+    const parsed = updateBoardStartFrameSchema.safeParse(body)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]?.message ?? 'Invalid request body'
+      return c.json(validationError(issue), 400)
+    }
+
+    const updatedBoard = await options.boardStore.updateBoardStartFrame(
+      board.id,
+      parsed.data.startFrameId
+    )
+    if (!updatedBoard) return notFoundResponse('board_not_found', 'Board not found')
+
+    return c.json({ board: updatedBoard })
+  })
+
   app.get('/boards/:id/invitations', async (c) => {
     const board = await options.boardStore.findBoard(c.req.param('id'))
     if (!board) return notFoundResponse('board_not_found', 'Board not found')
@@ -243,12 +185,8 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
       return forbiddenResponse('Only the creator can view invitations')
     }
 
-    const team = board.teamId ? await options.teamStore.findTeam(board.teamId) : null
     return c.json({
-      board: {
-        ...board,
-        team: board.teamId ? { id: board.teamId, name: team?.name ?? '' } : null
-      },
+      board,
       invitations: await options.invitationStore.listInvitationsByBoardId(board.id)
     })
   })
@@ -262,13 +200,339 @@ export function createBoardRoutes(options: BoardRoutesOptions): Hono {
       return forbiddenResponse('Only the creator can revoke invitations')
     }
 
-    const invitationId = c.req.param('invitationId')
-    const invitation = await options.invitationStore.findInvitation(invitationId)
+    const invitation = await options.invitationStore.revokeInvitation(c.req.param('invitationId'))
     if (!invitation || invitation.boardId !== board.id) {
       return notFoundResponse('invitation_not_found', 'Invitation not found')
     }
 
-    return c.json({ invitation: await options.invitationStore.revokeInvitation(invitationId) })
+    return c.json({ invitation })
+  })
+
+  // jfet 内部 user 専用の share endpoint。
+  // - logged-in jfet user → collaborators に直接追加 (招待 token なし)
+  // - 未 sign-up jfet user → pending_internal_invitations に pre-record
+  //   (初回 sign-in 時に auth hook が collaborators に転記する)
+  // - 非 jfet domain は 400 で reject (外部 email は別 endpoint `POST /invite` を使う)
+  app.post('/boards/:id/share', async (c) => {
+    if (!options.internalUserStore || !options.pendingInternalInvitationStore) {
+      return Response.json(
+        {
+          error: {
+            code: 'unsupported',
+            message: 'Internal share endpoint is not configured'
+          }
+        },
+        { status: 501 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const session = await getAuthSession(options.auth, c.req.raw)
+    if (!session) {
+      return Response.json(
+        {
+          error: {
+            code: 'unauthorized',
+            message: 'Sign-in required to share boards'
+          }
+        },
+        { status: 401 }
+      )
+    }
+
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!isBoardOwner(board, actor)) {
+      return forbiddenResponse('Only the creator can share this board')
+    }
+
+    const body = await c.req.json().catch(() => null)
+    const parsed = shareBoardSchema.safeParse(body)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]?.message ?? 'Invalid request body'
+      return c.json(validationError(issue), 400)
+    }
+
+    // dedup + normalize
+    const normalized = Array.from(new Set(parsed.data.emails.map((e) => e.trim().toLowerCase())))
+
+    const added: { email: string; userId: string }[] = []
+    const pending: { email: string }[] = []
+    const rejected: { email: string; reason: string }[] = []
+
+    for (const email of normalized) {
+      if (!isInternalDomainEmail(email)) {
+        rejected.push({ email, reason: 'non_internal_domain' })
+        continue
+      }
+
+      const internal = await options.internalUserStore.findInternalUserByEmail(email)
+      if (internal?.userId) {
+        // logged-in jfet user → 直接 collaborator 化
+        await options.boardStore.addCollaborator(board.id, {
+          anonymousId: `internal:${internal.userId}`,
+          userId: internal.userId,
+          role: parsed.data.role,
+          invitationId: null
+        })
+        added.push({ email, userId: internal.userId })
+
+        // 招待された jfet user の dashboard / notifications にリアルタイムで反映するため、
+        // notificationStore 経由で notification を 1 件発行する。 createNotification は
+        // 内部で onNotificationCreated を呼び、 そこから notifications WS server が
+        // 該当 user の接続全てに push する設計 (`server.ts` で配線済)。
+        if (options.notificationStore) {
+          try {
+            await options.notificationStore.createNotification({
+              userId: internal.userId,
+              type: 'invitation',
+              payload: {
+                invitationId: `direct:${board.id}:${internal.userId}`,
+                boardId: board.id,
+                boardName: board.name,
+                role: parsed.data.role,
+                inviterDisplayName: session.user.name ?? session.user.email,
+                inviteeEmail: email,
+                url: `/board/${board.id}`
+              }
+            })
+          } catch (error) {
+            console.warn('[boards.share] failed to emit invitation notification', error)
+          }
+        }
+      } else {
+        // 未 sign-up jfet user → pending pre-record
+        await options.pendingInternalInvitationStore.createPendingInvitation({
+          boardId: board.id,
+          email,
+          role: parsed.data.role,
+          invitedByUserId: session.user.id
+        })
+        pending.push({ email })
+      }
+    }
+
+    return c.json({ added, pending, rejected })
+  })
+
+  /**
+   * board document を一元 SSOT として GET / PUT する。
+   * owner / collaborator (canAccessBoard) のみアクセス可能、
+   * IndexedDB cache はクライアント側 fast-path にとどめ、 ここを server 側真値とする。
+   */
+  app.get('/boards/:id/document', async (c) => {
+    if (!options.boardDocumentStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Document store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!canAccessBoard(board, actor)) {
+      return forbiddenResponse('You do not have access to this board')
+    }
+
+    const document = await options.boardDocumentStore.findDocument(board.id)
+    if (!document) {
+      return Response.json(
+        { error: { code: 'document_not_found', message: 'No document stored yet' } },
+        { status: 404 }
+      )
+    }
+
+    return new Response(document.bytes as unknown as BodyInit, {
+      status: 200,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'content-length': String(document.size),
+        'x-document-updated-at': String(document.updatedAt)
+      }
+    })
+  })
+
+  app.put('/boards/:id/document', async (c) => {
+    if (!options.boardDocumentStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Document store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const session = await getAuthSession(options.auth, c.req.raw)
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!canAccessBoard(board, actor)) {
+      return forbiddenResponse('You do not have access to this board')
+    }
+
+    const buffer = await c.req.arrayBuffer()
+    if (!buffer || buffer.byteLength === 0) {
+      return c.json(validationError('Empty document body'), 400)
+    }
+
+    const record = await options.boardDocumentStore.upsertDocument({
+      boardId: board.id,
+      bytes: new Uint8Array(buffer),
+      updatedByUserId: session?.user.id ?? null
+    })
+
+    return c.json({
+      boardId: record.boardId,
+      size: record.size,
+      updatedAt: record.updatedAt
+    })
+  })
+
+  /**
+   * pin / unpin。 user スコープ (sign-in 必須)。 board access 判定は加えて行う、
+   * 自分が表示できる board しか pin できない。
+   */
+  app.get('/board-pins', async (c) => {
+    if (!options.boardPinStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Pin store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const session = await getAuthSession(options.auth, c.req.raw)
+    if (!session) {
+      return Response.json(
+        { error: { code: 'unauthorized', message: 'Sign-in required to read pinned boards' } },
+        { status: 401 }
+      )
+    }
+
+    const boardIds = await options.boardPinStore.listPinnedBoardIdsForUser(session.user.id)
+    return c.json({ boardIds })
+  })
+
+  app.post('/boards/:id/pin', async (c) => {
+    if (!options.boardPinStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Pin store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const session = await getAuthSession(options.auth, c.req.raw)
+    if (!session) {
+      return Response.json(
+        { error: { code: 'unauthorized', message: 'Sign-in required to pin boards' } },
+        { status: 401 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!canAccessBoard(board, actor)) {
+      return forbiddenResponse('You do not have access to this board')
+    }
+
+    const created = await options.boardPinStore.pinBoard(session.user.id, board.id)
+    return c.json({ pinned: true, created })
+  })
+
+  app.delete('/boards/:id/pin', async (c) => {
+    if (!options.boardPinStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Pin store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const session = await getAuthSession(options.auth, c.req.raw)
+    if (!session) {
+      return Response.json(
+        { error: { code: 'unauthorized', message: 'Sign-in required to unpin boards' } },
+        { status: 401 }
+      )
+    }
+
+    const removed = await options.boardPinStore.unpinBoard(session.user.id, c.req.param('id'))
+    return c.json({ pinned: false, removed })
+  })
+
+  /**
+   * board preview (サムネイル) を server SSOT で保持。
+   * GET ... canAccessBoard (read 系なので anonymous でも自分の board は読める)、
+   * PUT ... session 必須 (sign-in したユーザが書き込める)。
+   */
+  app.get('/boards/:id/preview', async (c) => {
+    if (!options.boardPreviewStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Preview store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!canAccessBoard(board, actor)) {
+      return forbiddenResponse('You do not have access to this board')
+    }
+
+    const preview = await options.boardPreviewStore.findPreview(board.id)
+    if (!preview) {
+      return Response.json(
+        { error: { code: 'preview_not_found', message: 'No preview stored yet' } },
+        { status: 404 }
+      )
+    }
+
+    return c.json({
+      boardId: preview.boardId,
+      dataUrl: preview.dataUrl,
+      updatedAt: preview.updatedAt
+    })
+  })
+
+  app.put('/boards/:id/preview', async (c) => {
+    if (!options.boardPreviewStore) {
+      return Response.json(
+        { error: { code: 'unsupported', message: 'Preview store is not configured' } },
+        { status: 501 }
+      )
+    }
+
+    const board = await options.boardStore.findBoard(c.req.param('id'))
+    if (!board) return notFoundResponse('board_not_found', 'Board not found')
+
+    const session = await getAuthSession(options.auth, c.req.raw)
+    const actor = await resolveRequestActor(options.auth, c.req.raw, () => resolveAnonymousId(c))
+    if (!canAccessBoard(board, actor)) {
+      return forbiddenResponse('You do not have access to this board')
+    }
+
+    const body = await c.req.json().catch(() => null)
+    const parsed = upsertPreviewSchema.safeParse(body)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]?.message ?? 'Invalid request body'
+      return c.json(validationError(issue), 400)
+    }
+
+    const record = await options.boardPreviewStore.upsertPreview({
+      boardId: board.id,
+      dataUrl: parsed.data.dataUrl,
+      updatedByUserId: session?.user.id ?? null
+    })
+
+    return c.json({
+      boardId: record.boardId,
+      size: record.size,
+      updatedAt: record.updatedAt
+    })
   })
 
   return app

@@ -1,31 +1,38 @@
 import type { ServerWebSocket } from 'bun'
-
 import { Hono } from 'hono'
 import { serveStatic } from 'hono/bun'
 
 import { createInklyAuth, type InklyAuth } from './auth/index.js'
+import { createBoardDocumentStore } from './boardDocumentStore.js'
+import { createBoardPinStore } from './boardPinStore.js'
+import { createBoardPreviewStore } from './boardPreviewStore.js'
 import { createBoardStore } from './boardStore.js'
 import { resolveApiDatabaseOptions, type ApiDatabase } from './db/client.js'
 import { createMigratedApiDatabase } from './db/migrate.js'
+import { createInternalUserStore } from './internalUserStore.js'
 import {
   createNotificationStore,
   DEFAULT_NOTIFICATION_SWEEP_OLDER_THAN_MS
 } from './notificationStore.js'
+import { createPendingInternalInvitationStore } from './pendingInternalInvitationStore.js'
 import { createAuthRoutes } from './routes/auth.js'
 import { createBoardRoutes } from './routes/boards.js'
+import { createInternalUserRoutes } from './routes/internalUsers.js'
 import { createInviteRoutes } from './routes/invite.js'
 import { createNotificationRoutes } from './routes/notifications.js'
 import { createTestingRoutes } from './routes/testing.js'
-import { createTeamRoutes } from './routes/teams.js'
 import { createInvitationStore } from './store.js'
-import { createTeamStore } from './teamStore.js'
 import { resolveJwtSecret } from './token.js'
 import type {
+  BoardDocumentStore,
+  BoardPinStore,
+  BoardPreviewStore,
   BoardStore,
+  InternalUserStore,
   InvitationStore,
   NotificationRecord,
   NotificationStore,
-  TeamStore
+  PendingInternalInvitationStore
 } from './types.js'
 import {
   createNotificationWebSocketServer,
@@ -43,8 +50,12 @@ export interface CreateApiAppOptions {
   secret: string
   store?: InvitationStore
   boardStore?: BoardStore
-  teamStore?: TeamStore
   notificationStore?: NotificationStore
+  internalUserStore?: InternalUserStore
+  pendingInternalInvitationStore?: PendingInternalInvitationStore
+  boardDocumentStore?: BoardDocumentStore
+  boardPinStore?: BoardPinStore
+  boardPreviewStore?: BoardPreviewStore
   database?: ApiDatabase
   auth?: InklyAuth
   env?: NodeJS.ProcessEnv
@@ -72,7 +83,6 @@ export async function createApiApp(options: CreateApiAppOptions) {
     options.database ?? (await createMigratedApiDatabase(resolveApiDatabaseOptions(env)))
   const store = options.store ?? (await createInvitationStore({ database, now: options.now }))
   const boardStore = options.boardStore ?? (await createBoardStore({ database, now: options.now }))
-  const teamStore = options.teamStore ?? (await createTeamStore({ database, now: options.now }))
   const notificationStore =
     options.notificationStore ??
     (await createNotificationStore({
@@ -80,13 +90,27 @@ export async function createApiApp(options: CreateApiAppOptions) {
       now: options.now,
       onNotificationCreated: options.onNotificationCreated
     }))
+  const internalUserStore =
+    options.internalUserStore ?? (await createInternalUserStore({ database }))
+  const pendingInternalInvitationStore =
+    options.pendingInternalInvitationStore ??
+    (await createPendingInternalInvitationStore({ database }))
+  const boardDocumentStore =
+    options.boardDocumentStore ?? (await createBoardDocumentStore({ database, now: options.now }))
+  const boardPinStore =
+    options.boardPinStore ?? (await createBoardPinStore({ database, now: options.now }))
+  const boardPreviewStore =
+    options.boardPreviewStore ?? (await createBoardPreviewStore({ database, now: options.now }))
   const auth =
     options.auth ??
     createInklyAuth({
       database,
       env,
       fallbackSecret: options.secret,
-      logger: console
+      logger: console,
+      internalUserStore,
+      pendingInternalInvitationStore,
+      boardStore
     })
   const app = new Hono()
 
@@ -122,17 +146,12 @@ export async function createApiApp(options: CreateApiAppOptions) {
       auth,
       boardStore,
       invitationStore: store,
-      teamStore
-    })
-  )
-
-  app.route(
-    '/api',
-    createTeamRoutes({
-      auth,
-      boardStore,
-      teamStore,
-      notificationStore
+      internalUserStore,
+      pendingInternalInvitationStore,
+      notificationStore,
+      boardDocumentStore,
+      boardPinStore,
+      boardPreviewStore
     })
   )
 
@@ -142,8 +161,15 @@ export async function createApiApp(options: CreateApiAppOptions) {
       auth,
       boardStore,
       notificationStore,
-      teamStore,
       env
+    })
+  )
+
+  app.route(
+    '/api',
+    createInternalUserRoutes({
+      auth,
+      internalUserStore
     })
   )
 
@@ -154,7 +180,6 @@ export async function createApiApp(options: CreateApiAppOptions) {
       database,
       boardStore,
       invitationStore: store,
-      teamStore,
       notificationStore
     })
   )
@@ -168,7 +193,7 @@ export async function createApiApp(options: CreateApiAppOptions) {
     app.get('*', serveStatic({ path: `${spaRoot}/index.html` }))
   }
 
-  return { app, store, boardStore, teamStore, notificationStore, database, auth }
+  return { app, store, boardStore, notificationStore, database, auth }
 }
 
 export async function startApiServer(options: Partial<StartApiServerOptions> = {}) {
@@ -177,21 +202,19 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
   const host = options.host ?? env.INKLY_API_HOST ?? API_HOST
   const requestedPort = options.port ?? Number(env.PORT ?? env.INKLY_API_PORT ?? API_PORT)
   let onNotificationCreated: ((notification: NotificationRecord) => void) | undefined
-  const { app, store, boardStore, teamStore, notificationStore, database, auth } =
-    await createApiApp({
-      boardStore: options.boardStore,
-      teamStore: options.teamStore,
-      notificationStore: options.notificationStore,
-      database: options.database,
-      auth: options.auth,
-      env,
-      secret,
-      store: options.store,
-      now: options.now,
-      onNotificationCreated: (notification) => {
-        onNotificationCreated?.(notification)
-      }
-    })
+  const { app, store, boardStore, notificationStore, database, auth } = await createApiApp({
+    boardStore: options.boardStore,
+    notificationStore: options.notificationStore,
+    database: options.database,
+    auth: options.auth,
+    env,
+    secret,
+    store: options.store,
+    now: options.now,
+    onNotificationCreated: (notification) => {
+      onNotificationCreated?.(notification)
+    }
+  })
   const signaling = createSignalingServer()
   const notifications = createNotificationWebSocketServer(auth)
   onNotificationCreated = (notification) => {
@@ -268,9 +291,7 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
   }
 
   if (!server) {
-    throw lastError instanceof Error
-      ? lastError
-      : new Error('Failed to bind an ephemeral API port')
+    throw lastError instanceof Error ? lastError : new Error('Failed to bind an ephemeral API port')
   }
 
   process.stderr.write(`Inkly API server listening on http://${host}:${port}\n`)
@@ -279,7 +300,6 @@ export async function startApiServer(options: Partial<StartApiServerOptions> = {
     app,
     store,
     boardStore,
-    teamStore,
     notificationStore,
     database,
     auth,

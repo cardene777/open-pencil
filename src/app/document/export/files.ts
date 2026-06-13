@@ -1,10 +1,5 @@
 import type { Editor, EditorState } from '@inkly/core/editor'
-import type {
-  ExportRequest,
-  IOFormatAdapter,
-  IORegistry,
-  RasterExportFormat
-} from '@inkly/core/io'
+import type { ExportRequest, IOFormatAdapter, IORegistry, RasterExportFormat } from '@inkly/core/io'
 import { renderNodesToImage } from '@inkly/core/io/formats/raster'
 import type { SceneGraph } from '@inkly/core/scene-graph'
 
@@ -32,6 +27,7 @@ export function getExportOptions(formatId: string, options?: ExportOptions): unk
       quality: options?.quality
     }
   }
+  if (formatId === 'site') return { startFrameId: options?.startFrameId ?? null }
   if (formatId === 'jsx') return { format: options?.jsxFormat ?? 'inkly' }
   return undefined
 }

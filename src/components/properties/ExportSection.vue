@@ -5,7 +5,9 @@ import AppSelect from '@/components/ui/AppSelect.vue'
 import Tip from '@/components/ui/Tip.vue'
 import { useIconButtonUI } from '@/components/ui/icon-button'
 import { useSectionUI } from '@/components/ui/section'
+import { activeBoard } from '@/app/boards/active'
 import { useEditorStore } from '@/app/editor/active-store'
+import { resolvePrototypeStartFrameId } from '@/app/prototype/frames'
 import { useExport, useI18n } from '@inkly/vue'
 
 import type { ExportFormatId } from '@inkly/vue'
@@ -34,7 +36,8 @@ const FORMAT_OPTIONS: { value: ExportFormatId; label: string }[] = [
   { value: 'jpg', label: 'JPG' },
   { value: 'webp', label: 'WEBP' },
   { value: 'svg', label: 'SVG' },
-  { value: 'fig', label: '.fig' }
+  { value: 'fig', label: '.fig' },
+  { value: 'site', label: 'Site ZIP' }
 ]
 
 const previewUrl = ref<string | null>(null)
@@ -67,11 +70,27 @@ async function doExport() {
   exporting.value = true
   try {
     if (activeTarget.value === 'selection') {
-      for (const s of activeSettings.value) await editorStore.exportSelection(s.scale, s.format)
+      for (const s of activeSettings.value) {
+        if (s.format === 'site') {
+          await editorStore.exportTarget({ scope: 'document' }, 'site', {
+            startFrameId:
+              activeBoard.value?.startFrameId ?? resolvePrototypeStartFrameId(editorStore.graph)
+          })
+          continue
+        }
+        await editorStore.exportSelection(s.scale, s.format)
+      }
       return
     }
 
     for (const s of activeSettings.value) {
+      if (s.format === 'site') {
+        await editorStore.exportTarget({ scope: 'document' }, 'site', {
+          startFrameId:
+            activeBoard.value?.startFrameId ?? resolvePrototypeStartFrameId(editorStore.graph)
+        })
+        continue
+      }
       await editorStore.exportTarget(
         { scope: 'page', pageId: editorStore.state.currentPageId },
         s.format,

@@ -11,7 +11,7 @@ import {
 import { useEditor } from '#vue/editor/context'
 import { useSceneComputed } from '#vue/internal/scene-computed/use'
 
-export type ExportFormatId = 'png' | 'jpg' | 'webp' | 'svg' | 'pdf' | 'fig'
+export type ExportFormatId = 'png' | 'jpg' | 'webp' | 'svg' | 'pdf' | 'fig' | 'site'
 export type ExportPanelTarget = 'selection' | 'page'
 
 export interface ExportSetting {

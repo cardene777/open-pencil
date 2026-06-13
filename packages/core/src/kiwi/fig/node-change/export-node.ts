@@ -8,6 +8,8 @@ import { stringToGuid } from './guid'
 import {
   mergePluginData,
   NODE_TYPE_PLUGIN_KEY,
+  PROTOTYPE_REACTIONS_PLUGIN_KEY,
+  setOptionalInklyPluginData,
   serializePluginRelaunchData,
   upsertPluginData
 } from './plugin-data'
@@ -679,6 +681,11 @@ export function sceneNodeToKiwiWithContext(
   applyComponentMetadata(node, nc)
   applyInstancePayload(context, node, nc, localIdCounter)
   if (node.type === 'COMPONENT_SET') upsertPluginData(node, NODE_TYPE_PLUGIN_KEY, node.type)
+  setOptionalInklyPluginData(
+    node,
+    PROTOTYPE_REACTIONS_PLUGIN_KEY,
+    node.reactions && node.reactions.length > 0 ? JSON.stringify(node.reactions) : null
+  )
   if (nc.type === 'CANVAS') nc.pageType = 'DESIGN'
   if (node.type === 'BOOLEAN_OPERATION') {
     const op = node.booleanOperation ?? 'UNION'

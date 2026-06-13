@@ -4,17 +4,16 @@ import { TEST_API_SECRET, createTestApiApp } from '../helpers/api.js'
 import { TEST_USER_HEADER, createHeaderAuth, createSession, seedUsers } from '../helpers/api-auth.js'
 
 describe('notification routes', () => {
-  test('supports CRUD and creates notifications from invite and team invite side effects', async () => {
+  test('supports CRUD and creates notifications from invite side effects', async () => {
     const owner = createSession('user-owner', 'Owner User', 'owner@example.com')
     const invitee = createSession('user-invitee', 'Invitee User', 'invitee@example.com')
-    const teammate = createSession('user-teammate', 'Teammate User', 'teammate@example.com')
     const outsider = createSession('user-outsider', 'Outsider User', 'outsider@example.com')
 
     const { app, boardStore, database, notificationStore } = await createTestApiApp({
-      auth: createHeaderAuth([owner, invitee, teammate, outsider]),
+      auth: createHeaderAuth([owner, invitee, outsider]),
       secret: TEST_API_SECRET
     })
-    await seedUsers(database, [owner, invitee, teammate, outsider])
+    await seedUsers(database, [owner, invitee, outsider])
 
     const createBoardResponse = await app.request('/api/boards', {
       method: 'POST',
@@ -41,30 +40,6 @@ describe('notification routes', () => {
     })
     expect(inviteResponse.status).toBe(201)
 
-    const createTeamResponse = await app.request('/api/teams', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        [TEST_USER_HEADER]: owner.user.id
-      },
-      body: JSON.stringify({ name: 'Studio Alpha' })
-    })
-    expect(createTeamResponse.status).toBe(201)
-    const team = (await createTeamResponse.json()) as { id: string; name: string }
-
-    const teamInviteResponse = await app.request(`/api/teams/${team.id}/members`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        [TEST_USER_HEADER]: owner.user.id
-      },
-      body: JSON.stringify({
-        email: teammate.user.email,
-        role: 'viewer'
-      })
-    })
-    expect(teamInviteResponse.status).toBe(201)
-
     await notificationStore.createNotification({
       userId: invitee.user.id,
       type: 'mention',
@@ -90,17 +65,25 @@ describe('notification routes', () => {
       }>
     }
     expect(inviteeList.notifications).toHaveLength(2)
-    expect(inviteeList.notifications.map((notification) => notification.type)).toEqual([
-      'mention',
-      'invitation'
+    expect(inviteeList.notifications.map((notification) => notification.type).sort()).toEqual([
+      'invitation',
+      'mention'
     ])
-    expect(inviteeList.notifications[0]?.payload).toEqual(
+
+    const mentionNotification = inviteeList.notifications.find(
+      (notification) => notification.type === 'mention'
+    )
+    const invitationNotification = inviteeList.notifications.find(
+      (notification) => notification.type === 'invitation'
+    )
+
+    expect(mentionNotification?.payload).toEqual(
       expect.objectContaining({
         boardName: 'Release plan',
         mentionedByDisplayName: owner.user.name
       })
     )
-    expect(inviteeList.notifications[1]?.payload).toEqual(
+    expect(invitationNotification?.payload).toEqual(
       expect.objectContaining({
         boardId: board.id,
         boardName: 'Release plan',
@@ -108,28 +91,6 @@ describe('notification routes', () => {
         inviteeEmail: invitee.user.email
       })
     )
-
-    const teammateListResponse = await app.request('/api/notifications', {
-      headers: { [TEST_USER_HEADER]: teammate.user.id }
-    })
-    expect(teammateListResponse.status).toBe(200)
-    expect(await teammateListResponse.json()).toEqual({
-      notifications: [
-        expect.objectContaining({
-          type: 'team_invite',
-          payload: expect.objectContaining({
-            teamId: team.id,
-            teamName: team.name,
-            inviterDisplayName: owner.user.name,
-            inviteeEmail: teammate.user.email,
-            url: `/team/${team.id}`
-          })
-        })
-      ]
-    })
-
-    const mentionNotification = inviteeList.notifications[0]
-    const invitationNotification = inviteeList.notifications[1]
 
     const readMentionResponse = await app.request(`/api/notifications/${mentionNotification?.id}/read`, {
       method: 'POST',

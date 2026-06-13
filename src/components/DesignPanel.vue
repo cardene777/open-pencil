@@ -16,6 +16,7 @@ import StrokeSection from './properties/StrokeSection.vue'
 import TypographySection from './properties/TypographySection.vue'
 import VariablesSection from './properties/VariablesSection.vue'
 import VariantSection from './properties/VariantSection.vue'
+import PrototypePanel from './PrototypePanel.vue'
 
 const variablesOpen = ref(false)
 const { selectedNode: node, selectedCount: multiCount } = useSelectionState()
@@ -102,6 +103,7 @@ const { panels } = useI18n()
     <FillSection />
     <StrokeSection />
     <EffectsSection />
+    <PrototypePanel v-if="node.type === 'FRAME'" />
 
     <ExportSection />
   </div>

@@ -1,0 +1,1 @@
+ALTER TABLE `boards` ADD `start_frame_id` text;

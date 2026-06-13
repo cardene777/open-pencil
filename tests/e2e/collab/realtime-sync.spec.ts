@@ -13,7 +13,7 @@ test('board room syncs shape movement between two tabs in realtime', async ({ br
 
   await mockGoogleLogin(page, { email: userEmail, name: 'Collab User' })
   await page.goto('/boards')
-  await page.getByTestId('board-create-input').fill(boardName)
+  await page.getByTestId('board-name-input').fill(boardName)
   await page.getByTestId('board-create-button').click()
   await expect(page.getByTestId('editor-root')).toBeVisible()
 

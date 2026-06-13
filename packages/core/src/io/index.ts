@@ -8,6 +8,7 @@ export {
   jpgFormat,
   webpFormat,
   svgFormat,
+  siteFormat,
   jsxFormat
 } from './formats'
 export { exportFigFile, parseFigFile, readFigFile } from './formats/fig'
@@ -41,6 +42,7 @@ export type {
   RasterExportOptions,
   SVGExportOptions,
   JSXExportOptions,
+  SiteExportOptions,
   IOFormatSupport,
   IOFormatExportOptions,
   IOFormatAdapter

@@ -285,6 +285,16 @@ export interface VariantPropSpec {
   value: string
 }
 
+export interface PrototypeReaction {
+  trigger: 'onClick' | 'onHover' | 'onMouseDown' | 'afterDelay'
+  delayMs?: number
+  action: 'navigate' | 'openOverlay' | 'closeOverlay' | 'back' | 'externalUrl'
+  targetFrameId?: string
+  externalUrl?: string
+  transition?: 'instant' | 'dissolve' | 'slideLeft' | 'slideRight'
+  transitionDurationMs?: number
+}
+
 export type FigmaLayoutMetadata = Partial<
   Record<
     | 'stackMode'
@@ -453,6 +463,7 @@ export interface SceneNode {
   symbolDescription: string
   symbolLinks: SymbolLink[]
   variantPropSpecs: VariantPropSpec[]
+  reactions?: PrototypeReaction[]
 
   boundVariables: Record<string, string>
 

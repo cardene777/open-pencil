@@ -2,16 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead } from '@unhead/vue'
-import {
-  DialogContent,
-  DialogDescription,
-  DialogOverlay,
-  DialogPortal,
-  DialogRoot,
-  DialogTitle
-} from 'reka-ui'
 
-import { useDialogUI } from '@/components/ui/dialog'
+import { useI18n } from '@inkly/vue'
 
 import { useAuthStore } from '@/app/auth/store'
 import { useNotificationsStore } from '@/app/notifications/store'
@@ -26,59 +18,33 @@ import {
   createBoardEditorLocation,
   deleteBoard,
   listBoards,
-  updateBoard,
   type Board
 } from '@/app/api/client'
-import { getTeam, listTeams, type TeamMember, type TeamSummary } from '@/app/api/teams'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import LoginBanner from '@/components/LoginBanner.vue'
 
-import { useI18n } from '@inkly/vue'
-
 import { triggerCsvDownload, type CsvCell } from '@/app/shell/csv-export'
-import { formatTemplate } from '@/app/shell/i18n-format'
 
 const { admin, locale, notificationsFormat: notificationsFormatT } = useI18n()
 
 useHead({ title: () => admin.value.title })
 
-type TabKey = 'overview' | 'boards' | 'teams' | 'activity' | 'members'
+type TabKey = 'overview' | 'boards' | 'activity'
 type BoardSortKey = 'updated' | 'created' | 'name' | 'collaborators'
-
-interface MemberWithTeam {
-  member: TeamMember
-  team: TeamSummary
-}
 
 const router = useRouter()
 const auth = useAuthStore()
 const notifications = useNotificationsStore()
 const boards = ref<Board[]>([])
-const teams = ref<TeamSummary[]>([])
 const loading = ref(false)
 const tab = ref<TabKey>('overview')
 const searchQuery = ref('')
-const teamFilter = ref<'all' | 'personal' | 'team'>('all')
 const boardSort = ref<BoardSortKey>('updated')
 const boardSortDirection = ref<'asc' | 'desc'>('desc')
 const deletingBoardId = ref<string | null>(null)
-const selectedBoardIds = ref<Set<string>>(new Set())
-const bulkDeleting = ref(false)
-const bulkMoving = ref(false)
-const moveDialogOpen = ref(false)
-const moveTargetTeamId = ref<string>('personal')
-const moveDialogCls = useDialogUI({
-  content: 'w-[min(28rem,calc(100vw-2rem))] rounded-2xl p-5 shadow-2xl'
-})
 const activitySearch = ref('')
-const activityTypeFilter = ref<'all' | 'invitation' | 'team_invite' | 'mention'>('all')
+const activityTypeFilter = ref<'all' | 'invitation' | 'mention'>('all')
 const activityRangeFilter = ref<'all' | '24h' | '7d' | '30d'>('all')
-
-const memberSearch = ref('')
-const memberRoleFilter = ref<'all' | 'owner' | 'editor' | 'viewer'>('all')
-const members = ref<MemberWithTeam[]>([])
-const membersLoading = ref(false)
-const membersError = ref<string | null>(null)
 
 const authDisplayName = computed(() => auth.user?.name?.trim() || auth.user?.email || 'Inkly User')
 const authInitials = computed(() => initials(authDisplayName.value))
@@ -87,8 +53,6 @@ const showLoginBanner = computed(() => auth.initialized && !auth.isAuthenticated
 const filteredBoards = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
   const filtered = boards.value.filter((board) => {
-    if (teamFilter.value === 'personal' && board.teamId !== null) return false
-    if (teamFilter.value === 'team' && board.teamId === null) return false
     if (!query) return true
     return board.name.toLowerCase().includes(query) || board.id.includes(query)
   })
@@ -162,70 +126,7 @@ const activityItems = computed(() => {
   })
 })
 
-const filteredMembers = computed(() => {
-  const query = memberSearch.value.trim().toLowerCase()
-  return members.value.filter(({ member }) => {
-    if (memberRoleFilter.value !== 'all' && member.role !== memberRoleFilter.value) return false
-    if (!query) return true
-    const haystack = [
-      member.user.name,
-      member.user.email,
-      member.role
-    ].join(' ').toLowerCase()
-    return haystack.includes(query)
-  })
-})
-
-const memberRoleCounts = computed(() => {
-  const counts = { owner: 0, editor: 0, viewer: 0 }
-  for (const entry of members.value) {
-    counts[entry.member.role]++
-  }
-  return counts
-})
-
-async function loadMembers() {
-  if (membersLoading.value) return
-  membersLoading.value = true
-  membersError.value = null
-  try {
-    const teamList = teams.value.length > 0 ? teams.value : await listTeams().catch(() => [])
-    if (teams.value.length === 0) teams.value = teamList
-
-    const detailResults = await Promise.allSettled(
-      teamList.map((team) => getTeam(team.id))
-    )
-
-    const collected: MemberWithTeam[] = []
-    for (let i = 0; i < detailResults.length; i++) {
-      const result = detailResults[i]
-      if (result.status !== 'fulfilled') continue
-      const team = teamList[i]
-      for (const member of result.value.members) {
-        collected.push({ member, team })
-      }
-    }
-    members.value = collected
-  } catch (error) {
-    membersError.value = error instanceof Error ? error.message : admin.value.membersTab.loadFail
-  } finally {
-    membersLoading.value = false
-  }
-}
-
-async function activateTab(next: TabKey) {
-  tab.value = next
-  if (next === 'members' && auth.isAuthenticated && members.value.length === 0 && !membersLoading.value) {
-    await loadMembers()
-  }
-}
-
-const ownedTeams = computed(() => teams.value.filter((team) => team.role === 'owner'))
-const memberTeams = computed(() => teams.value.filter((team) => team.role !== 'owner'))
-
 const totalBoards = computed(() => boards.value.length)
-const personalBoards = computed(() => boards.value.filter((board) => board.teamId === null).length)
-const teamBoards = computed(() => boards.value.filter((board) => board.teamId !== null).length)
 const totalCollaborators = computed(() => {
   const ids = new Set<string>()
   for (const board of boards.value) {
@@ -240,12 +141,7 @@ const totalCollaborators = computed(() => {
 async function loadAdminView() {
   loading.value = true
   try {
-    const [boardList, teamList] = await Promise.all([
-      listBoards().catch(() => [] as Board[]),
-      auth.isAuthenticated ? listTeams().catch(() => [] as TeamSummary[]) : Promise.resolve([] as TeamSummary[])
-    ])
-    boards.value = boardList
-    teams.value = teamList
+    boards.value = await listBoards().catch(() => [] as Board[])
   } finally {
     loading.value = false
   }
@@ -254,37 +150,16 @@ async function loadAdminView() {
 function openActivity(notificationId: string) {
   const record = notifications.items.find((item) => item.id === notificationId)
   if (!record) return
-  router.push(getNotificationTarget(record))
+  void router.push(getNotificationTarget(record))
 }
 
 function notifyExportSuccess(
   count: number,
-  singular: string,
-  plural: string
+  singular: (input: { count: number }) => string,
+  plural: (input: { count: number }) => string
 ) {
-  const message = count === 1
-    ? formatTemplate(singular, { count })
-    : formatTemplate(plural, { count })
-  toast.success(message)
-}
-
-function exportMembersCsv() {
-  const m = admin.value.membersTab
-  const header: CsvCell[] = [m.colName, m.colEmail, m.colTeam, m.colRole, m.colJoined]
-  const rows: CsvCell[][] = filteredMembers.value.map((entry) => [
-    entry.member.user.name || m.namePlaceholder,
-    entry.member.user.email,
-    entry.team.name,
-    entry.member.role,
-    new Date(entry.member.addedAt).toISOString()
-  ])
-
-  const count = triggerCsvDownload({
-    header,
-    rows,
-    filename: `inkly-members-${locale.value}-${Date.now()}.csv`
-  })
-  notifyExportSuccess(count, m.exportToastSingular, m.exportToastPlural)
+  const message = count === 1 ? singular({ count }) : plural({ count })
+  toast.info(message)
 }
 
 function exportActivityCsv() {
@@ -319,7 +194,6 @@ function exportBoardsCsv() {
   const header: CsvCell[] = [
     b.csvHeaderId,
     b.colName,
-    b.colWorkspace,
     b.colCollaborators,
     b.colCreated,
     b.colUpdated
@@ -327,7 +201,6 @@ function exportBoardsCsv() {
   const rows: CsvCell[][] = filteredBoards.value.map((board) => [
     board.id,
     board.name,
-    board.team?.name ?? b.workspacePersonal,
     String(board.collaborators.length),
     new Date(board.createdAt).toISOString(),
     new Date(board.updatedAt).toISOString()
@@ -343,16 +216,14 @@ function exportBoardsCsv() {
 
 async function handleDeleteBoard(board: Board) {
   if (deletingBoardId.value) return
-  const confirmed = window.confirm(formatTemplate(admin.value.boardsTab.deletePromptSingular, { name: board.name }))
+  const confirmed = window.confirm(admin.value.boardsTab.deletePromptSingular({ name: board.name }))
   if (!confirmed) return
 
   deletingBoardId.value = board.id
   try {
     await deleteBoard(board.id)
-    boards.value = boards.value.filter((b) => b.id !== board.id)
-    selectedBoardIds.value.delete(board.id)
-    selectedBoardIds.value = new Set(selectedBoardIds.value)
-    toast.success(admin.value.boardsTab.deleteSuccess)
+    boards.value = boards.value.filter((candidate) => candidate.id !== board.id)
+    toast.info(admin.value.boardsTab.deleteSuccess)
   } catch (error) {
     const message = error instanceof Error ? error.message : admin.value.boardsTab.deleteFail
     toast.error(message)
@@ -361,156 +232,8 @@ async function handleDeleteBoard(board: Board) {
   }
 }
 
-function toggleBoardSelection(boardId: string) {
-  const next = new Set(selectedBoardIds.value)
-  if (next.has(boardId)) {
-    next.delete(boardId)
-  } else {
-    next.add(boardId)
-  }
-  selectedBoardIds.value = next
-}
-
-const allFilteredSelected = computed(() => {
-  if (filteredBoards.value.length === 0) return false
-  return filteredBoards.value.every((board) => selectedBoardIds.value.has(board.id))
-})
-
-function toggleSelectAllFiltered() {
-  const next = new Set(selectedBoardIds.value)
-  if (allFilteredSelected.value) {
-    for (const board of filteredBoards.value) next.delete(board.id)
-  } else {
-    for (const board of filteredBoards.value) next.add(board.id)
-  }
-  selectedBoardIds.value = next
-}
-
-function clearBoardSelection() {
-  selectedBoardIds.value = new Set()
-}
-
-function openBulkMoveDialog() {
-  if (selectedBoardIds.value.size === 0) return
-  moveTargetTeamId.value = 'personal'
-  moveDialogOpen.value = true
-}
-
-function closeBulkMoveDialog() {
-  if (bulkMoving.value) return
-  moveDialogOpen.value = false
-}
-
-async function handleBulkMove() {
-  if (bulkMoving.value) return
-  if (selectedBoardIds.value.size === 0) return
-
-  bulkMoving.value = true
-  const targets = [...selectedBoardIds.value]
-  const teamId = moveTargetTeamId.value === 'personal' ? null : moveTargetTeamId.value
-
-  const results = await Promise.allSettled(
-    targets.map((id) => updateBoard(id, { teamId }))
-  )
-
-  const succeeded = new Set<string>()
-  let failed = 0
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i]
-    if (result.status === 'fulfilled') {
-      succeeded.add(targets[i])
-    } else {
-      failed++
-    }
-  }
-
-  if (succeeded.size > 0) {
-    const updatedTeam = teams.value.find((team) => team.id === teamId) ?? null
-    boards.value = boards.value.map((board) => {
-      if (!succeeded.has(board.id)) return board
-      return {
-        ...board,
-        teamId,
-        team: updatedTeam ? { id: updatedTeam.id, name: updatedTeam.name } : null
-      }
-    })
-  }
-
-  const remaining = new Set(selectedBoardIds.value)
-  for (const id of succeeded) remaining.delete(id)
-  selectedBoardIds.value = remaining
-  bulkMoving.value = false
-  moveDialogOpen.value = false
-
-  if (succeeded.size > 0) {
-    toast.success(
-      succeeded.size === 1
-        ? formatTemplate(admin.value.boardsTab.bulkMoveSuccessSingular, { count: succeeded.size })
-        : formatTemplate(admin.value.boardsTab.bulkMoveSuccessPlural, { count: succeeded.size })
-    )
-  }
-  if (failed > 0) {
-    toast.error(
-      failed === 1
-        ? formatTemplate(admin.value.boardsTab.bulkMoveFailSingular, { count: failed })
-        : formatTemplate(admin.value.boardsTab.bulkMoveFailPlural, { count: failed })
-    )
-  }
-}
-
-async function handleBulkDelete() {
-  if (bulkDeleting.value) return
-  if (selectedBoardIds.value.size === 0) return
-  const count = selectedBoardIds.value.size
-  const confirmed = window.confirm(
-    count === 1
-      ? formatTemplate(admin.value.boardsTab.bulkConfirmSingular, { count })
-      : formatTemplate(admin.value.boardsTab.bulkConfirmPlural, { count })
-  )
-  if (!confirmed) return
-
-  bulkDeleting.value = true
-  const targets = [...selectedBoardIds.value]
-  const results = await Promise.allSettled(targets.map((id) => deleteBoard(id)))
-
-  const succeeded = new Set<string>()
-  let failed = 0
-  for (let i = 0; i < results.length; i++) {
-    if (results[i].status === 'fulfilled') {
-      succeeded.add(targets[i])
-    } else {
-      failed++
-    }
-  }
-
-  boards.value = boards.value.filter((b) => !succeeded.has(b.id))
-  const remaining = new Set(selectedBoardIds.value)
-  for (const id of succeeded) remaining.delete(id)
-  selectedBoardIds.value = remaining
-  bulkDeleting.value = false
-
-  if (succeeded.size > 0) {
-    toast.success(
-      succeeded.size === 1
-        ? formatTemplate(admin.value.boardsTab.bulkSuccessSingular, { count: succeeded.size })
-        : formatTemplate(admin.value.boardsTab.bulkSuccessPlural, { count: succeeded.size })
-    )
-  }
-  if (failed > 0) {
-    toast.error(
-      failed === 1
-        ? formatTemplate(admin.value.boardsTab.bulkFailSingular, { count: failed })
-        : formatTemplate(admin.value.boardsTab.bulkFailPlural, { count: failed })
-    )
-  }
-}
-
 function openBoard(board: Board) {
-  router.push(createBoardEditorLocation(board))
-}
-
-function openTeam(team: TeamSummary) {
-  router.push(`/team/${team.id}`)
+  void router.push(createBoardEditorLocation(board))
 }
 
 async function startGoogleLogin() {
@@ -581,25 +304,20 @@ onMounted(async () => {
         </div>
       </header>
 
-      <LoginBanner
-        v-if="showLoginBanner"
-        @login="startGoogleLogin"
-      />
+      <LoginBanner v-if="showLoginBanner" @login="startGoogleLogin" />
 
       <section
         data-test-id="admin-tabs"
-        class="flex gap-2 rounded-full border border-white/8 bg-panel/80 p-1.5 shadow-lg w-fit"
+        class="flex w-fit gap-2 rounded-full border border-white/8 bg-panel/80 p-1.5 shadow-lg"
       >
         <button
           type="button"
           data-test-id="admin-tab-overview"
           :class="[
             'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
-            tab === 'overview'
-              ? 'bg-[#ef6262]/85 text-white shadow'
-              : 'text-muted hover:text-surface'
+            tab === 'overview' ? 'bg-[#ef6262]/85 text-white shadow' : 'text-muted hover:text-surface'
           ]"
-          @click="activateTab('overview')"
+          @click="tab = 'overview'"
         >
           {{ admin.tabs.overview }}
         </button>
@@ -608,59 +326,29 @@ onMounted(async () => {
           data-test-id="admin-tab-boards"
           :class="[
             'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
-            tab === 'boards'
-              ? 'bg-[#ef6262]/85 text-white shadow'
-              : 'text-muted hover:text-surface'
+            tab === 'boards' ? 'bg-[#ef6262]/85 text-white shadow' : 'text-muted hover:text-surface'
           ]"
-          @click="activateTab('boards')"
+          @click="tab = 'boards'"
         >
           {{ admin.tabs.boards }}
-        </button>
-        <button
-          type="button"
-          data-test-id="admin-tab-teams"
-          :class="[
-            'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
-            tab === 'teams'
-              ? 'bg-[#ef6262]/85 text-white shadow'
-              : 'text-muted hover:text-surface'
-          ]"
-          @click="activateTab('teams')"
-        >
-          {{ admin.tabs.teams }}
         </button>
         <button
           type="button"
           data-test-id="admin-tab-activity"
           :class="[
             'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
-            tab === 'activity'
-              ? 'bg-[#ef6262]/85 text-white shadow'
-              : 'text-muted hover:text-surface'
+            tab === 'activity' ? 'bg-[#ef6262]/85 text-white shadow' : 'text-muted hover:text-surface'
           ]"
-          @click="activateTab('activity')"
+          @click="tab = 'activity'"
         >
           {{ admin.tabs.activity }}
-        </button>
-        <button
-          type="button"
-          data-test-id="admin-tab-members"
-          :class="[
-            'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
-            tab === 'members'
-              ? 'bg-[#ef6262]/85 text-white shadow'
-              : 'text-muted hover:text-surface'
-          ]"
-          @click="activateTab('members')"
-        >
-          {{ admin.tabs.members }}
         </button>
       </section>
 
       <section
         v-if="tab === 'overview'"
         data-test-id="admin-overview"
-        class="grid grid-cols-1 gap-4 md:grid-cols-4"
+        class="grid grid-cols-1 gap-4 md:grid-cols-3"
       >
         <div
           data-test-id="admin-stat-total"
@@ -674,14 +362,7 @@ onMounted(async () => {
           class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
         >
           <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.overview.personal }}</p>
-          <p class="text-2xl font-semibold text-surface">{{ personalBoards }}</p>
-        </div>
-        <div
-          data-test-id="admin-stat-team-boards"
-          class="flex flex-col gap-1 rounded-2xl border border-white/8 bg-panel/80 p-4 shadow-lg"
-        >
-          <p class="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.overview.teamBoards }}</p>
-          <p class="text-2xl font-semibold text-surface">{{ teamBoards }}</p>
+          <p class="text-2xl font-semibold text-surface">{{ totalBoards }}</p>
         </div>
         <div
           data-test-id="admin-stat-collaborators"
@@ -700,46 +381,9 @@ onMounted(async () => {
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 class="text-lg font-semibold text-surface">{{ admin.boardsTab.heading }}</h2>
-            <p class="text-sm text-muted">{{ formatTemplate(admin.boardsTab.shownCount, { shown: filteredBoards.length, total: totalBoards }) }}</p>
+            <p class="text-sm text-muted">{{ admin.boardsTab.shownCount({ shown: filteredBoards.length, total: totalBoards }) }}</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button
-              v-if="selectedBoardIds.size > 0"
-              type="button"
-              data-test-id="admin-boards-bulk-move"
-              :disabled="bulkMoving"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-accent transition-colors hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
-              @click="openBulkMoveDialog"
-            >
-              <icon-lucide-arrow-right-left class="size-4" />
-              <span>
-                <span v-if="bulkMoving">{{ admin.boardsTab.bulkMoving }}</span>
-                <span v-else>{{ formatTemplate(admin.boardsTab.bulkMove, { count: selectedBoardIds.size }) }}</span>
-              </span>
-            </button>
-            <button
-              v-if="selectedBoardIds.size > 0"
-              type="button"
-              data-test-id="admin-boards-bulk-delete"
-              :disabled="bulkDeleting"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
-              @click="handleBulkDelete"
-            >
-              <icon-lucide-trash class="size-4" />
-              <span>
-                <span v-if="bulkDeleting">{{ admin.boardsTab.bulkDeleting }}</span>
-                <span v-else>{{ formatTemplate(admin.boardsTab.bulkDelete, { count: selectedBoardIds.size }) }}</span>
-              </span>
-            </button>
-            <button
-              v-if="selectedBoardIds.size > 0"
-              type="button"
-              data-test-id="admin-boards-clear-selection"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-muted transition-colors hover:bg-hover hover:text-surface"
-              @click="clearBoardSelection"
-            >
-              {{ admin.boardsTab.bulkClear }}
-            </button>
             <button
               type="button"
               data-test-id="admin-boards-export"
@@ -757,153 +401,94 @@ onMounted(async () => {
               type="text"
               data-test-id="admin-boards-search"
               :placeholder="admin.boardsTab.searchPlaceholder"
-              class="rounded-lg border border-border bg-input px-3 py-2 text-sm text-surface outline-none focus:border-accent w-64"
+              class="w-64 rounded-lg border border-border bg-input px-3 py-2 text-sm text-surface outline-none focus:border-accent"
             />
-            <label class="sr-only" for="admin-boards-filter-select">{{ admin.boardsTab.filterAria }}</label>
-            <select
-              id="admin-boards-filter-select"
-              v-model="teamFilter"
-              data-test-id="admin-boards-filter"
-              :aria-label="admin.boardsTab.filterAria"
-              class="rounded-lg border border-border bg-input px-2 py-2 text-sm text-surface outline-none focus:border-accent"
-            >
-              <option value="all">{{ admin.boardsTab.filterAll }}</option>
-              <option value="personal">{{ admin.boardsTab.filterPersonal }}</option>
-              <option value="team">{{ admin.boardsTab.filterTeam }}</option>
-            </select>
           </div>
         </div>
 
-        <p
+        <div
           v-if="loading"
-          data-test-id="admin-boards-loading"
-          class="text-sm text-muted"
+          class="rounded-2xl border border-border bg-canvas/50 p-6 text-sm text-muted"
         >
           {{ admin.boardsTab.loading }}
-        </p>
-        <p
+        </div>
+
+        <div
           v-else-if="filteredBoards.length === 0"
-          data-test-id="admin-boards-empty"
-          class="text-sm text-muted"
+          class="rounded-2xl border border-dashed border-border bg-canvas/45 p-6 text-center text-sm text-muted"
         >
           {{ admin.boardsTab.empty }}
-        </p>
-        <div
-          v-else
-          data-test-id="admin-boards-table-wrap"
-          class="overflow-x-auto rounded-xl border border-white/8"
-        >
-          <table class="w-full min-w-[640px] text-left text-sm">
-            <thead class="bg-canvas/40 text-[11px] uppercase tracking-[0.2em] text-muted">
-              <tr>
-                <th scope="col" class="w-10 px-3 py-2">
-                  <label class="sr-only" for="admin-boards-select-all">{{ admin.boardsTab.selectAllAria }}</label>
-                  <input
-                    id="admin-boards-select-all"
-                    type="checkbox"
-                    data-test-id="admin-boards-select-all"
-                    :checked="allFilteredSelected"
-                    :aria-label="admin.boardsTab.selectAllAria"
-                    class="size-4 cursor-pointer accent-[#ef6262]"
-                    @change="toggleSelectAllFiltered"
-                  />
-                </th>
+        </div>
+
+        <div v-else class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-white/8 text-left text-sm">
+            <thead>
+              <tr class="text-[11px] uppercase tracking-[0.16em] text-muted">
                 <th scope="col" class="px-3 py-2">
-                  <button
-                    type="button"
-                    data-test-id="admin-boards-sort-name"
-                    class="inline-flex items-center gap-1 hover:text-surface"
-                    @click="toggleSort('name')"
-                  >
-                    {{ admin.boardsTab.colName }}
-                    <span v-if="boardSort === 'name'" aria-hidden="true">{{ boardSortDirection === 'asc' ? '↑' : '↓' }}</span>
-                  </button>
-                </th>
-                <th scope="col" class="px-3 py-2">{{ admin.boardsTab.colWorkspace }}</th>
-                <th scope="col" class="px-3 py-2">
-                  <button
-                    type="button"
-                    data-test-id="admin-boards-sort-collaborators"
-                    class="inline-flex items-center gap-1 hover:text-surface"
-                    @click="toggleSort('collaborators')"
-                  >
-                    {{ admin.boardsTab.colCollaborators }}
-                    <span v-if="boardSort === 'collaborators'" aria-hidden="true">{{ boardSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                  <button type="button" class="inline-flex items-center gap-1" @click="toggleSort('name')">
+                    <span>{{ admin.boardsTab.colName }}</span>
+                    <icon-lucide-arrow-up-down class="size-3.5" />
                   </button>
                 </th>
                 <th scope="col" class="px-3 py-2">
-                  <button
-                    type="button"
-                    data-test-id="admin-boards-sort-created"
-                    class="inline-flex items-center gap-1 hover:text-surface"
-                    @click="toggleSort('created')"
-                  >
-                    {{ admin.boardsTab.colCreated }}
-                    <span v-if="boardSort === 'created'" aria-hidden="true">{{ boardSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                  <button type="button" class="inline-flex items-center gap-1" @click="toggleSort('collaborators')">
+                    <span>{{ admin.boardsTab.colCollaborators }}</span>
+                    <icon-lucide-arrow-up-down class="size-3.5" />
                   </button>
                 </th>
                 <th scope="col" class="px-3 py-2">
-                  <button
-                    type="button"
-                    data-test-id="admin-boards-sort-updated"
-                    class="inline-flex items-center gap-1 hover:text-surface"
-                    @click="toggleSort('updated')"
-                  >
-                    {{ admin.boardsTab.colUpdated }}
-                    <span v-if="boardSort === 'updated'" aria-hidden="true">{{ boardSortDirection === 'asc' ? '↑' : '↓' }}</span>
+                  <button type="button" class="inline-flex items-center gap-1" @click="toggleSort('created')">
+                    <span>{{ admin.boardsTab.colCreated }}</span>
+                    <icon-lucide-arrow-up-down class="size-3.5" />
                   </button>
                 </th>
-                <th scope="col" class="px-3 py-2 text-right">{{ admin.boardsTab.colActions }}</th>
+                <th scope="col" class="px-3 py-2">
+                  <button type="button" class="inline-flex items-center gap-1" @click="toggleSort('updated')">
+                    <span>{{ admin.boardsTab.colUpdated }}</span>
+                    <icon-lucide-arrow-up-down class="size-3.5" />
+                  </button>
+                </th>
+                <th scope="col" class="px-3 py-2 text-right">{{ admin.boardsTab.actions }}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-white/6">
               <tr
                 v-for="board in filteredBoards"
                 :key="board.id"
                 :data-test-id="`admin-board-row-${board.id}`"
-                :class="[
-                  'border-t border-white/5 transition-colors',
-                  selectedBoardIds.has(board.id) ? 'bg-[#ef6262]/5' : 'hover:bg-hover/60'
-                ]"
+                class="align-top text-surface"
               >
-                <td class="w-10 px-3 py-2">
-                  <input
-                    type="checkbox"
-                    :data-test-id="`admin-board-select-${board.id}`"
-                    :checked="selectedBoardIds.has(board.id)"
-                    :aria-label="formatTemplate(admin.boardsTab.selectRowAria, { name: board.name })"
-                    class="size-4 cursor-pointer accent-[#ef6262]"
-                    @change="toggleBoardSelection(board.id)"
-                  />
-                </td>
-                <td class="px-3 py-2 text-surface">
+                <td class="px-3 py-3">
                   <button
                     type="button"
-                    :data-test-id="`admin-board-open-${board.id}`"
-                    class="hover:underline"
+                    class="font-medium transition-colors hover:text-accent"
                     @click="openBoard(board)"
                   >
                     {{ board.name }}
                   </button>
+                  <p class="mt-1 text-xs text-muted">{{ board.id }}</p>
                 </td>
-                <td class="px-3 py-2 text-muted">
-                  <span v-if="board.team">{{ board.team.name }}</span>
-                  <span v-else>{{ admin.boardsTab.workspacePersonal }}</span>
-                </td>
-                <td class="px-3 py-2 text-muted">{{ board.collaborators.length }}</td>
-                <td class="px-3 py-2 text-muted">{{ formatDate(board.createdAt) }}</td>
-                <td class="px-3 py-2 text-muted">{{ formatDate(board.updatedAt) }}</td>
-                <td class="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    :data-test-id="`admin-board-delete-${board.id}`"
-                    class="rounded-lg border border-red-500/30 px-2 py-1 text-xs text-red-300 transition-colors hover:bg-red-500/10 disabled:opacity-50"
-                    :disabled="deletingBoardId === board.id"
-                    @click="handleDeleteBoard(board)"
-                  >
-                    <span v-if="deletingBoardId === board.id">{{ admin.boardsTab.bulkDeleting }}</span>
-                    <span v-else>{{ admin.boardsTab.delete }}</span>
-                  </button>
+                <td class="px-3 py-3 text-muted">{{ board.collaborators.length }}</td>
+                <td class="px-3 py-3 text-muted">{{ formatDate(board.createdAt) }}</td>
+                <td class="px-3 py-3 text-muted">{{ formatDate(board.updatedAt) }}</td>
+                <td class="px-3 py-3">
+                  <div class="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      class="rounded-md border border-white/10 bg-canvas/60 px-3 py-1.5 text-xs text-surface transition-colors hover:bg-hover"
+                      @click="openBoard(board)"
+                    >
+                      {{ admin.boardsTab.open }}
+                    </button>
+                    <button
+                      type="button"
+                      :disabled="deletingBoardId === board.id"
+                      class="rounded-md border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-xs text-red-100 transition-colors hover:bg-red-500/16 disabled:cursor-not-allowed disabled:opacity-60"
+                      @click="handleDeleteBoard(board)"
+                    >
+                      {{ deletingBoardId === board.id ? admin.boardsTab.deleting : admin.boardsTab.delete }}
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -912,75 +497,14 @@ onMounted(async () => {
       </section>
 
       <section
-        v-else-if="tab === 'teams'"
-        data-test-id="admin-teams"
-        class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
-      >
-        <div>
-          <h2 class="text-lg font-semibold text-surface">{{ admin.teamsTab.heading }}</h2>
-          <p class="text-sm text-muted">{{ formatTemplate(admin.teamsTab.summary, { owned: ownedTeams.length, joined: memberTeams.length }) }}</p>
-        </div>
-
-        <div
-          v-if="ownedTeams.length > 0"
-          data-test-id="admin-teams-owned"
-          class="flex flex-col gap-2"
-        >
-          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.teamsTab.owned }}</p>
-          <ul class="grid grid-cols-1 gap-2 md:grid-cols-2">
-            <li
-              v-for="team in ownedTeams"
-              :key="team.id"
-              :data-test-id="`admin-team-owned-${team.id}`"
-              class="cursor-pointer rounded-xl border border-white/8 bg-canvas/55 p-3 text-sm transition-colors hover:bg-hover"
-              @click="openTeam(team)"
-            >
-              <p class="font-medium text-surface">{{ team.name }}</p>
-              <p class="text-xs text-muted">{{ formatTemplate(admin.teamsTab.membersCount, { count: team.memberCount }) }}</p>
-            </li>
-          </ul>
-        </div>
-
-        <div
-          v-if="memberTeams.length > 0"
-          data-test-id="admin-teams-joined"
-          class="flex flex-col gap-2"
-        >
-          <p class="text-[11px] font-medium uppercase tracking-[0.2em] text-muted">{{ admin.teamsTab.joined }}</p>
-          <ul class="grid grid-cols-1 gap-2 md:grid-cols-2">
-            <li
-              v-for="team in memberTeams"
-              :key="team.id"
-              :data-test-id="`admin-team-joined-${team.id}`"
-              class="cursor-pointer rounded-xl border border-white/8 bg-canvas/55 p-3 text-sm transition-colors hover:bg-hover"
-              @click="openTeam(team)"
-            >
-              <p class="font-medium text-surface">{{ team.name }}</p>
-              <p class="text-xs text-muted">{{ formatTemplate(admin.teamsTab.membersCountWithRole, { count: team.memberCount, role: team.role }) }}</p>
-            </li>
-          </ul>
-        </div>
-
-        <p
-          v-if="ownedTeams.length === 0 && memberTeams.length === 0"
-          data-test-id="admin-teams-empty"
-          class="text-sm text-muted"
-        >
-          {{ admin.teamsTab.empty }}
-        </p>
-      </section>
-
-      <section
-        v-else-if="tab === 'activity'"
+        v-else
         data-test-id="admin-activity"
         class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
       >
         <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 class="text-lg font-semibold text-surface">{{ admin.activityTab.heading }}</h2>
-            <p class="text-sm text-muted">
-              {{ formatTemplate(admin.activityTab.shownCount, { shown: activityItems.length, total: activityBase.length }) }}
-            </p>
+            <p class="text-sm text-muted">{{ admin.activityTab.shownCount({ shown: activityItems.length, total: activityBase.length }) }}</p>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <button
@@ -993,35 +517,26 @@ onMounted(async () => {
               <icon-lucide-download class="size-4" />
               <span>{{ admin.activityTab.exportCsv }}</span>
             </button>
-            <label class="sr-only" for="admin-activity-search-input">{{ admin.activityTab.searchAria }}</label>
             <input
-              id="admin-activity-search-input"
               v-model="activitySearch"
               type="text"
               data-test-id="admin-activity-search"
               :placeholder="admin.activityTab.searchPlaceholder"
-              class="rounded-lg border border-border bg-input px-3 py-2 text-sm text-surface outline-none focus:border-accent w-56"
+              class="w-64 rounded-lg border border-border bg-input px-3 py-2 text-sm text-surface outline-none focus:border-accent"
             />
-            <label class="sr-only" for="admin-activity-type-select">{{ admin.activityTab.typeAria }}</label>
             <select
-              id="admin-activity-type-select"
               v-model="activityTypeFilter"
-              data-test-id="admin-activity-type"
-              :aria-label="admin.activityTab.typeAria"
-              class="rounded-lg border border-border bg-input px-2 py-2 text-sm text-surface outline-none focus:border-accent"
+              data-test-id="admin-activity-type-filter"
+              class="rounded-lg border border-border bg-input px-3 py-2 text-sm text-surface outline-none focus:border-accent"
             >
               <option value="all">{{ admin.activityTab.typeAll }}</option>
               <option value="invitation">{{ admin.activityTab.typeInvitation }}</option>
-              <option value="team_invite">{{ admin.activityTab.typeTeamInvite }}</option>
               <option value="mention">{{ admin.activityTab.typeMention }}</option>
             </select>
-            <label class="sr-only" for="admin-activity-range-select">{{ admin.activityTab.rangeAria }}</label>
             <select
-              id="admin-activity-range-select"
               v-model="activityRangeFilter"
-              data-test-id="admin-activity-range"
-              :aria-label="admin.activityTab.rangeAria"
-              class="rounded-lg border border-border bg-input px-2 py-2 text-sm text-surface outline-none focus:border-accent"
+              data-test-id="admin-activity-range-filter"
+              class="rounded-lg border border-border bg-input px-3 py-2 text-sm text-surface outline-none focus:border-accent"
             >
               <option value="all">{{ admin.activityTab.rangeAll }}</option>
               <option value="24h">{{ admin.activityTab.range24h }}</option>
@@ -1031,224 +546,39 @@ onMounted(async () => {
           </div>
         </div>
 
-        <p
+        <div
           v-if="activityItems.length === 0"
-          data-test-id="admin-activity-empty"
-          class="text-sm text-muted"
+          class="rounded-2xl border border-dashed border-border bg-canvas/45 p-6 text-center text-sm text-muted"
         >
           {{ admin.activityTab.empty }}
-        </p>
-        <ul
-          v-else
-          data-test-id="admin-activity-list"
-          class="flex flex-col gap-2"
-        >
+        </div>
+
+        <ul v-else class="space-y-3">
           <li
             v-for="record in activityItems"
             :key="record.id"
-            :data-test-id="`admin-activity-${record.id}`"
-            class="flex cursor-pointer items-start gap-3 rounded-xl border border-white/8 bg-canvas/55 p-3 transition-colors hover:bg-hover"
-            @click="openActivity(record.id)"
           >
-            <div
-              v-if="record.readAt === null"
-              class="mt-1.5 size-2 shrink-0 rounded-full bg-[#ef6262]"
-              aria-hidden="true"
-            />
-            <div
-              v-else
-              class="mt-1.5 size-2 shrink-0 rounded-full bg-muted/30"
-              aria-hidden="true"
-            />
-            <div class="flex flex-1 flex-col gap-1">
-              <div class="flex items-center justify-between gap-2">
-                <p class="text-sm font-medium text-surface">{{ getNotificationTitle(record, notificationsFormatT) }}</p>
-                <span class="rounded-full border border-white/8 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-muted">
-                  {{ record.type }}
-                </span>
+            <button
+              type="button"
+              class="w-full rounded-2xl border border-white/8 bg-canvas/45 p-4 text-left transition-colors hover:bg-hover"
+              @click="openActivity(record.id)"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-sm font-medium text-surface">
+                  {{ getNotificationTitle(record, notificationsFormatT) }}
+                </p>
+                <span class="text-[11px] uppercase tracking-[0.16em] text-muted">{{ record.type }}</span>
               </div>
-              <p class="text-xs text-muted">{{ getNotificationBody(record, notificationsFormatT) }}</p>
-              <p class="text-[11px] text-muted">{{ formatNotificationTime(record) }}</p>
-            </div>
+              <p class="mt-1 text-xs text-muted">
+                {{ getNotificationBody(record, notificationsFormatT) }}
+              </p>
+              <p class="mt-2 text-[11px] text-muted/80">
+                {{ formatNotificationTime(record) }}
+              </p>
+            </button>
           </li>
         </ul>
       </section>
-
-      <section
-        v-else-if="tab === 'members'"
-        data-test-id="admin-members"
-        class="flex flex-col gap-4 rounded-[28px] border border-white/8 bg-panel/80 p-6 shadow-2xl backdrop-blur-xl"
-      >
-        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h2 class="text-lg font-semibold text-surface">{{ admin.membersTab.heading }}</h2>
-            <p class="text-sm text-muted">
-              {{ formatTemplate(admin.membersTab.summary, { shown: filteredMembers.length, total: members.length, owners: memberRoleCounts.owner, editors: memberRoleCounts.editor, viewers: memberRoleCounts.viewer }) }}
-            </p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              data-test-id="admin-members-export"
-              :disabled="filteredMembers.length === 0"
-              class="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-surface transition-colors hover:bg-hover disabled:cursor-not-allowed disabled:opacity-50"
-              @click="exportMembersCsv"
-            >
-              <icon-lucide-download class="size-4" />
-              <span>{{ admin.membersTab.exportCsv }}</span>
-            </button>
-            <label class="sr-only" for="admin-members-search-input">{{ admin.membersTab.searchAria }}</label>
-            <input
-              id="admin-members-search-input"
-              v-model="memberSearch"
-              type="text"
-              data-test-id="admin-members-search"
-              :placeholder="admin.membersTab.searchPlaceholder"
-              class="rounded-lg border border-border bg-input px-3 py-2 text-sm text-surface outline-none focus:border-accent w-64"
-            />
-            <label class="sr-only" for="admin-members-role-select">{{ admin.membersTab.roleAria }}</label>
-            <select
-              id="admin-members-role-select"
-              v-model="memberRoleFilter"
-              data-test-id="admin-members-role"
-              :aria-label="admin.membersTab.roleAria"
-              class="rounded-lg border border-border bg-input px-2 py-2 text-sm text-surface outline-none focus:border-accent"
-            >
-              <option value="all">{{ admin.membersTab.roleAll }}</option>
-              <option value="owner">{{ admin.membersTab.roleOwner }}</option>
-              <option value="editor">{{ admin.membersTab.roleEditor }}</option>
-              <option value="viewer">{{ admin.membersTab.roleViewer }}</option>
-            </select>
-          </div>
-        </div>
-
-        <p
-          v-if="membersLoading"
-          data-test-id="admin-members-loading"
-          class="text-sm text-muted"
-        >
-          {{ admin.membersTab.loading }}
-        </p>
-        <p
-          v-else-if="membersError"
-          data-test-id="admin-members-error"
-          class="text-sm text-red-300"
-        >
-          {{ membersError }}
-        </p>
-        <p
-          v-else-if="filteredMembers.length === 0"
-          data-test-id="admin-members-empty"
-          class="text-sm text-muted"
-        >
-          {{ admin.membersTab.empty }}
-        </p>
-        <div
-          v-else
-          data-test-id="admin-members-table-wrap"
-          class="overflow-x-auto rounded-xl border border-white/8"
-        >
-          <table class="w-full min-w-[640px] text-left text-sm">
-            <thead class="bg-canvas/40 text-[11px] uppercase tracking-[0.2em] text-muted">
-              <tr>
-                <th scope="col" class="px-3 py-2">{{ admin.membersTab.colName }}</th>
-                <th scope="col" class="px-3 py-2">{{ admin.membersTab.colEmail }}</th>
-                <th scope="col" class="px-3 py-2">{{ admin.membersTab.colTeam }}</th>
-                <th scope="col" class="px-3 py-2">{{ admin.membersTab.colRole }}</th>
-                <th scope="col" class="px-3 py-2">{{ admin.membersTab.colJoined }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="entry in filteredMembers"
-                :key="`${entry.team.id}-${entry.member.userId}`"
-                :data-test-id="`admin-member-row-${entry.team.id}-${entry.member.userId}`"
-                class="border-t border-white/5 hover:bg-hover/60"
-              >
-                <td class="px-3 py-2 text-surface">{{ entry.member.user.name || admin.membersTab.namePlaceholder }}</td>
-                <td class="px-3 py-2 text-muted">{{ entry.member.user.email }}</td>
-                <td class="px-3 py-2 text-muted">
-                  <RouterLink
-                    :to="`/team/${entry.team.id}`"
-                    :data-test-id="`admin-member-team-link-${entry.team.id}-${entry.member.userId}`"
-                    class="hover:underline"
-                  >
-                    {{ entry.team.name }}
-                  </RouterLink>
-                </td>
-                <td class="px-3 py-2">
-                  <span
-                    :class="[
-                      'rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.18em]',
-                      entry.member.role === 'owner'
-                        ? 'border-amber-400/30 bg-amber-400/10 text-amber-200'
-                        : entry.member.role === 'editor'
-                          ? 'border-accent/30 bg-accent/10 text-accent'
-                          : 'border-white/10 bg-canvas/55 text-muted'
-                    ]"
-                  >
-                    {{ entry.member.role }}
-                  </span>
-                </td>
-                <td class="px-3 py-2 text-muted">{{ formatDate(entry.member.addedAt) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
     </div>
-
-    <DialogRoot :open="moveDialogOpen" @update:open="(open) => !open && closeBulkMoveDialog()">
-      <DialogPortal>
-        <DialogOverlay :class="moveDialogCls.overlay" @click="closeBulkMoveDialog" />
-        <DialogContent
-          data-test-id="admin-bulk-move-dialog"
-          :class="moveDialogCls.content"
-        >
-          <DialogTitle :class="moveDialogCls.title">
-            {{ admin.boardsTab.bulkMoveDialogTitle }}
-          </DialogTitle>
-          <DialogDescription :class="moveDialogCls.description">
-            {{ formatTemplate(admin.boardsTab.bulkMove, { count: selectedBoardIds.size }) }}
-          </DialogDescription>
-          <div class="mt-4 flex flex-col gap-2">
-            <label class="sr-only" for="admin-bulk-move-target">{{ admin.boardsTab.bulkMoveTargetAria }}</label>
-            <select
-              id="admin-bulk-move-target"
-              v-model="moveTargetTeamId"
-              data-test-id="admin-bulk-move-target"
-              :aria-label="admin.boardsTab.bulkMoveTargetAria"
-              class="rounded-lg border border-border bg-input px-3 py-2 text-sm text-surface outline-none focus:border-accent"
-            >
-              <option value="personal">{{ admin.boardsTab.bulkMoveDialogPersonal }}</option>
-              <option v-for="team in ownedTeams" :key="team.id" :value="team.id">
-                {{ team.name }}
-              </option>
-            </select>
-          </div>
-          <div class="mt-5 flex justify-end gap-2">
-            <button
-              type="button"
-              data-test-id="admin-bulk-move-cancel"
-              :disabled="bulkMoving"
-              class="cursor-pointer rounded-lg border border-white/10 bg-canvas/60 px-3 py-2 text-sm text-muted transition-colors hover:bg-hover hover:text-surface disabled:opacity-50"
-              @click="closeBulkMoveDialog"
-            >
-              {{ admin.boardsTab.bulkMoveDialogCancel }}
-            </button>
-            <button
-              type="button"
-              data-test-id="admin-bulk-move-confirm"
-              :disabled="bulkMoving"
-              class="cursor-pointer rounded-lg bg-accent px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:opacity-50"
-              @click="handleBulkMove"
-            >
-              <span v-if="bulkMoving">{{ admin.boardsTab.bulkMoving }}</span>
-              <span v-else>{{ admin.boardsTab.bulkMoveDialogConfirm }}</span>
-            </button>
-          </div>
-        </DialogContent>
-      </DialogPortal>
-    </DialogRoot>
   </main>
 </template>

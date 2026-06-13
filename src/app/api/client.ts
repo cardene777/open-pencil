@@ -1,7 +1,6 @@
 import { BOARD_API_ENDPOINTS } from '@/app/api/boards'
 
 export type InvitationRole = 'editor' | 'viewer'
-export type TeamMemberRole = 'owner' | 'editor' | 'viewer'
 
 const ANONYMOUS_ID_STORAGE_KEY = 'inkly.anonymous-id'
 export const ANONYMOUS_ID_HEADER = 'X-Inkly-Anonymous-Id'
@@ -19,16 +18,10 @@ export interface Board {
   name: string
   creatorAnonymousId: string
   creatorUserId: string | null
-  teamId: string | null
+  startFrameId: string | null
   createdAt: number
   updatedAt: number
   collaborators: BoardCollaborator[]
-  team: BoardTeamSummary | null
-}
-
-export interface BoardTeamSummary {
-  id: string
-  name: string
 }
 
 export interface Invitation {
@@ -79,6 +72,23 @@ export interface BoardInvitationsResponse {
   invitations: Invitation[]
 }
 
+export interface ShareBoardInput {
+  emails: string[]
+  role: InvitationRole
+}
+
+export interface ShareBoardResponse {
+  added: { email: string; userId: string }[]
+  pending: { email: string }[]
+  rejected: { email: string; reason: string }[]
+}
+
+export interface InternalUserSummary {
+  id: string
+  name: string
+  email: string
+}
+
 export interface RedeemInvitationInput {
   token: string
   email: string
@@ -95,6 +105,26 @@ export interface RedeemInvitationResponse {
 
 export interface RedeemInvitationErrorResponse {
   error: { code: string; message: string }
+}
+
+function isRedeemInvitationSuccess(
+  data: ApiErrorBody | RedeemInvitationResponse | RedeemInvitationErrorResponse | null
+): data is RedeemInvitationResponse {
+  return Boolean(data && typeof data === 'object' && 'ok' in data && data.ok === true)
+}
+
+function isRedeemInvitationError(
+  data: ApiErrorBody | RedeemInvitationResponse | RedeemInvitationErrorResponse | null
+): data is RedeemInvitationErrorResponse {
+  return Boolean(
+    data &&
+    typeof data === 'object' &&
+    'error' in data &&
+    data.error &&
+    typeof data.error === 'object' &&
+    typeof data.error.code === 'string' &&
+    typeof data.error.message === 'string'
+  )
 }
 
 function readAnonymousId(): string | null {
@@ -147,11 +177,149 @@ export async function apiRequest<T>(input: string, init: RequestInit = {}): Prom
   return data as T
 }
 
+/**
+ * board の document blob を server DB から取得する。 404 = 未保存 (新規 board) なので null を返す。
+ */
+export async function fetchBoardDocument(boardId: string): Promise<{
+  bytes: Uint8Array
+  updatedAt: number
+} | null> {
+  const response = await fetch(BOARD_API_ENDPOINTS.document(boardId), {
+    credentials: 'include',
+    headers: buildHeaders({})
+  })
+
+  if (response.status === 404) return null
+  if (!response.ok) {
+    throw new Error(`Failed to fetch board document (HTTP ${response.status})`)
+  }
+
+  const updatedAt = Number(response.headers.get('x-document-updated-at')) || Date.now()
+  const buffer = await response.arrayBuffer()
+  return { bytes: new Uint8Array(buffer), updatedAt }
+}
+
+/**
+ * board の document blob を server DB に保存する。 owner / collaborator の autosave 経路から呼ぶ。
+ */
+export async function uploadBoardDocument(boardId: string, bytes: Uint8Array): Promise<void> {
+  const response = await fetch(BOARD_API_ENDPOINTS.document(boardId), {
+    method: 'PUT',
+    credentials: 'include',
+    headers: buildHeaders({
+      headers: { 'content-type': 'application/octet-stream' }
+    }),
+    body: bytes
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to upload board document (HTTP ${response.status})`)
+  }
+}
+
+/**
+ * server DB に保存された board preview (data URL) を取得する。 未保存 (404) は null。
+ */
+export async function fetchBoardPreview(boardId: string): Promise<{
+  dataUrl: string
+  updatedAt: number
+} | null> {
+  const response = await fetch(BOARD_API_ENDPOINTS.preview(boardId), {
+    credentials: 'include',
+    headers: buildHeaders({})
+  })
+
+  if (response.status === 404) return null
+  if (!response.ok) {
+    throw new Error(`Failed to fetch board preview (HTTP ${response.status})`)
+  }
+
+  const data = (await response.json().catch(() => null)) as {
+    dataUrl?: string
+    updatedAt?: number
+  } | null
+  if (!data?.dataUrl) return null
+  return {
+    dataUrl: data.dataUrl,
+    updatedAt: Number(data.updatedAt) || Date.now()
+  }
+}
+
+/**
+ * server DB に board preview (data URL) を保存する。 owner / collaborator 全員に共通の
+ * thumbnail が見えるよう一元化、 localStorage 経路は廃止。
+ */
+export async function uploadBoardPreview(boardId: string, dataUrl: string): Promise<void> {
+  const response = await fetch(BOARD_API_ENDPOINTS.preview(boardId), {
+    method: 'PUT',
+    credentials: 'include',
+    headers: buildHeaders({
+      headers: { 'content-type': 'application/json' }
+    }),
+    body: JSON.stringify({ dataUrl })
+  })
+  if (!response.ok) {
+    throw new Error(`Failed to upload board preview (HTTP ${response.status})`)
+  }
+}
+
+/**
+ * sign-in user の pinned board id 一覧を server から取得する。 未 sign-in は 401 → 空 array。
+ */
+export async function fetchPinnedBoardIds(): Promise<string[]> {
+  const { response, data } = await requestJson<{ boardIds: string[] }>(BOARD_API_ENDPOINTS.pins)
+  if (response.status === 401) return []
+  if (!response.ok) {
+    throw new Error(`Failed to fetch pinned boards (HTTP ${response.status})`)
+  }
+  return (data as { boardIds?: string[] } | null)?.boardIds ?? []
+}
+
+/**
+ * board を pin する (server DB 側、 user-board pair PK)。
+ */
+export async function pinBoard(boardId: string): Promise<void> {
+  await apiRequest<{ pinned: true; created: boolean }>(BOARD_API_ENDPOINTS.pin(boardId), {
+    method: 'POST'
+  })
+}
+
+/**
+ * board を unpin する。 該当 user の該当 board 行を削除する。
+ */
+export async function unpinBoard(boardId: string): Promise<void> {
+  await apiRequest<{ pinned: false; removed: boolean }>(BOARD_API_ENDPOINTS.pin(boardId), {
+    method: 'DELETE'
+  })
+}
+
 export function inviteUser(input: InviteUserInput) {
   return apiRequest<InviteUserResponse>(BOARD_API_ENDPOINTS.invite, {
     method: 'POST',
     body: JSON.stringify(input)
   })
+}
+
+export function shareBoard(boardId: string, input: ShareBoardInput) {
+  return apiRequest<ShareBoardResponse>(BOARD_API_ENDPOINTS.share(boardId), {
+    method: 'POST',
+    body: JSON.stringify(input)
+  })
+}
+
+export function searchInternalUsers(query: string, limit?: number) {
+  // 空 query も許容 = ShareModal 初期表示で sign-up 済み jfet user の上位 N 名を取得する経路。
+  const normalizedQuery = query.trim()
+  const params = new URLSearchParams()
+  if (normalizedQuery) params.set('q', normalizedQuery)
+  if (typeof limit === 'number') params.set('limit', String(limit))
+
+  const queryString = params.toString()
+  const endpoint = queryString
+    ? `${BOARD_API_ENDPOINTS.internalUsers}?${queryString}`
+    : BOARD_API_ENDPOINTS.internalUsers
+
+  return apiRequest<{ users: InternalUserSummary[] }>(endpoint)
 }
 
 export function verifyInvitation(token: string) {
@@ -181,18 +349,17 @@ export async function checkInvited(email: string): Promise<boolean> {
 export async function redeemInvitation(
   input: RedeemInvitationInput
 ): Promise<RedeemInvitationResponse | RedeemInvitationErrorResponse> {
-  const { data, status } = await requestJson<RedeemInvitationResponse | RedeemInvitationErrorResponse>(
-    BOARD_API_ENDPOINTS.redeemInvite,
-    {
-      method: 'POST',
-      body: JSON.stringify(input)
-    }
-  )
-  if (data) return data
+  const { response, data } = await requestJson<
+    RedeemInvitationResponse | RedeemInvitationErrorResponse
+  >(BOARD_API_ENDPOINTS.redeemInvite, {
+    method: 'POST',
+    body: JSON.stringify(input)
+  })
+  if (isRedeemInvitationSuccess(data) || isRedeemInvitationError(data)) return data
   return {
     error: {
       code: 'unexpected_response',
-      message: `Unexpected response (HTTP ${status})`
+      message: `Unexpected response (HTTP ${response.status})`
     }
   }
 }
@@ -211,17 +378,18 @@ export function clearAnonymousId() {
 }
 
 export function createBoardEditorLocation(board: Board) {
-  const query: Record<string, string> = {
-    name: board.name
-  }
-
-  if (board.team?.name) {
-    query.teamName = board.team.name
-  }
-
   return {
     path: `/board/${board.id}`,
-    query
+    query: {
+      name: board.name
+    }
+  }
+}
+
+export function createBoardPreviewLocation(boardId: string, startFrameId?: string | null) {
+  return {
+    path: `/board/${boardId}/preview`,
+    query: startFrameId ? { startFrame: startFrameId } : {}
   }
 }
 
@@ -230,7 +398,7 @@ export async function listBoards() {
   return response.boards
 }
 
-export function createBoard(input: { name: string; teamId?: string | null } | string) {
+export function createBoard(input: { name: string } | string) {
   const payload = typeof input === 'string' ? { name: input } : input
   return apiRequest<Board>(BOARD_API_ENDPOINTS.boards, {
     method: 'POST',
@@ -238,11 +406,12 @@ export function createBoard(input: { name: string; teamId?: string | null } | st
   })
 }
 
-export function updateBoard(boardId: string, input: { teamId?: string | null }) {
-  return apiRequest<Board>(BOARD_API_ENDPOINTS.board(boardId), {
+export async function updateBoardStartFrame(boardId: string, startFrameId: string | null) {
+  const response = await apiRequest<{ board: Board }>(BOARD_API_ENDPOINTS.startFrame(boardId), {
     method: 'PATCH',
-    body: JSON.stringify(input)
+    body: JSON.stringify({ startFrameId })
   })
+  return response.board
 }
 
 export function deleteBoard(boardId: string) {

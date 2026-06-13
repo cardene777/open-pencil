@@ -10,10 +10,11 @@ import type { Board } from '@/app/api/client'
 
 const { boardCard: boardCardT } = useI18n()
 
-const { board, previewUrl = null, pinned = false } = defineProps<{
+const { board, previewUrl = null, pinned = false, canDelete = true } = defineProps<{
   board: Board
   previewUrl?: string | null
   pinned?: boolean
+  canDelete?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -81,13 +82,6 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
           <span class="rounded-full border border-white/10 bg-canvas/60 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-muted">
             {{ boardCardT.badge }}
           </span>
-          <span
-            v-if="board.team"
-            data-test-id="board-team-badge"
-            class="rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-amber-100"
-          >
-            {{ board.team.name }}
-          </span>
         </div>
         <div class="flex items-center gap-2">
           <div class="flex -space-x-2">
@@ -147,6 +141,7 @@ const hiddenCollaboratorCount = computed(() => Math.max(board.collaborators.leng
         </button>
       </div>
       <button
+        v-if="canDelete"
         type="button"
         data-test-id="board-delete"
         class="cursor-pointer rounded-md px-2 py-1 text-xs text-red-300 transition-colors hover:bg-red-500/10 hover:text-red-200"

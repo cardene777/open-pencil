@@ -15,7 +15,11 @@ import {
 } from '@/app/api/client'
 import { initials } from '@/app/shell/ui'
 import { formatTemplate } from '@/app/shell/i18n-format'
-import { readBoardPreview } from '@/app/boards/preview'
+import {
+  preloadBoardPreviews,
+  purgeLegacyLocalPreviews,
+  readBoardPreview
+} from '@/app/boards/preview'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 import NotificationBell from '@/components/NotificationBell.vue'
 
@@ -92,7 +96,8 @@ const welcomeTitle = computed(() =>
 
 const previews = ref<Record<string, string>>({})
 
-function syncPreviews(list: Board[]) {
+async function syncPreviews(list: Board[]) {
+  await preloadBoardPreviews(list.map((b) => b.id))
   previews.value = Object.fromEntries(
     list
       .map((board) => [board.id, readBoardPreview(board.id)])
@@ -108,7 +113,7 @@ async function loadBoards() {
       return [] as Board[]
     })
     boards.value = list
-    syncPreviews(list)
+    await syncPreviews(list)
   } finally {
     loading.value = false
   }
@@ -156,6 +161,7 @@ function closeAccountMenu() {
 }
 
 onMounted(async () => {
+  purgeLegacyLocalPreviews()
   if (!auth.initialized) {
     await auth.init()
   }
