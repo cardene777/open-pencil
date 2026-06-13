@@ -154,9 +154,22 @@ async function loadBoardDocument(boardId: string) {
       return
     }
 
-    const blob = new Blob([remote.bytes], { type: 'application/octet-stream' })
-    const file = new File([blob], `${boardId}.fig`, { type: 'application/octet-stream' })
-    const graph = await readFigFile(file, { populate: 'first-page' })
+    // PR #210 / #220 以降、 collab 経由の board は server snapshot が yjs format で
+    // 書き戻される。 readFigFile が throw した場合は yjs binary として decode を試みる。
+    let graph
+    try {
+      const blob = new Blob([remote.bytes], { type: 'application/octet-stream' })
+      const file = new File([blob], `${boardId}.fig`, { type: 'application/octet-stream' })
+      graph = await readFigFile(file, { populate: 'first-page' })
+    } catch {
+      const { decodeBoardDocumentBytes } = await import('@/app/collab/yjs-document-decode')
+      const decoded = decodeBoardDocumentBytes(remote.bytes)
+      if (!decoded) {
+        console.warn('[editor] failed to decode board document as either .fig or yjs')
+        return
+      }
+      graph = decoded
+    }
 
     const activeStore = getActiveStore()
     activeStore.replaceGraph(graph)

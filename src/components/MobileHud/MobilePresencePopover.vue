@@ -6,6 +6,7 @@ import { useI18n } from '@inkly/vue'
 
 import { initials } from '@/app/shell/ui'
 import { colorToCSS } from '@inkly/core/color'
+import { stableRemotePeerId } from '@/app/collab/awareness'
 import { useMobileHudContext } from '@/components/MobileHud/context'
 
 const hud = useMobileHudContext()
@@ -52,7 +53,7 @@ const onlineCountText = computed(() =>
 
           <div
             v-for="peer in hud.collabPeers"
-            :key="peer.clientId"
+            :key="stableRemotePeerId(peer)"
             class="flex cursor-pointer items-center gap-2 rounded-md px-0.5 py-0.5 select-none active:bg-hover"
             :class="peer.isIdle ? 'opacity-50' : ''"
             @click="hud.toggleFollowPeer(peer.clientId)"

@@ -157,10 +157,25 @@ async function loadPreviewDocument() {
       return
     }
 
-    const blob = new Blob([remote.bytes], { type: 'application/octet-stream' })
-    const file = new File([blob], `${boardId.value}.fig`, { type: 'application/octet-stream' })
-    const { readFigFile } = await import('@inkly/core/io/formats/fig')
-    const graph = await readFigFile(file, { populate: 'first-page' })
+    // collab 経由で yjs format で書き戻された snapshot は readFigFile が decode できない
+    // (PR #210 以降の経路)。 まず .fig として読み、 失敗したら yjs binary として decode して
+    // SceneGraph を再構築する。 旧 board (純粋な .fig binary) も新 board (yjs format) も
+    // 同じ Play 経路で開けるようにする橋渡し。
+    let graph
+    try {
+      const blob = new Blob([remote.bytes], { type: 'application/octet-stream' })
+      const file = new File([blob], `${boardId.value}.fig`, { type: 'application/octet-stream' })
+      const { readFigFile } = await import('@inkly/core/io/formats/fig')
+      graph = await readFigFile(file, { populate: 'first-page' })
+    } catch {
+      const { decodeBoardDocumentBytes } = await import('@/app/collab/yjs-document-decode')
+      const decoded = decodeBoardDocumentBytes(remote.bytes)
+      if (!decoded) {
+        unavailable.value = true
+        return
+      }
+      graph = decoded
+    }
     previewStore.replaceGraph(graph)
 
     baseVisibility.clear()
