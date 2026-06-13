@@ -44,6 +44,9 @@ const errorMessage = ref('')
 const revokeOpen = ref(false)
 const revokeTarget = ref<BoardInvitationsResponse['invitations'][number] | null>(null)
 const cls = useDialogUI({
+  // overlay は default の bg-black/50 だと revoke 確認モーダル背景に招待リンクの
+  // token 文字列が透けて読めてしまうため、 不透明度を上げ blur で隠す。
+  overlay: 'bg-black/80 backdrop-blur-sm',
   content: 'w-[min(28rem,calc(100vw-2rem))] rounded-2xl p-5 shadow-2xl'
 })
 

@@ -398,7 +398,9 @@
     "you": "Вы",
     "youSuffix": "вы",
     "followingPeerStop": "Следите за {name} (нажмите, чтобы остановить)",
-    "clickToFollowPeer": "Нажмите, чтобы следить за {name}"
+    "clickToFollowPeer": "Нажмите, чтобы следить за {name}",
+    "peerActive": "Активен",
+    "peerIdle": "Неактивен"
   },
   "variableTypes": {
     "color": "Цвет",
