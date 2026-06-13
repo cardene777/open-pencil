@@ -421,6 +421,8 @@ export const dialogMessages = i18n('dialogs', {
   youSuffix: 'you',
   followingPeerStop: params('Following {name} (click to stop)'),
   clickToFollowPeer: params('Click to follow {name}'),
+  peerActive: 'Active',
+  peerIdle: 'Idle',
   connectAIProvider: 'Connect an AI provider to start chatting.',
   connect: 'Connect',
   getAPIKey: params('Get an {provider} API key →'),

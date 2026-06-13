@@ -38,6 +38,31 @@ function mapCollaborator(
 }
 
 /**
+ * 同一 userId の collaborator row が複数残っている場合 (anonymous → sign-in で
+ * anonymousId が振り直された場合や、 同一招待を複数経路で redeem した場合) に、
+ * 最古の row だけを採用して dedup する。 userId == null の anonymous collaborator
+ * は per anonymousId で別人扱い (元の primary key と整合)。
+ *
+ * server SSOT 側でこれをやることで client 表示 (BoardSettings 一覧 / Avatar Stack)
+ * は意識せず always-dedup の前提で組める。 並び順は呼び出し側で addedAt 昇順済が
+ * 前提 (最古 row を勝者にするため)。
+ */
+export function dedupCollaboratorRows(
+  rows: Array<typeof collaborators.$inferSelect>
+): Array<typeof collaborators.$inferSelect> {
+  const seenUserIds = new Set<string>()
+  const out: Array<typeof collaborators.$inferSelect> = []
+  for (const row of rows) {
+    if (row.userId) {
+      if (seenUserIds.has(row.userId)) continue
+      seenUserIds.add(row.userId)
+    }
+    out.push(row)
+  }
+  return out
+}
+
+/**
  * collaborator rows に紐付く `userId` の users table 行を bulk lookup する。
  * UI で「userId raw 表示」ではなく name / email を表示する display 用 enrichment。
  * userId が null の anonymous collaborator は lookup 不要。
@@ -62,12 +87,14 @@ async function loadUserDisplayInfo(
 
 function createRecordMapper(database: ApiDatabase) {
   return async function mapBoard(row: typeof boards.$inferSelect): Promise<BoardRecord> {
-    const collaboratorRows = await database.db
+    const rawCollaboratorRows = await database.db
       .select()
       .from(collaborators)
       .where(eq(collaborators.boardId, row.id))
       .orderBy(asc(collaborators.addedAt))
       .all()
+
+    const collaboratorRows = dedupCollaboratorRows(rawCollaboratorRows)
 
     const userInfo = await loadUserDisplayInfo(
       database,
@@ -108,7 +135,7 @@ async function mapBoardRows(
 ): Promise<BoardRecord[]> {
   if (rows.length === 0) return []
 
-  const collaboratorRows = await database.db
+  const rawCollaboratorRows = await database.db
     .select()
     .from(collaborators)
     .where(
@@ -119,6 +146,18 @@ async function mapBoardRows(
     )
     .orderBy(asc(collaborators.addedAt))
     .all()
+
+  // board ごとに dedup する (board をまたぐ同 userId は別 board 扱いで保持)。
+  const rowsByBoardId = new Map<string, Array<typeof collaborators.$inferSelect>>()
+  for (const row of rawCollaboratorRows) {
+    const list = rowsByBoardId.get(row.boardId) ?? []
+    list.push(row)
+    rowsByBoardId.set(row.boardId, list)
+  }
+  const collaboratorRows: Array<typeof collaborators.$inferSelect> = []
+  for (const list of rowsByBoardId.values()) {
+    collaboratorRows.push(...dedupCollaboratorRows(list))
+  }
 
   const userInfo = await loadUserDisplayInfo(
     database,

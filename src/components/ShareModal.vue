@@ -54,6 +54,9 @@ const invitationUrl = ref('')
 const errorMessage = ref('')
 const { copy, copied } = useClipboard({ copiedDuring: 1500 })
 const cls = useDialogUI({
+  // overlay は default の bg-black/50 だと共有 URL の token 文字列が透けて読めて
+  // しまうため、 不透明度を上げ blur で隠す (#205 / image #8 と同じ症状)。
+  overlay: 'bg-black/80 backdrop-blur-sm',
   content: 'w-[min(32rem,calc(100vw-2rem))] rounded-2xl p-5 shadow-2xl'
 })
 
