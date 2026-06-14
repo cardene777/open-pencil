@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -101,11 +101,8 @@ const seedInvitationsSchema = z.object({
     .max(20)
 })
 
-// internal user seed schema (PR #236 ... 異 user share flow e2e で
-// ShareModal 経由の immediate collaborator 化を成立させるための seed)。
-// email を渡すと、 users table の userId と紐付けた internal user row を
-// upsert する (既に users 側に同 email user が居る前提、 mockGoogleLogin
-// 経由で先に created される想定)。
+// 既存 users 行を internalUsers として登録 (test の異 user share flow 用)。
+// users 側に該当 email が無ければ silent skip。
 const seedInternalUsersSchema = z.object({
   items: z
     .array(
@@ -313,54 +310,70 @@ async function seedInternalUsers(
   options: TestingRoutesOptions,
   input: z.infer<typeof seedInternalUsersSchema>
 ) {
+  if (input.items.length === 0) return []
+
+  const emails = Array.from(new Set(input.items.map((item) => item.email.toLowerCase())))
+
+  // 1 batch read で users と既存 internalUsers をまとめて引く (serial DB lookup の回避)。
+  const userRows = await options.database.db
+    .select({ id: users.id, email: users.email })
+    .from(users)
+    .where(inArray(users.email, emails))
+    .all()
+  const userIdByEmail = new Map(userRows.map((row) => [row.email.toLowerCase(), row.id]))
+
+  const internalRows = await options.database.db
+    .select()
+    .from(internalUsers)
+    .where(inArray(internalUsers.email, emails))
+    .all()
+  const internalByEmail = new Map(internalRows.map((row) => [row.email.toLowerCase(), row]))
+
   const created: { id: string; email: string; userId: string | null; addedAt: number }[] = []
 
-  for (const item of input.items) {
-    const email = item.email.toLowerCase()
+  for (const email of emails) {
+    const userId = userIdByEmail.get(email)
+    // users 未登録なら internal user として登録できない (caller が mockGoogleLogin
+    // を先に呼ぶこと)。 silent skip。
+    if (!userId) continue
 
-    // email から users table の userId を引く (mockGoogleLogin で先に作成済前提)。
-    const existingUser = await options.database.db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, email))
-      .get()
+    const existing = internalByEmail.get(email)
 
-    if (!existingUser) {
-      // user 未作成なら internal user として登録できない (FK 制約 / 実 share path に
-      // 合わせる)。 caller で先に mockGoogleLogin を呼ぶこと。
+    if (existing) {
+      // 既存 row の userId が null / stale なら relinking する (review MAJOR fix)。
+      // null や別 userId だと /api/boards/{id}/share が immediate collaborator 化
+      // しないため、 seed endpoint の意味が失われる。
+      if (existing.userId !== userId) {
+        await options.database.db
+          .update(internalUsers)
+          .set({ userId })
+          .where(eq(internalUsers.id, existing.id))
+          .run()
+        created.push({
+          id: existing.id,
+          email: existing.email,
+          userId,
+          addedAt: existing.addedAt
+        })
+      } else {
+        created.push({
+          id: existing.id,
+          email: existing.email,
+          userId: existing.userId,
+          addedAt: existing.addedAt
+        })
+      }
       continue
     }
 
     const addedAt = nextTimestamp()
-    // 既に internal user として登録済なら no-op、 そうでなければ insert。
-    const existing = await options.database.db
-      .select()
-      .from(internalUsers)
-      .where(eq(internalUsers.email, email))
-      .get()
-
-    if (existing) {
-      created.push({
-        id: existing.id,
-        email: existing.email,
-        userId: existing.userId,
-        addedAt: existing.addedAt
-      })
-      continue
-    }
-
     const id = `internal-${email}-${addedAt}`
     await options.database.db
       .insert(internalUsers)
-      .values({
-        id,
-        email,
-        userId: existingUser.id,
-        addedAt
-      })
+      .values({ id, email, userId, addedAt })
       .run()
 
-    created.push({ id, email, userId: existingUser.id, addedAt })
+    created.push({ id, email, userId, addedAt })
   }
 
   return created

@@ -6,35 +6,18 @@ import { seedInternalUsers } from '#tests/helpers/api-seed'
 import { getNodeById, getPageChildren } from '#tests/helpers/store'
 
 /**
- * 異 user の owner / invitee で realtime sync が双方向に動く e2e。
- *
- * Issue #232 / PR #233 で対応した「owner の編集が invitee 側でリロード不要で
- * リアルタイム反映される」を、 異 user (= 違う email でログインした 2 アカウント)
- * の owner / invitee BrowserContext で再現検証する。
- *
- * 想定 scenario ...
- *   1. owner email で mockGoogleLogin して board を作成
- *   2. invitee email で mockGoogleLogin (別 BrowserContext)、 続けて invitee を
- *      internalUsers table に seed することで /api/boards/{id}/share が
- *      immediate collaborator 化できる状態にする
- *   3. owner 側から /api/boards/{id}/share を直接呼んで invitee を collaborator 化
- *      (ShareModal UI 経由は別 spec で扱う、 本 spec は sync 経路に focus)
- *   4. invitee context で board URL に goto、 editor-root 表示を確認
- *   5. owner が rectangle を描画 → invitee 側で同 id の node が見える状態に
- *      なるまで poll、 座標が一致することを verify
- *   6. cleanup ... invitee context close
- *
- * 注意 ...
- *   - これは「異 user」を前提とした唯一の collab regression detector。
- *     既存 realtime-sync.spec.ts は同一 user 2 context のため別人扱いでは
- *     ないく、 invitee 側 ACL や applyYnodeToGraph の root 経路を verify できない。
- *   - immediate collaborator 化を成立させるため invitee を internalUsers に
- *     seed する必要がある (PR #236 で seedInternalUsers helper を新設)。
+ * 異 user owner / invitee の realtime sync regression detector (Issue #232 / PR #233)。
+ * 同一 user 2 context の既存 realtime-sync.spec.ts では ACL / applyYnodeToGraph root
+ * 経路が verify できないため、 invitee を internalUsers に seed して
+ * immediate collaborator 化したうえで rectangle の双方向反映を観測する。
  */
 test('owner が rectangle 描画すると invitee 側で同 node が見える (Issue #232 cross-user regression detector)', async ({
   browser,
   page
 }) => {
+  // poll が 15s × 1 + canvas init / share API / login 2 回で 30s 標準を超えるため余裕を持って 60s。
+  test.setTimeout(60_000)
+
   const boardName = `RealtimeCrossUser ${Date.now()}`
   const ownerEmail = `owner-${Date.now()}@jfet.co.jp`
   const inviteeEmail = `invitee-${Date.now()}@jfet.co.jp`
@@ -96,15 +79,34 @@ test('owner が rectangle 描画すると invitee 側で同 node が見える (I
     expect(rectangle).toBeTruthy()
     if (!rectangle) throw new Error('Expected rectangle to be created on owner side')
 
-    // invitee 側で同 id の node が見えるまで poll、 座標一致を verify。
-    // applyYnodeToGraph の root 経路 (PR #233) が動作しないとここで永久に
-    // 来ない (= timeout で fail)、 regression detector として機能する。
+    // invitee 側で同 node が見えるまで poll、 形状全体 (type / 座標 / size) の
+    // 一致を verify。 applyYnodeToGraph の root 経路 (PR #233) が動作しないと
+    // ここで永久に来ない (= timeout で fail)、 regression detector として機能する。
     await expect
-      .poll(async () => (await getNodeById(inviteePage, rectangle.id))?.x ?? null, {
-        timeout: 15_000,
-        intervals: [200, 500, 1000]
+      .poll(
+        async () => {
+          const inviteeNode = await getNodeById(inviteePage, rectangle.id)
+          if (!inviteeNode) return null
+          return {
+            type: inviteeNode.type,
+            x: inviteeNode.x,
+            y: inviteeNode.y,
+            width: inviteeNode.width,
+            height: inviteeNode.height
+          }
+        },
+        {
+          timeout: 15_000,
+          intervals: [200, 500, 1000]
+        }
+      )
+      .toEqual({
+        type: rectangle.type,
+        x: rectangle.x,
+        y: rectangle.y,
+        width: rectangle.width,
+        height: rectangle.height
       })
-      .toBe(rectangle.x)
   } finally {
     await inviteeContext.close()
   }
