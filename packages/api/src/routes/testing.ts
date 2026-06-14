@@ -101,6 +101,22 @@ const seedInvitationsSchema = z.object({
     .max(20)
 })
 
+// internal user seed schema (PR #236 ... 異 user share flow e2e で
+// ShareModal 経由の immediate collaborator 化を成立させるための seed)。
+// email を渡すと、 users table の userId と紐付けた internal user row を
+// upsert する (既に users 側に同 email user が居る前提、 mockGoogleLogin
+// 経由で先に created される想定)。
+const seedInternalUsersSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        email: z.string().trim().email()
+      })
+    )
+    .min(0)
+    .max(20)
+})
+
 export interface TestingRoutesOptions {
   enabled: boolean
   database: ApiDatabase
@@ -293,6 +309,63 @@ async function seedNotifications(
   return created
 }
 
+async function seedInternalUsers(
+  options: TestingRoutesOptions,
+  input: z.infer<typeof seedInternalUsersSchema>
+) {
+  const created: { id: string; email: string; userId: string | null; addedAt: number }[] = []
+
+  for (const item of input.items) {
+    const email = item.email.toLowerCase()
+
+    // email から users table の userId を引く (mockGoogleLogin で先に作成済前提)。
+    const existingUser = await options.database.db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, email))
+      .get()
+
+    if (!existingUser) {
+      // user 未作成なら internal user として登録できない (FK 制約 / 実 share path に
+      // 合わせる)。 caller で先に mockGoogleLogin を呼ぶこと。
+      continue
+    }
+
+    const addedAt = nextTimestamp()
+    // 既に internal user として登録済なら no-op、 そうでなければ insert。
+    const existing = await options.database.db
+      .select()
+      .from(internalUsers)
+      .where(eq(internalUsers.email, email))
+      .get()
+
+    if (existing) {
+      created.push({
+        id: existing.id,
+        email: existing.email,
+        userId: existing.userId,
+        addedAt: existing.addedAt
+      })
+      continue
+    }
+
+    const id = `internal-${email}-${addedAt}`
+    await options.database.db
+      .insert(internalUsers)
+      .values({
+        id,
+        email,
+        userId: existingUser.id,
+        addedAt
+      })
+      .run()
+
+    created.push({ id, email, userId: existingUser.id, addedAt })
+  }
+
+  return created
+}
+
 async function seedInvitations(
   options: TestingRoutesOptions,
   input: z.infer<typeof seedInvitationsSchema>
@@ -365,6 +438,20 @@ export function createTestingRoutes(options: TestingRoutesOptions): Hono {
     }
 
     return c.json({ invitations: await seedInvitations(options, parsed.data) })
+  })
+
+  app.post('/seed/internal-users', async (c) => {
+    const guard = ensureTestingRequest(options, c.req.url)
+    if (guard) return guard
+
+    const body = await c.req.json().catch(() => ({}))
+    const parsed = seedInternalUsersSchema.safeParse(body)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]?.message ?? 'Invalid request body'
+      return c.json({ error: { code: 'invalid_request_body', message: issue } }, 400)
+    }
+
+    return c.json({ internalUsers: await seedInternalUsers(options, parsed.data) })
   })
 
   return app

@@ -128,6 +128,37 @@ export async function seedNotifications(page: Page, options: SeedNotificationsOp
   return payload.notifications
 }
 
+/**
+ * mockGoogleLogin で作成された users を internal user として登録する。
+ * PR #236 ... 異 user share flow e2e で ShareModal が internal user only
+ * immediate collaborator 化を成立させるため、 invitee 側 user を事前に
+ * internal user として seed する。 caller は invitee の mockGoogleLogin 後に
+ * 呼ぶこと (`users` table に email row が無いと no-op になる)。
+ */
+export async function seedInternalUsers(page: Page, emails: string[]) {
+  const response = await page.request.post('/api/test/seed/internal-users', {
+    data: {
+      items: emails.map((email) => ({ email }))
+    }
+  })
+
+  if (!response.ok()) {
+    throw new Error(
+      `Failed to seed internal users: ${response.status()} ${response.statusText()}`
+    )
+  }
+
+  const payload = (await response.json()) as {
+    internalUsers: Array<{
+      id: string
+      email: string
+      userId: string | null
+      addedAt: number
+    }>
+  }
+  return payload.internalUsers
+}
+
 export async function seedInvitations(
   page: Page,
   boardId: string,
