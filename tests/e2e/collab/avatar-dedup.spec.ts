@@ -67,7 +67,7 @@ test('同一 user が 3 tab を開いても Avatar Stack に 1 件のみ表示 (
     // 短い polling timeout で wait する。
     const pollPeerCount = async (target: Page) => {
       // local avatar (collab-local-avatar) は除外、 peer avatar だけ数える。
-      const count = await target.locator('[data-test-id="collab-peer-avatar"]').count()
+      const count = await target.getByTestId('collab-peer-avatar').count()
       return count
     }
 
