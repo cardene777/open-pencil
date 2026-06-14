@@ -26,6 +26,7 @@
     "test": "playwright test --project=inkly",
     "test:update": "playwright test --project=inkly --update-snapshots",
     "test:figma": "playwright test --project=figma",
+    "test:e2e:collab": "bash scripts/test-e2e-collab.sh",
     "figma:debug": "open -a Figma --args --remote-debugging-port=9222",
     "test:unit": "bun test ./tests/engine",
     "test:coverage": "bun run coverage:unit",

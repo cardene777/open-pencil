@@ -1,5 +1,15 @@
 import { defineConfig } from '@playwright/test'
 
+// e2e は test-util 経路 (/api/auth/test/login) を必須とするため、 dev server を
+// reuse する場合は INKLY_API_AUTH_ENABLE_TEST_UTILS=1 で起動された server だけが
+// 有効。 .env.dev (本番接続) の dev server を reuse すると test-util が無効で
+// 全 spec の mockGoogleLogin が 404 になる。
+//
+// ユーザーが意図して reuse したい時のみ PLAYWRIGHT_REUSE_DEV_SERVER=1 を設定する。
+// 未設定なら playwright が test 専用 server を新規起動 (= ユーザー側 dev server を
+// 事前に停止する必要あり、 port 1420 / 3001 の衝突防止)。
+const reuseDevServer = process.env.PLAYWRIGHT_REUSE_DEV_SERVER === '1'
+
 export default defineConfig({
   testDir: './tests',
   timeout: 15_000,
@@ -48,13 +58,13 @@ export default defineConfig({
     {
       command: 'VITE_INKLY_AUTH_TEST_MODE=1 bun run dev',
       port: 1420,
-      reuseExistingServer: true
+      reuseExistingServer: reuseDevServer
     },
     {
       command:
         'INKLY_API_DB_MODE=memory INKLY_API_JWT_SECRET=playwright-secret INKLY_API_AUTH_ENABLE_TEST_UTILS=1 bun --filter @inkly/api dev',
       port: 3001,
-      reuseExistingServer: true
+      reuseExistingServer: reuseDevServer
     }
   ]
 })
