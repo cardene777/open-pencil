@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
@@ -95,6 +95,19 @@ const seedInvitationsSchema = z.object({
         email: z.string().trim().email(),
         role: z.enum(['editor', 'viewer']).default('editor'),
         expiresInMs: z.number().int().optional()
+      })
+    )
+    .min(0)
+    .max(20)
+})
+
+// 既存 users 行を internalUsers として登録 (test の異 user share flow 用)。
+// users 側に該当 email が無ければ silent skip。
+const seedInternalUsersSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        email: z.string().trim().email()
       })
     )
     .min(0)
@@ -293,6 +306,79 @@ async function seedNotifications(
   return created
 }
 
+async function seedInternalUsers(
+  options: TestingRoutesOptions,
+  input: z.infer<typeof seedInternalUsersSchema>
+) {
+  if (input.items.length === 0) return []
+
+  const emails = Array.from(new Set(input.items.map((item) => item.email.toLowerCase())))
+
+  // 1 batch read で users と既存 internalUsers をまとめて引く (serial DB lookup の回避)。
+  const userRows = await options.database.db
+    .select({ id: users.id, email: users.email })
+    .from(users)
+    .where(inArray(users.email, emails))
+    .all()
+  const userIdByEmail = new Map(userRows.map((row) => [row.email.toLowerCase(), row.id]))
+
+  const internalRows = await options.database.db
+    .select()
+    .from(internalUsers)
+    .where(inArray(internalUsers.email, emails))
+    .all()
+  const internalByEmail = new Map(internalRows.map((row) => [row.email.toLowerCase(), row]))
+
+  const created: { id: string; email: string; userId: string | null; addedAt: number }[] = []
+
+  for (const email of emails) {
+    const userId = userIdByEmail.get(email)
+    // users 未登録なら internal user として登録できない (caller が mockGoogleLogin
+    // を先に呼ぶこと)。 silent skip。
+    if (!userId) continue
+
+    const existing = internalByEmail.get(email)
+
+    if (existing) {
+      // 既存 row の userId が null / stale なら relinking する (review MAJOR fix)。
+      // null や別 userId だと /api/boards/{id}/share が immediate collaborator 化
+      // しないため、 seed endpoint の意味が失われる。
+      if (existing.userId !== userId) {
+        await options.database.db
+          .update(internalUsers)
+          .set({ userId })
+          .where(eq(internalUsers.id, existing.id))
+          .run()
+        created.push({
+          id: existing.id,
+          email: existing.email,
+          userId,
+          addedAt: existing.addedAt
+        })
+      } else {
+        created.push({
+          id: existing.id,
+          email: existing.email,
+          userId: existing.userId,
+          addedAt: existing.addedAt
+        })
+      }
+      continue
+    }
+
+    const addedAt = nextTimestamp()
+    const id = `internal-${email}-${addedAt}`
+    await options.database.db
+      .insert(internalUsers)
+      .values({ id, email, userId, addedAt })
+      .run()
+
+    created.push({ id, email, userId, addedAt })
+  }
+
+  return created
+}
+
 async function seedInvitations(
   options: TestingRoutesOptions,
   input: z.infer<typeof seedInvitationsSchema>
@@ -365,6 +451,20 @@ export function createTestingRoutes(options: TestingRoutesOptions): Hono {
     }
 
     return c.json({ invitations: await seedInvitations(options, parsed.data) })
+  })
+
+  app.post('/seed/internal-users', async (c) => {
+    const guard = ensureTestingRequest(options, c.req.url)
+    if (guard) return guard
+
+    const body = await c.req.json().catch(() => ({}))
+    const parsed = seedInternalUsersSchema.safeParse(body)
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0]?.message ?? 'Invalid request body'
+      return c.json({ error: { code: 'invalid_request_body', message: issue } }, 400)
+    }
+
+    return c.json({ internalUsers: await seedInternalUsers(options, parsed.data) })
   })
 
   return app

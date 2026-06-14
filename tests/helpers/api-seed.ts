@@ -128,6 +128,34 @@ export async function seedNotifications(page: Page, options: SeedNotificationsOp
   return payload.notifications
 }
 
+/**
+ * users を internalUsers に seed する。 mockGoogleLogin 後に呼ぶこと
+ * (users 行が無い email は silent skip)。
+ */
+export async function seedInternalUsers(page: Page, emails: string[]) {
+  const response = await page.request.post('/api/test/seed/internal-users', {
+    data: {
+      items: emails.map((email) => ({ email }))
+    }
+  })
+
+  if (!response.ok()) {
+    throw new Error(
+      `Failed to seed internal users: ${response.status()} ${response.statusText()}`
+    )
+  }
+
+  const payload = (await response.json()) as {
+    internalUsers: Array<{
+      id: string
+      email: string
+      userId: string | null
+      addedAt: number
+    }>
+  }
+  return payload.internalUsers
+}
+
 export async function seedInvitations(
   page: Page,
   boardId: string,
